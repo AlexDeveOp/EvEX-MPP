@@ -15,7 +15,9 @@
     "i18n": "node scripts/i18n-check.mjs",
     "check": "node scripts/check.mjs",
     "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\"",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "assets:emoji": "node scripts/build-anim-emoji.mjs",
+    "license-pages": "node scripts/build-license-pages.mjs"
   },
   "author": "AlexDeveOp",
   "license": "MIT",
@@ -36,7 +38,8 @@
     "emojibase-data": "^18.0.0",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
-    "lucide-static": "^1.66.0"
+    "lucide-static": "^1.66.0",
+    "sharp": "^0.35.5"
   },
   "productName": "EvEX-MPP",
   "build": {

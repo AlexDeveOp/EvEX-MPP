@@ -11,6 +11,7 @@ import { Logs } from "./logs.js";
 import { scanPidgin, importLogs } from "./pidgin-import.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, closeAllPopups } from "./popups.js";
+import { checkForUpdates, repoFromUrl } from "./updates.js";
 
 import { t, tk, setLanguage, currentLang } from "./i18n.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -49,6 +50,48 @@ const avatarDir = () => mediaDir("avatars");
 
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+}
+
+// ---------- aviso de versión nueva (opcional, desactivado por defecto) ----------
+// Solo consulta la última release de GitHub y avisa; no descarga ni instala nada.
+const UPDATE_EVERY = 24 * 3600e3;
+const REPO = (() => {
+  try {
+    return repoFromUrl(JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).repository?.url);
+  } catch {
+    return null;
+  }
+})();
+let updateTimer = null;
+let updatesEnabled = false;
+let updateFound = null; // versión nueva pendiente de mostrar cuando la interfaz esté lista
+const updateNotified = new Set();
+
+function checkLatest() {
+  if (!REPO) throw new Error(t("No se conoce el repositorio de la app."));
+  return checkForUpdates({ currentVersion: app.getVersion(), repo: REPO, fetchImpl: (url, opts) => net.fetch(url, opts) });
+}
+
+// Comprobación automática: avisa una sola vez por versión.
+async function runUpdateCheck() {
+  const r = await checkLatest();
+  if (r.newer && !updateNotified.has(r.latest)) {
+    updateNotified.add(r.latest);
+    if (rendererReady) send("update-available", r);
+    else updateFound = r;
+    if (tray && (!win || !win.isVisible())) tray.displayBalloon({ title: t("Hay una versión nueva de EvEX-MPP"), content: t("Versión {version}. Ábrela desde la ventana de la app.", { version: r.latest }), iconType: "info" });
+  }
+  return r;
+}
+
+function scheduleUpdateChecks(enabled) {
+  if (enabled === updatesEnabled) return;
+  updatesEnabled = enabled;
+  clearInterval(updateTimer);
+  updateTimer = null;
+  if (!enabled) return;
+  setTimeout(() => updatesEnabled && runUpdateCheck().catch(() => {}), 10000);
+  updateTimer = setInterval(() => runUpdateCheck().catch(() => {}), UPDATE_EVERY);
 }
 
 function sendXmpp(ev) {
@@ -507,7 +550,12 @@ function registerIpc() {
   handle("ready", () => {
     rendererReady = true;
     for (const ev of pendingEvents.splice(0)) send("xmpp", ev);
+    if (updateFound) send("update-available", updateFound);
+    updateFound = null;
   });
+
+  // Comprobación pedida a mano (botón «Comprobar ahora»): la interfaz muestra el resultado.
+  handle("updates:check", () => checkLatest());
 
   handle("settings:set", (settings) => {
     const before = currentLang();
@@ -730,6 +778,7 @@ function openFromNotification(data) {
 }
 
 function applySystemSettings(s) {
+  scheduleUpdateChecks(!!s.behavior.checkUpdates);
   configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
   refreshTray();
   try {

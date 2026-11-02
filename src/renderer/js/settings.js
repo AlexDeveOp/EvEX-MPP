@@ -6,6 +6,8 @@ const append = (el, ...children) => el.append(...children.filter(Boolean));
 import { PRESETS, TOKENS, GRADIENTS, BUNDLED_FONTS, applyAppearance, themeColors, backgroundCss, resolveThemeId } from "./themes.js";
 import { PRESETS as SOUNDS, SOUND_KINDS, previewSound } from "./sounds.js";
 import { addCustomEmoji, emojifyHtml } from "./emoji.js";
+import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
+import { checkUpdatesNow } from "./updates.js";
 import { openAccounts, openPidginImport } from "./accounts.js";
 
 import { t, LANGUAGES, setLanguagePreference } from "./i18n.js";
@@ -313,9 +315,18 @@ const RENDER = {
               preview.innerHTML = emojifyHtml(sample, v);
             },
           ),
-          t("Los animados y Noto/Twemoji se descargan de Internet la primera vez"),
+          t("Los {n} emojis animados más usados vienen con la app (Animated Noto Emoji © Google, CC BY 4.0). Noto estáticos y Twemoji se descargan de Internet.", { n: BUNDLED_ANIMATED.size }),
         ),
         preview,
+        toggle(
+          s.downloadEmoji,
+          (v) => {
+            full((x) => (x.downloadEmoji = v));
+            preview.innerHTML = emojifyHtml(sample);
+          },
+          t("Descargar de Internet los emojis animados que no vienen con la app"),
+          t("Se piden a Google (fonts.gstatic.com), que ve tu IP. Desactivado: esos emojis se muestran con el estilo de Windows."),
+        ),
         field(t("Tamaño en el texto"), range(1, 2, 0.05, s.emojiSize, (v) => look((x) => (x.emojiSize = v)), (v) => `${Math.round(v * 100)}%`)),
         toggle(s.jumboEmoji, (v) => full((x) => (x.jumboEmoji = v)), t("Emojis grandes cuando el mensaje solo tiene emojis")),
         toggle(s.emoticonToEmoji, (v) => full((x) => (x.emoticonToEmoji = v)), t("Convertir emoticonos de texto"), t("Por ejemplo :) → 🙂, <3 → ❤️, \\o/ → 🙌")),
@@ -506,6 +517,16 @@ const RENDER = {
         h("p", { class: "muted small" }, t("Configuración, historial (JSONL), avatares y archivos personalizados se guardan en la carpeta de datos de la aplicación. Las contraseñas se cifran con DPAPI de Windows.")),
         h("button", { class: "btn", onclick: () => api("shell:openUserData") }, icon("folder-open"), t("Abrir carpeta de datos")),
         h("p", { class: "muted small" }, `EvEX-MPP ${S.version}`),
+      ),
+      group(
+        t("Actualizaciones"),
+        toggle(
+          S.settings.behavior.checkUpdates,
+          (v) => look((x) => (x.behavior.checkUpdates = v)),
+          t("Avisar cuando haya una versión nueva"),
+          t("Una vez al día se consulta la última versión publicada en GitHub (api.github.com), que ve tu IP. No se descarga ni se instala nada: solo se avisa."),
+        ),
+        h("button", { class: "btn", onclick: checkUpdatesNow }, icon("refresh-cw"), t("Comprobar ahora")),
       ),
     );
   },

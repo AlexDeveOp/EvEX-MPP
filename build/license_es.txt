@@ -1,13 +1,14 @@
 EvEX-MPP - privacidad y licencia
 
 PRIVACIDAD
-EvEX-MPP no tiene telemetría, analíticas, publicidad, informes de errores ni comprobación automática de actualizaciones. El desarrollador no recibe ningún dato de la app. Tus cuentas, contraseñas cifradas e historial se guardan solo en este PC.
+EvEX-MPP no tiene telemetría, analíticas, publicidad ni informes de errores, y no busca actualizaciones salvo que lo actives. El desarrollador no recibe ningún dato de la app. Tus cuentas, contraseñas cifradas e historial se guardan solo en este PC.
 
 La app solo se conecta a:
 - los servidores XMPP que configures;
-- Google Fonts (fonts.gstatic.com) para mostrar los emojis con el estilo por defecto «Noto animados». Desactivar: Preferencias > Emojis > Dibujo de los emojis > Nativos de Windows;
+- Google Fonts (fonts.gstatic.com), solo si eliges el estilo de emoji «Noto estáticos» o activas «Descargar de Internet los emojis animados que no vienen con la app» (desactivado por defecto). Los emojis animados más usados vienen con la app;
 - las webs enlazadas en los mensajes y YouTube (i.ytimg.com) para las vistas previas de imágenes y vídeos. Desactivar: Preferencias > Mensajes > Contenido > Vista previa de imágenes y vídeos de YouTube;
-- Google, una vez por idioma, para descargar los diccionarios del corrector. Desactivar: Preferencias > Comportamiento > Escritura > Corrector ortográfico.
+- Google, una vez por idioma, para descargar los diccionarios del corrector. Desactivar: Preferencias > Comportamiento > Escritura > Corrector ortográfico;
+- GitHub (api.github.com), una vez al día, solo si activas «Avisar cuando haya una versión nueva» (desactivado por defecto).
 
 Política completa: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/PRIVACY.md#política-de-privacidad
 

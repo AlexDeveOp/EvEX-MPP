@@ -1,13 +1,14 @@
 EvEX-MPP - privacy and license
 
 PRIVACY
-EvEX-MPP has no telemetry, analytics, advertising, crash reporting or automatic update checks. The developer receives no data from the app. Your accounts, encrypted passwords and message history are stored only on this PC.
+EvEX-MPP has no telemetry, analytics, advertising or crash reporting, and it does not check for updates unless you turn that on. The developer receives no data from the app. Your accounts, encrypted passwords and message history are stored only on this PC.
 
 The app connects only to:
 - the XMPP servers you configure;
-- Google Fonts (fonts.gstatic.com) to show emoji with the default "Animated Noto" style. Turn off: Preferences > Emoji > Emoji artwork > Native Windows;
+- Google Fonts (fonts.gstatic.com), only if you choose the "Static Noto" emoji style or turn on "Download animated emoji that don't come with the app" (off by default). The most used animated emoji come with the app;
 - websites linked in messages and YouTube (i.ytimg.com) for image and video previews. Turn off: Preferences > Messages > Content > Preview images and YouTube videos;
-- Google, once per language, to download spell-check dictionaries. Turn off: Preferences > Behavior > Typing > Spell checker.
+- Google, once per language, to download spell-check dictionaries. Turn off: Preferences > Behavior > Typing > Spell checker;
+- GitHub (api.github.com), once a day, only if you turn on "Notify me when a new version is available" (off by default).
 
 Full policy: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/PRIVACY.md
 

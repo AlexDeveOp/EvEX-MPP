@@ -10,6 +10,7 @@ import { openSettings } from "./settings.js";
 import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } from "./accounts.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openSearch } from "./search.js";
+import { showUpdate } from "./updates.js";
 
 import { t, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
@@ -38,6 +39,7 @@ async function boot() {
     else openConv(accountId, conv, convType);
   });
   onMain("switch-account", openSwitchAccount);
+  onMain("update-available", showUpdate);
   onMain("window-focus", (f) => {
     S.focused = f;
     if (f && S.active) markRead(S.active);

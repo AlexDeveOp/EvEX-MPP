@@ -61,7 +61,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Cualquier fuente de Windows, escala y densidad.
 - 4 estilos de mensaje: moderno, burbujas, IRC y Pidgin.
 - Fondos (imagen, GIF o degradado) para la ventana, la barra lateral o cada conversación.
-- Emojis animados de Google (Noto), Twemoji o los nativos, y emojis propios.
+- Emojis animados de Google (Noto), Twemoji o los nativos, y emojis propios. Los animados más usados vienen con la app y funcionan sin conexión.
 
 **Escritorio**
 - Bandeja del sistema (cerrar o minimizar a la bandeja).
@@ -87,7 +87,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Las contraseñas se cifran con DPAPI de Windows (`safeStorage`), así que en otro PC se vuelven a pedir.
 - La interfaz corre aislada (`contextIsolation`, `sandbox`, CSP estricta) y solo habla con el proceso principal por canales concretos.
 - El ejecutable lleva desactivados los *fuses* `RunAsNode`, `NODE_OPTIONS` y los argumentos de inspección.
-- Sin telemetría, analíticas ni comprobación de actualizaciones. A qué se conecta la app, y cómo desactivar cada conexión, está en la [política de privacidad](PRIVACY.md#política-de-privacidad).
+- Sin telemetría ni analíticas; solo busca actualizaciones si lo activas. A qué se conecta la app, y cómo desactivar cada conexión, está en la [política de privacidad](PRIVACY.md#política-de-privacidad).
 
 **Commits firmados.** Todos los commits y etiquetas de versión de este repositorio están firmados con la clave SSH de firma del autor, y GitHub los muestra como **Verified** (verificados). La cuenta tiene activado el *modo vigilante* de GitHub: cualquier commit atribuido al autor que **no** esté firmado aparecería como **Unverified** (no verificado). Así una suplantación se detecta a simple vista: cualquiera puede poner el nombre y el correo de otra persona en un commit, pero nadie más puede firmar con su clave. Si alguna vez ves aquí un commit del autor marcado como Unverified, desconfía y avisa (consulta [SECURITY.md](SECURITY.md)).
 
@@ -114,6 +114,7 @@ npm start          # lanza la app (scripts/start.mjs quita ELECTRON_RUN_AS_NODE,
 npm run dev        # con DevTools
 npm run dist       # instalador + portable en dist/
 npm run assets     # regenera iconos (Lucide) y datos de emojis (emojibase)
+npm run assets:emoji  # regenera los emojis animados incluidos (los descarga de Google, ~15 min)
 npm test           # tests unitarios y de integración XMPP (contra el servidor simulado)
 npm run lint       # ESLint
 npm run check      # comprueba la sintaxis de todos los ficheros JavaScript
@@ -155,4 +156,4 @@ Variables de diagnóstico:
 
 ## Licencia
 
-MIT. Iconos: Lucide (ISC). Datos de emojis: emojibase (MIT). Fuentes: Fontsource (OFL).
+MIT. Iconos: Lucide (ISC). Datos de emojis: emojibase (MIT). Fuentes: Fontsource (OFL). Emojis animados: [Animated Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/) © Google, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), redimensionados. Detalles en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

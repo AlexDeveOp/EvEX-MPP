@@ -11,9 +11,9 @@ const CHANNELS = [
   "logs:tail", "logs:search", "logs:list",
   "pidgin:scan", "pidgin:import",
   "file:pick", "emoji:import", "theme:export", "theme:import", "avatar:set", "fonts:list",
-  "notify", "notify:test", "popup:get", "popup:size", "popup:click", "popup:close", "popup:hover", "window:unread", "window:titlebar", "window:focus", "shell:open", "shell:openUserData", "app:quit",
+  "notify", "notify:test", "popup:get", "popup:size", "popup:click", "popup:close", "popup:hover", "window:unread", "window:titlebar", "window:focus", "shell:open", "shell:openUserData", "updates:check", "app:quit",
 ];
-const EVENTS = ["xmpp", "accounts", "nav", "window-focus", "import-progress", "switch-account", "popup-close"];
+const EVENTS = ["xmpp", "accounts", "nav", "window-focus", "import-progress", "switch-account", "popup-close", "update-available"];
 
 contextBridge.exposeInMainWorld("evex", {
   async call(channel, ...args) {

@@ -61,7 +61,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Any Windows font, UI scale and density.
 - 4 message styles: modern, bubbles, IRC and Pidgin.
 - Backgrounds (image, GIF or gradient) for the window, the sidebar or each conversation.
-- Animated Google emoji (Noto), Twemoji or native emoji, plus custom emoji.
+- Animated Google emoji (Noto), Twemoji or native emoji, plus custom emoji. The most used animated emoji come with the app and work offline.
 
 **Desktop**
 - System tray (close or minimize to tray).
@@ -87,7 +87,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Passwords are encrypted with Windows DPAPI (`safeStorage`), so on another PC you will be asked for them again.
 - The interface runs isolated (`contextIsolation`, `sandbox`, strict CSP) and only talks to the main process through a fixed set of channels.
 - The executable ships with the `RunAsNode`, `NODE_OPTIONS` and inspector *fuses* disabled.
-- No telemetry, analytics or update checks. What the app connects to, and how to turn each connection off, is listed in the [privacy policy](PRIVACY.md).
+- No telemetry or analytics; update checks only if you turn them on. What the app connects to, and how to turn each connection off, is listed in the [privacy policy](PRIVACY.md).
 
 **Signed commits.** Every commit and release tag in this repository is signed with the maintainer’s SSH signing key, so GitHub shows them as **Verified**. The account has GitHub’s *vigilant mode* turned on: any commit attributed to the maintainer that is **not** signed would be marked **Unverified**, which makes impersonation easy to spot (anyone can put someone else’s name and email in a git commit, but nobody else can sign with their key). If you ever see an Unverified commit from the maintainer here, treat it as suspicious and report it (see [SECURITY.md](SECURITY.md)).
 
@@ -114,6 +114,7 @@ npm start          # runs the app (scripts/start.mjs clears ELECTRON_RUN_AS_NODE
 npm run dev        # with DevTools
 npm run dist       # installer + portable in dist/
 npm run assets     # regenerates icons (Lucide) and emoji data (emojibase)
+npm run assets:emoji  # regenerates the bundled animated emoji (downloads from Google, ~15 min)
 npm test           # unit tests and XMPP integration tests (against the fake server)
 npm run lint       # ESLint
 npm run check      # syntax check of every JavaScript file
@@ -155,4 +156,4 @@ Diagnostic variables:
 
 ## License
 
-MIT. Icons: Lucide (ISC). Emoji data: emojibase (MIT). Fonts: Fontsource (OFL).
+MIT. Icons: Lucide (ISC). Emoji data: emojibase (MIT). Fonts: Fontsource (OFL). Animated emoji: [Animated Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/) © Google, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), resized. Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

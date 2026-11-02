@@ -1,5 +1,6 @@
 // Emojis: estilos de dibujo, atajos :código:, emoticonos clásicos, emojis personalizados y selector.
 import { EMOJI, EMOJI_GROUPS } from "./data/emoji.js";
+import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
 import { S, updateSettings } from "./state.js";
 import { h, icon, esc } from "./dom.js";
 
@@ -41,8 +42,20 @@ function codepoints(emoji, sep, keepFe0f) {
   return cps.filter((cp) => keepFe0f || hasZwj || cp !== 0xfe0f).map((cp) => cp.toString(16)).join(sep);
 }
 
+// Clave de los ficheros de Noto: códigos en hexadecimal unidos por "_" y sin fe0f (p. ej. "2764", "1f44d").
+const notoKey = (emoji) => codepoints(emoji, "_").replace(/_fe0f/g, "");
+// ¿Se pueden descargar de Google los emojis animados que no vienen con la app? (desactivado por defecto: privacidad)
+const mayDownload = () => !!S.settings?.downloadEmoji;
+
+// URL de la imagen del emoji, o null si debe mostrarse el emoji de Windows.
+// «Noto animados» usa los que vienen con la app y, solo si el usuario lo permite, descarga el resto de Google.
+// «Noto estáticos» y «Twemoji» se descargan siempre: el usuario los elige sabiendo que vienen de Internet.
 export function emojiImageUrl(emoji, style = S.settings.emojiStyle) {
-  if (style === "noto-animated") return `https://fonts.gstatic.com/s/e/notoemoji/latest/${codepoints(emoji, "_").replace(/_fe0f/g, "")}/512.webp`;
+  if (style === "noto-animated") {
+    const key = notoKey(emoji);
+    if (BUNDLED_ANIMATED.has(key)) return `assets/emoji-anim/${key}.webp`;
+    return mayDownload() ? `https://fonts.gstatic.com/s/e/notoemoji/latest/${key}/512.webp` : null;
+  }
   if (style === "noto") return `https://fonts.gstatic.com/s/e/notoemoji/latest/${codepoints(emoji, "_").replace(/_fe0f/g, "")}/emoji.svg`;
   if (style === "twemoji") return `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${codepoints(emoji, "-")}.svg`;
   return null;
@@ -51,11 +64,14 @@ export function emojiImageUrl(emoji, style = S.settings.emojiStyle) {
 // Devuelve HTML seguro: el texto ya debe venir escapado.
 const TEXT_SYMBOLS = new Set(["©", "®", "™", "‼", "⁉", "↔", "↕", "▪", "▫", "◀", "▶"]);
 
+const nativeSpan = (e) => `<span class="emoji-native">${e}</span>`;
+
 export function emojifyHtml(escaped, style = S.settings.emojiStyle) {
-  if (style === "native") return escaped.replace(EMOJI_RE, (e) => (TEXT_SYMBOLS.has(e) ? e : `<span class="emoji-native">${e}</span>`));
+  if (style === "native") return escaped.replace(EMOJI_RE, (e) => (TEXT_SYMBOLS.has(e) ? e : nativeSpan(e)));
   return escaped.replace(EMOJI_RE, (e) => {
     if (TEXT_SYMBOLS.has(e)) return e;
     const url = emojiImageUrl(e, style);
+    if (!url) return nativeSpan(e);
     const entry = BY_EMOJI.get(e);
     const name = entry ? label(entry) : "";
     return `<img class="emoji" src="${url}" alt="${e}" title="${esc(name)}" draggable="false" data-style="${style}" loading="lazy">`;
@@ -72,7 +88,7 @@ document.addEventListener(
   (e) => {
     const img = e.target;
     if (!(img instanceof HTMLImageElement) || !img.classList.contains("emoji")) return;
-    if (img.dataset.style === "noto-animated") {
+    if (img.dataset.style === "noto-animated" && mayDownload()) {
       img.dataset.style = "noto";
       img.src = emojiImageUrl(img.alt, "noto");
     } else {
@@ -112,6 +128,22 @@ export function closePicker() {
   pickerEl = null;
 }
 
+// En el selector, «Noto animados» muestra quieto lo que no viene con la app (Noto estático de Google solo si se permite
+// descargar; si no, el emoji de Windows). Así abrir el selector no pide cientos de imágenes a Internet.
+function pickerImage(u, style) {
+  let src = null;
+  let dataStyle = style;
+  if (style === "noto-animated") {
+    src = emojiImageUrl(u, "noto-animated");
+    if (src?.startsWith("https:")) {
+      src = emojiImageUrl(u, "noto");
+      dataStyle = "noto";
+    }
+  } else if (style !== "native") src = emojiImageUrl(u, style);
+  if (!src) return h("span", { class: "emoji-native" }, u);
+  return h("img", { class: "emoji", src, alt: u, loading: "lazy", "data-style": dataStyle });
+}
+
 export function openPicker(anchor, onPick) {
   if (pickerEl) return closePicker();
   const skin = Number(localStorage.getItem("evex.skin") || 0);
@@ -129,7 +161,7 @@ export function openPicker(anchor, onPick) {
 
   const cell = (e) => {
     const u = skin && e[6] ? e[6][skin - 1] : e[0];
-    const inner = style === "native" ? h("span", { class: "emoji-native" }, u) : h("img", { class: "emoji", src: emojiImageUrl(u, style === "noto-animated" ? "noto" : style), alt: u, loading: "lazy", "data-style": "noto" });
+    const inner = pickerImage(u, style);
     return h(
       "button",
       {

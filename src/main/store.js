@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS = {
   sidebarBackground: { type: "none", value: "", opacity: 0.25, blur: 8 },
   conversationBackgrounds: {},
   emojiStyle: "noto-animated",
+  downloadEmoji: false, // descargar de Google los animados que no vienen con la app
   emojiSize: 1.25,
   jumboEmoji: true,
   emoticonToEmoji: true,
@@ -69,6 +70,7 @@ export const DEFAULT_SETTINGS = {
     mucHistory: 50,
     linkPreviews: true,
     spellcheck: true,
+    checkUpdates: false, // consultar en GitHub si hay versión nueva (solo avisa)
     spellLanguages: ["es-ES", "en-US"],
     closeToTray: true,
     minimizeToTray: false,

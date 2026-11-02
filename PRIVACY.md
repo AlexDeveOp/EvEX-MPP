@@ -2,7 +2,7 @@
 
 **English** | [Español](#política-de-privacidad)
 
-EvEX-MPP has **no telemetry, analytics, advertising, crash reporting or automatic update checks**. The developer receives no data from the app.
+EvEX-MPP has **no telemetry, analytics, advertising or crash reporting**, and it does not check for updates unless you turn that on. The developer receives no data from the app.
 
 ## What is stored, and where
 
@@ -22,10 +22,11 @@ The app connects to the following, and to nothing else:
 | Connection | When | What the other side can see | How to turn it off |
 |---|---|---|---|
 | **Your XMPP server** (the one you configure in each account) | While the account is connected | What any XMPP client sends: your messages, presence, rooms, contacts and avatar. Contacts can ask your client name, version and operating system (XEP-0092), and see typing notifications and read receipts in private chats. | Disconnect the account. Turn off *Preferences → Behavior → Typing → Let others know when I am typing*. |
-| **Google Fonts** (`fonts.gstatic.com`) | When an emoji is displayed with the default style *Animated Noto (Google)* or *Static Noto (Google)* | Your IP address and which emoji images are loaded | *Preferences → Emoji → Emoji artwork → Native Windows (works offline)* |
+| **Google Fonts** (`fonts.gstatic.com`) | Only if you choose it: with the emoji style *Static Noto (Google)*, or with *Animated Noto* for emoji that don't come with the app when *Preferences → Emoji → Download animated emoji that don't come with the app* is on (off by default). The most used animated emoji are included in the app and never downloaded. | Your IP address and which emoji images are loaded | Turn that option off, or use *Native Windows (works offline)* |
 | **jsDelivr** (`cdn.jsdelivr.net`) | Only with the emoji style *Twemoji* | Your IP address and which emoji images are loaded | Use another emoji style |
 | **Websites linked in messages** and **YouTube thumbnails** (`i.ytimg.com`) | When a message contains a link to an image or a YouTube video and link previews are on (default) | Your IP address. No referrer is sent, so the site does not learn which conversation the link came from. | *Preferences → Messages → Content → Preview images and YouTube videos* |
 | **Google** (Chromium spell-check dictionaries) | Once per language, the first time the spell checker is used | Your IP address and the dictionary language | *Preferences → Behavior → Typing → Spell checker* |
+| **GitHub** (`api.github.com`) | Once a day, only if you turn on *Preferences → Accounts and data → Updates → Notify me when a new version is available* (off by default), or when you press *Check now* | Your IP address and that you use EvEX-MPP (it only reads the latest published version; nothing is downloaded or installed) | Leave that option off |
 | **Your web browser** | Only when you click a link (including the Dotlan map links on fleet pings) | Whatever any website sees | Don't click |
 
 Images that other people send are loaded only through link previews (above) or your XMPP server.
@@ -44,7 +45,7 @@ Any change to this policy is listed in [CHANGELOG.md](CHANGELOG.md). Questions: 
 
 [English](#privacy-policy) | **Español**
 
-EvEX-MPP **no tiene telemetría, analíticas, publicidad, informes de errores ni comprobación automática de actualizaciones**. El desarrollador no recibe ningún dato de la app.
+EvEX-MPP **no tiene telemetría, analíticas, publicidad ni informes de errores**, y no busca actualizaciones salvo que lo actives. El desarrollador no recibe ningún dato de la app.
 
 ## Qué se guarda y dónde
 
@@ -64,10 +65,11 @@ La app se conecta a lo siguiente, y a nada más:
 | Conexión | Cuándo | Qué ve el otro lado | Cómo desactivarla |
 |---|---|---|---|
 | **Tu servidor XMPP** (el que configuras en cada cuenta) | Mientras la cuenta está conectada | Lo mismo que con cualquier cliente XMPP: tus mensajes, presencia, salas, contactos y avatar. Tus contactos pueden preguntar el nombre, la versión y el sistema operativo del cliente (XEP-0092) y ven los avisos de «escribiendo» y de lectura en los chats privados. | Desconecta la cuenta. Desactiva *Preferencias → Comportamiento → Escritura → Avisar de que estoy escribiendo*. |
-| **Google Fonts** (`fonts.gstatic.com`) | Al mostrar un emoji con el estilo por defecto *Noto animados (Google)* o con *Noto estáticos (Google)* | Tu IP y qué imágenes de emoji se cargan | *Preferencias → Emojis → Dibujo de los emojis → Nativos de Windows (sin conexión)* |
+| **Google Fonts** (`fonts.gstatic.com`) | Solo si lo eliges: con el estilo de emoji *Noto estáticos (Google)*, o con *Noto animados* para los emojis que no vienen con la app si activas *Preferencias → Emojis → Descargar de Internet los emojis animados que no vienen con la app* (desactivado por defecto). Los emojis animados más usados vienen con la app y nunca se descargan. | Tu IP y qué imágenes de emoji se cargan | Desactiva esa opción o usa *Nativos de Windows (sin conexión)* |
 | **jsDelivr** (`cdn.jsdelivr.net`) | Solo con el estilo de emoji *Twemoji* | Tu IP y qué imágenes de emoji se cargan | Usa otro estilo de emoji |
 | **Webs enlazadas en los mensajes** y **miniaturas de YouTube** (`i.ytimg.com`) | Cuando un mensaje enlaza una imagen o un vídeo de YouTube y la vista previa está activada (por defecto) | Tu IP. No se envía el *referer*, así que la web no sabe de qué conversación viene el enlace. | *Preferencias → Mensajes → Contenido → Vista previa de imágenes y vídeos de YouTube* |
 | **Google** (diccionarios del corrector de Chromium) | Una vez por idioma, la primera vez que se usa el corrector | Tu IP y el idioma del diccionario | *Preferencias → Comportamiento → Escritura → Corrector ortográfico* |
+| **GitHub** (`api.github.com`) | Una vez al día, solo si activas *Preferencias → Cuentas y datos → Actualizaciones → Avisar cuando haya una versión nueva* (desactivado por defecto), o al pulsar *Comprobar ahora* | Tu IP y que usas EvEX-MPP (solo lee la última versión publicada; no se descarga ni se instala nada) | Deja esa opción desactivada |
 | **Tu navegador** | Solo cuando pulsas un enlace (incluidos los mapas de Dotlan de los pings) | Lo que ve cualquier web | No pulsarlo |
 
 Las imágenes que envían otras personas solo se cargan mediante la vista previa (arriba) o tu servidor XMPP.
