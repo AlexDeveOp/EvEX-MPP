@@ -540,21 +540,15 @@ body.resizing {
   width: 24px;
   height: 24px;
 }
-/* Nada cambia de tamaño al pasar el ratón ni al hacer clic (antes la fila temblaba y se veía el número un instante):
-   el número de personas siempre está y la estrella y el rayo tienen su sitio reservado; solo se funden.
-   Sin pasar el ratón solo se ve el rayo de las salas con autounión. */
-.sb-quick .icon-btn {
-  transition: opacity 0.12s;
-}
+/* Nada cambia de tamaño ni de intensidad al pasar el ratón ni al hacer clic (antes la fila temblaba):
+   - el número de personas siempre está;
+   - la estrella de las favoritas y el rayo de autounión se ven siempre, igual con o sin ratón;
+   - los botones apagados tienen su hueco reservado y solo se ven con el ratón sobre la fila (sin fundido). */
 .sb-quick .icon-btn:not(.on) {
   opacity: 0.45;
 }
-.sb-item:not(:hover) .sb-quick .icon-btn:not(.on.zap) {
-  opacity: 0;
-  pointer-events: none;
-}
-.sb-item:not(:hover) .sb-quick .on.zap {
-  opacity: 0.8;
+.sb-item:not(:hover) .sb-quick .icon-btn:not(.on) {
+  visibility: hidden;
 }
 .sb-group {
   display: flex;
