@@ -28,7 +28,7 @@ The app connects to the following, and to nothing else:
 | **Google** (Chromium spell-check dictionaries) | Once per language, the first time the spell checker is used | Your IP address and the dictionary language | *Preferences → Behavior → Typing → Spell checker* |
 | **GitHub** (`api.github.com`) | Once a day, only if you turn on *Preferences → Accounts and data → Updates → Notify me when a new version is available* (off by default), or when you press *Check now* | Your IP address and that you use EvEX-MPP (it only reads the latest published version; nothing is downloaded or installed) | Leave that option off |
 | **GIPHY** (`api.giphy.com`, `media*.giphy.com`) or **KLIPY** (`api.klipy.com`, `static.klipy.com`) | Only if you choose that GIF search service and enter your own key (*Preferences → Emoji → GIFs*; off by default), when you search in the GIF panel | Your IP address and what you search for; thumbnails load directly from their servers | Set *GIF search* to *None (My GIFs only)* |
-| **The website of a GIF you save** | When you save a GIF to *My GIFs* (right-click → *Save to My GIFs*, or pasting its link), a copy is downloaded once for the thumbnail | Your IP address | Don't save GIFs |
+| **The website of an image you save** | When you save a GIF to *My GIFs* (right-click → *Save to My GIFs*, or pasting its link), or download a background from an Internet address (also when you drag an image from a browser): a copy is downloaded once | Your IP address | Use images from your PC instead |
 | **Your web browser** | Only when you click a link (including the Dotlan map links on fleet pings) | Whatever any website sees | Don't click |
 
 Images that other people send are loaded only through link previews (above) or your XMPP server.
@@ -73,7 +73,7 @@ La app se conecta a lo siguiente, y a nada más:
 | **Google** (diccionarios del corrector de Chromium) | Una vez por idioma, la primera vez que se usa el corrector | Tu IP y el idioma del diccionario | *Preferencias → Comportamiento → Escritura → Corrector ortográfico* |
 | **GitHub** (`api.github.com`) | Una vez al día, solo si activas *Preferencias → Cuentas y datos → Actualizaciones → Avisar cuando haya una versión nueva* (desactivado por defecto), o al pulsar *Comprobar ahora* | Tu IP y que usas EvEX-MPP (solo lee la última versión publicada; no se descarga ni se instala nada) | Deja esa opción desactivada |
 | **GIPHY** (`api.giphy.com`, `media*.giphy.com`) o **KLIPY** (`api.klipy.com`, `static.klipy.com`) | Solo si eliges ese buscador de GIFs y pones tu propia clave (*Preferencias → Emojis → GIFs*; desactivado por defecto), al buscar en el panel de GIFs | Tu IP y lo que buscas; las miniaturas se cargan directamente de sus servidores | Pon *Buscador de GIFs* en *Ninguno (solo Mis GIFs)* |
-| **La web de un GIF que guardas** | Al guardar un GIF en *Mis GIFs* (clic derecho → *Guardar en Mis GIFs*, o pegando su enlace) se descarga una copia una vez, para la miniatura | Tu IP | No guardar GIFs |
+| **La web de una imagen que guardas** | Al guardar un GIF en *Mis GIFs* (clic derecho → *Guardar en Mis GIFs*, o pegando su enlace), o al descargar un fondo desde una dirección de Internet (también al arrastrar una imagen desde el navegador): se descarga una copia una vez | Tu IP | Usar imágenes de tu PC |
 | **Tu navegador** | Solo cuando pulsas un enlace (incluidos los mapas de Dotlan de los pings) | Lo que ve cualquier web | No pulsarlo |
 
 Las imágenes que envían otras personas solo se cargan mediante la vista previa (arriba) o tu servidor XMPP.
