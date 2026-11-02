@@ -13,6 +13,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Optional ping repeat: the ping sound repeats every N seconds (up to a maximum) until you look at the window.
 - *Import Pidgin sounds*: copies the sounds of your installed Pidgin (your custom ones from `prefs.xml` if you set any) and lets you choose which alerts use them. Pidgin's files are never distributed with EvEX-MPP.
 - Five new built-in sounds: Bubble, Radar, Warp jump, Signal lost and Signal restored.
+- **GIFs**: a *GIF* button in the message box. *My GIFs* keeps the GIFs you save (right-click on an image → *Save to My GIFs*, or paste a link) with a local thumbnail, and works without any external service. Optional search in GIPHY or KLIPY with your own free key (off by default), shown as their terms require ("Powered by GIPHY", results unchanged and never stored). GIFs are sent as their link and as an XEP-0066 attachment, so other clients show the image.
 
 ### Changed
 - *Do not disturb* now also lets connection lost/restored sounds through, like fleet pings.

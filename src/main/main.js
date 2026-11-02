@@ -12,6 +12,7 @@ import { scanPidgin, importLogs, scanPidginSounds } from "./pidgin-import.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, closeAllPopups } from "./popups.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
+import { searchGifs, downloadGif, isProviderUrl } from "./gifs.js";
 
 import { t, tk, setLanguage, currentLang } from "./i18n.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -267,6 +268,7 @@ function nativeContextMenu(params) {
   if (params.mediaType === "image" && params.srcURL) {
     items.push({ label: t("Copiar imagen"), click: () => win.webContents.copyImageAt(params.x, params.y) });
     if (/^https?:/.test(params.srcURL)) items.push({ label: t("Abrir imagen en el navegador"), click: () => openExternal(params.srcURL) });
+    if (/^https?:/.test(params.srcURL) && !isProviderUrl(params.srcURL)) items.push({ label: t("Guardar en Mis GIFs"), click: () => send("gif-save", params.srcURL) });
     items.push({ type: "separator" });
   }
   if (params.isEditable) {
@@ -644,6 +646,24 @@ function registerIpc() {
   handle("logs:list", (id) => logs.listConversations(id));
 
   // Sonidos de Pidgin: se buscan en el Pidgin instalado y se copian a la carpeta de la app (no se incluyen con EvEX-MPP).
+  // GIFs: búsqueda con la clave del usuario y copias locales de «Mis GIFs» (solo para la miniatura).
+  handle("gifs:search", ({ query, page }) => {
+    const g = store.get().settings.gifs;
+    return searchGifs({ provider: g.provider, key: g.keys?.[g.provider], query, page, rating: g.rating, lang: currentLang(), fetchImpl: (url, opts) => net.fetch(url, opts) });
+  });
+  handle("gifs:save", async (url) => {
+    const { buffer, ext } = await downloadGif(url, { fetchImpl: (u, opts) => net.fetch(u, opts) });
+    const name = `${crypto.createHash("sha1").update(buffer).digest("hex").slice(0, 20)}.${ext}`;
+    fs.mkdirSync(mediaDir("gifs"), { recursive: true });
+    fs.writeFileSync(mediaDir("gifs", name), buffer);
+    return { url, thumb: `media://evex/gifs/${name}` };
+  });
+  handle("gifs:remove", (thumb) => {
+    const m = String(thumb || "").match(/^media:\/\/evex\/gifs\/([0-9a-f]{20}\.[a-z]{3,4})$/);
+    if (m) fs.rmSync(mediaDir("gifs", m[1]), { force: true });
+    return true;
+  });
+
   handle("sounds:pidginScan", () => {
     const r = scanPidginSounds();
     return { found: r.found, sounds: Object.fromEntries(Object.entries(r.sounds).map(([k, v]) => [k, { name: path.basename(v.file), custom: v.custom }])) };

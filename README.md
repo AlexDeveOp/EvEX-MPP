@@ -61,6 +61,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Any Windows font, UI scale and density.
 - 4 message styles: modern, bubbles, IRC and Pidgin.
 - Backgrounds (image, GIF or gradient) for the window, the sidebar or each conversation.
+- **GIFs**: a *GIF* button next to the emoji one. *My GIFs* keeps the GIFs you save (right-click → *Save to My GIFs*) and works without any service; optional search in GIPHY or KLIPY with your own free key.
 - Animated Google emoji (Noto), Twemoji or native emoji, plus custom emoji. The most used animated emoji come with the app and work offline.
 
 **Desktop**

@@ -8,7 +8,8 @@ The app connects only to:
 - Google Fonts (fonts.gstatic.com), only if you choose the "Static Noto" emoji style or turn on "Download animated emoji that don't come with the app" (off by default). The most used animated emoji come with the app;
 - websites linked in messages and YouTube (i.ytimg.com) for image and video previews. Turn off: Preferences > Messages > Content > Preview images and YouTube videos;
 - Google, once per language, to download spell-check dictionaries. Turn off: Preferences > Behavior > Typing > Spell checker;
-- GitHub (api.github.com), once a day, only if you turn on "Notify me when a new version is available" (off by default).
+- GitHub (api.github.com), once a day, only if you turn on "Notify me when a new version is available" (off by default);
+- GIPHY or KLIPY, only if you choose a GIF search service and enter your own key (off by default).
 
 Full policy: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/PRIVACY.md
 

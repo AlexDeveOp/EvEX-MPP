@@ -122,6 +122,21 @@ test("responde a la consulta de versión (XEP-0092) con la versión de la app", 
   assert.equal(q?.getChildText("version"), "9.8.7");
 });
 
+test("un GIF se envía con la URL en el cuerpo y como adjunto XEP-0066", async (t) => {
+  const { acc, waitFor } = account(t);
+  await acc.connect("test");
+  await waitFor((e) => e.type === "status" && e.state === "online");
+  const sent = [];
+  const origSend = acc.send.bind(acc);
+  acc.send = (st) => (st.name === "message" && sent.push(st), origSend(st));
+  const url = "https://ejemplo.com/o7.gif";
+  await acc.sendMessage({ to: "alice@test.local", body: url, oob: url, type: "chat" });
+  await acc.sendMessage({ to: "alice@test.local", body: "javascript:alert(1)", oob: "javascript:alert(1)", type: "chat" });
+  assert.equal(sent[0].getChildText("body"), url);
+  assert.equal(sent[0].getChild("x", "jabber:x:oob")?.getChildText("url"), url);
+  assert.equal(sent[1].getChild("x", "jabber:x:oob"), undefined, "solo se adjuntan URL http(s)");
+});
+
 test("una sala con contraseña rechaza la entrada sin ella", async (t) => {
   const { acc, waitFor } = account(t);
   await acc.connect("test");

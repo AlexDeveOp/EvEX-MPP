@@ -4,6 +4,7 @@ import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, d
 import { formatBody, previewHtml, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes } from "./format.js";
 import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
 import { playSound } from "./sounds.js";
+import { openGifPicker } from "./gifs.js";
 import { activate, closeConv, openConv, convTitle, markRead, loadHistory, systemMessage, mentionWords, moveTab, notifyMode, getConv } from "./convs.js";
 import { backgroundCss } from "./themes.js";
 import { pingCard, pingMatches, pingGroups } from "./pings.js";
@@ -719,8 +720,19 @@ function buildComposer(c, p) {
   const suggest = h("div", { class: "suggest hidden" });
   const editBar = h("div", { class: "edit-bar hidden" });
   const emojiBtn = iconButton("smile-plus", t("Emojis"), () => openPicker(emojiBtn, (e) => insertAtCursor(ta, e)), "emoji-toggle");
+  // GIF: se envía al momento, con la URL como cuerpo y como adjunto (XEP-0066).
+  const gifBtn = h("button", { class: "icon-btn gif-toggle", type: "button", title: t("GIFs") }, "GIF");
+  gifBtn.onclick = () =>
+    openGifPicker(gifBtn, async (url) => {
+      try {
+        await api("msg:send", c.accountId, { to: c.conv, body: url, oob: url, type: c.type === "groupchat" ? "groupchat" : "chat" });
+        playSound("sent");
+      } catch (e) {
+        toast(t("No se pudo enviar: {message}", { message: e.message }), { kind: "error" });
+      }
+    });
   const sendBtn = iconButton("send", t("Enviar (Intro)"), () => submit(), "send-btn");
-  const el = h("div", { class: "composer" }, editBar, suggest, h("div", { class: "composer-box" }, emojiBtn, ta, sendBtn));
+  const el = h("div", { class: "composer" }, editBar, suggest, h("div", { class: "composer-box" }, emojiBtn, gifBtn, ta, sendBtn));
 
   let editing = null;
   let typingState = "active";

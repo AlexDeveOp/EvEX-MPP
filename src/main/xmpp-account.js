@@ -575,12 +575,14 @@ export class XmppAccount extends EventEmitter {
 
   // ---------- envío ----------
 
-  async sendMessage({ to, body, type, replaces }) {
+  async sendMessage({ to, body, type, replaces, oob }) {
     const id = crypto.randomUUID();
     const isRoom = type === "groupchat";
     const m = xml("message", { to, type: isRoom ? "groupchat" : "chat", id }, xml("body", {}, body), xml("active", NS.CHATSTATES));
     if (!isRoom) m.append(xml("request", NS.RECEIPTS));
     if (replaces) m.append(xml("replace", { xmlns: NS.CORRECT, id: replaces }));
+    // Adjunto (XEP-0066): los clientes que lo entienden muestran la imagen; el cuerpo lleva la misma URL para los demás.
+    if (oob && /^https?:\/\//.test(oob)) m.append(xml("x", { xmlns: NS.OOB }, xml("url", {}, oob)));
     await this.send(m);
     if (!isRoom) {
       this.event("message", {
@@ -593,6 +595,7 @@ export class XmppAccount extends EventEmitter {
         ts: Date.now(),
         outgoing: true,
         replaces: replaces || "",
+        oob: oob || "",
         mucPm: this.rooms.has(bare(to)),
       });
     }

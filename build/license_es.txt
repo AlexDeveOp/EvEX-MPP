@@ -8,7 +8,8 @@ La app solo se conecta a:
 - Google Fonts (fonts.gstatic.com), solo si eliges el estilo de emoji «Noto estáticos» o activas «Descargar de Internet los emojis animados que no vienen con la app» (desactivado por defecto). Los emojis animados más usados vienen con la app;
 - las webs enlazadas en los mensajes y YouTube (i.ytimg.com) para las vistas previas de imágenes y vídeos. Desactivar: Preferencias > Mensajes > Contenido > Vista previa de imágenes y vídeos de YouTube;
 - Google, una vez por idioma, para descargar los diccionarios del corrector. Desactivar: Preferencias > Comportamiento > Escritura > Corrector ortográfico;
-- GitHub (api.github.com), una vez al día, solo si activas «Avisar cuando haya una versión nueva» (desactivado por defecto).
+- GitHub (api.github.com), una vez al día, solo si activas «Avisar cuando haya una versión nueva» (desactivado por defecto);
+- GIPHY o KLIPY, solo si eliges un buscador de GIFs y pones tu propia clave (desactivado por defecto).
 
 Política completa: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/PRIVACY.md#política-de-privacidad
 

@@ -36,6 +36,8 @@ export const DEFAULT_SETTINGS = {
   jumboEmoji: true,
   emoticonToEmoji: true,
   customEmoji: [],
+  // GIFs: colección propia y buscador opcional (cada usuario pone su propia clave).
+  gifs: { saved: [], provider: "none", keys: { giphy: "", klipy: "" }, rating: "pg-13" },
   notifications: {
     enabled: true,
     privateMessages: true,
