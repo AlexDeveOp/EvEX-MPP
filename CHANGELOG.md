@@ -13,6 +13,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - ESLint (`npm run lint`).
 - CI runs syntax check, ESLint, tests, translation check and `npm audit` on Windows and Linux; releases run them too before building.
 - `CONTRIBUTING.md`.
+- OpenSSF Best Practices badge (passing level) in the README.
 - `main` and release tags are protected: no deletion or force-push, and commits on `main` must be signed.
 
 ### Changed
