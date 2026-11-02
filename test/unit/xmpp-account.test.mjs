@@ -79,6 +79,29 @@ test("entra en una sala, recibe ocupantes e historial y envía mensajes", async 
   assert.equal(echo.nick, "probador");
 });
 
+// Regresión: entrar en una sala nada más conectar (como la autounión) hacía que onOnline volviera a entrar,
+// lo que vaciaba la lista de ocupantes y dejaba la sala mostrando solo al propio usuario.
+test("entrar en una sala al conectar no la vuelve a unir ni pierde los ocupantes", async (t) => {
+  const { acc, waitFor } = account(t);
+  const sent = [];
+  acc.on("event", (e) => {
+    if (e.type === "status" && e.state === "online") acc.joinRoom("general@conference.test.local", "probador");
+  });
+  const origSend = acc.send.bind(acc);
+  acc.send = (st) => {
+    // Solo cuentan las entradas en la sala (llevan <x xmlns=".../muc">), no las actualizaciones de estado.
+    if (st.name === "presence" && st.attrs.to?.startsWith("general@") && st.getChild("x", "http://jabber.org/protocol/muc")) sent.push(st.attrs.to);
+    return origSend(st);
+  };
+  await acc.connect("test");
+  await waitFor((e) => e.type === "room-joined");
+  // Margen para que onOnline termine (roster, presencia y reentrada en salas).
+  await new Promise((r) => setTimeout(r, 800));
+  assert.equal(sent.length, 1, `entradas enviadas a la sala: ${sent.join(", ")}`);
+  const nicks = [...acc.rooms.get("general@conference.test.local").occupants.keys()].sort();
+  assert.deepEqual(nicks, ["piloto_dos", "piloto_tres", "piloto_uno", "probador"]);
+});
+
 test("una sala con contraseña rechaza la entrada sin ella", async (t) => {
   const { acc, waitFor } = account(t);
   await acc.connect("test");

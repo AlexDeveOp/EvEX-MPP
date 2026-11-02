@@ -247,9 +247,10 @@ export class XmppAccount extends EventEmitter {
     this.discoverServer().catch(() => {});
     this.loadOwnAvatar().catch(() => {});
 
-    // Volver a entrar en las salas que estaban abiertas (reconexión)
+    // Volver a entrar en las salas que estaban abiertas (reconexión). Las que ya se están uniendo en esta sesión
+    // (p. ej. la autounión, lanzada al pasar a «online») se saltan: unirse otra vez vaciaría sus ocupantes.
     for (const [roomJid, r] of this.rooms) {
-      if (r.wanted) this.joinRoom(roomJid, r.nick, r.password, this.historyOptions?.(roomJid)).catch(() => {});
+      if (r.wanted && !r.joined && !r.joining) this.joinRoom(roomJid, r.nick, r.password, this.historyOptions?.(roomJid)).catch(() => {});
     }
     if (this.acc.syncBookmarks) this.fetchBookmarks().catch(() => {});
 

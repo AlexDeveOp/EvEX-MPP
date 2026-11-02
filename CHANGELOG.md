@@ -21,6 +21,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - `SECURITY.md` links directly to the private report form and describes the disclosure timeline.
 
 ### Fixed
+- Auto-join rooms were joined twice right after connecting; the second join could empty the occupant list (only you were shown). Found by the new integration tests.
 - Pidgin HTML logs: the last message of each file no longer gets an extra empty line.
 - Fleet pings: a field on the same line as a footer with invisible characters is no longer lost.
 - The fake XMPP server (`test/mock-xmpp.mjs`) closes the stream like a real server, and its port can be set with `MOCK_PORT`.
