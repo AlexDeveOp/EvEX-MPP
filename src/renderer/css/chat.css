@@ -11,6 +11,8 @@
   display: none;
   flex-direction: column;
   isolation: isolate;
+  /* El fondo (.conv-bg) desborda a propósito por el desenfoque: se recorta dentro de la conversación. */
+  overflow: clip;
 }
 .conv-pane.active {
   display: flex;

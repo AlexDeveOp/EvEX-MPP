@@ -20,6 +20,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Several alerts of the same kind arriving at once ring only once.
 
 ### Fixed
+- The whole window could shift up by about 30 px, hiding the title bar: the window could no longer be moved and Preferences could not be opened. The blurred background layers were slightly taller than the window, which made the page scrollable ([#3](https://github.com/AlexDeveOp/EvEX-MPP/issues/3)).
 - The room invitation notice was not translated.
 
 ## [0.5.0] - 2026-11-02

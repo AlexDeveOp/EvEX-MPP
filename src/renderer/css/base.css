@@ -46,7 +46,9 @@ html,
 body {
   margin: 0;
   height: 100%;
-  overflow: hidden;
+  /* «clip» y no «hidden»: con hidden, un foco o un scrollIntoView pueden desplazar la página y esconder la barra
+     superior (con ella, mover la ventana y abrir Preferencias). */
+  overflow: clip;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
@@ -138,6 +140,7 @@ kbd {
 #app {
   position: relative;
   height: 100vh;
+  overflow: clip;
   display: flex;
   flex-direction: column;
   isolation: isolate;
@@ -232,6 +235,8 @@ kbd {
   flex-direction: column;
   background: var(--bg2);
   border-right: 1px solid var(--border);
+  /* El fondo (#sidebar-bg) es más grande para que el desenfoque no deje bordes: se recorta aquí. */
+  overflow: clip;
   overflow: hidden;
   z-index: 0;
 }
