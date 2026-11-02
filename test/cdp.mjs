@@ -1,10 +1,10 @@
-﻿// Driver mínimo por Chrome DevTools Protocol para automatizar la interfaz.
+// Driver mínimo por Chrome DevTools Protocol para automatizar la interfaz.
 // Arranca la app con --remote-debugging-port=9333 y luego: node test/cdp.mjs 9333 pasos.json
 // Cada paso: {eval: "js"} | {shot: "ruta.png"} | {wait: ms}
 import fs from "node:fs";
 
 const [port, stepsFile] = process.argv.slice(2);
-const steps = JSON.parse(fs.readFileSync(stepsFile, "utf8").replace(/^﻿/, ""));
+const steps = JSON.parse(fs.readFileSync(stepsFile, "utf8").trimStart());
 let targets = [];
 for (let i = 0; i < 40; i++) {
   try {

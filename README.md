@@ -102,6 +102,8 @@ npm start          # runs the app (scripts/start.mjs clears ELECTRON_RUN_AS_NODE
 npm run dev        # with DevTools
 npm run dist       # installer + portable in dist/
 npm run assets     # regenerates icons (Lucide) and emoji data (emojibase)
+npm test           # unit tests and XMPP integration tests (against the fake server)
+npm run lint       # ESLint
 npm run check      # syntax check of every JavaScript file
 npm run i18n       # checks that every UI string has a translation
 npm run probe      # checks a server's TLS and SASL without logging in
@@ -118,7 +120,10 @@ src/renderer/    Interface in plain JS and CSS, no build step (ES modules)
 src/renderer/locales/  Translations (the source strings in the code are Spanish)
 scripts/         Launcher, icon and asset generation, translation check, connection probe
 test/            Fake XMPP server, DevTools driver and desktop screenshot
+test/unit/       Automated tests (node:test), run by CI on Windows and Linux
 ```
+
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Translations
 

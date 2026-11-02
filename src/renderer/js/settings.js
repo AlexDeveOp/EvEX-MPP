@@ -1,5 +1,5 @@
 // Ventana de preferencias y editor de fondos.
-import { S, api, emit, saveSettings, updateSettings } from "./state.js";
+import { S, api, emit, saveSettings } from "./state.js";
 import { h, icon, iconButton, modal, field, toggle, select, range, clear, toast, debounce } from "./dom.js";
 
 const append = (el, ...children) => el.append(...children.filter(Boolean));

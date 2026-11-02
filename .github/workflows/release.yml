@@ -30,6 +30,12 @@ jobs:
       - name: Comprobar sintaxis
         run: npm run check
 
+      - name: Revisar el código (ESLint)
+        run: npm run lint
+
+      - name: Tests (incluye integración con el servidor XMPP simulado)
+        run: npm test
+
       - name: Comprobar traducciones
         run: npm run i18n
 

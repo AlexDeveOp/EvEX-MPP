@@ -146,13 +146,15 @@ export function parseLogFile(file, { selfNames = [], isRoom = false } = {}) {
       if (!after) continue;
       line = after;
     }
-    if (/^\s*<\/?(body|html)>\s*$/i.test(line) || !line.trim()) continue;
+    // Pidgin cierra el fichero con "</body></html>" en una sola línea.
+    if (/^\s*(<\/?(body|html)>\s*)+$/i.test(line) || !line.trim()) continue;
     const m = line.match(TIME_RE);
     if (!m) {
-      if (out.length) out[out.length - 1].body += "\n" + (html ? decodeHtml(line) : line);
+      const extra = html ? decodeHtml(line) : line;
+      if (out.length && extra.trim()) out[out.length - 1].body += "\n" + extra;
       continue;
     }
-    let [, d1, d2, d3, hh, mm, ss, ampm] = m;
+    const [, d1, d2, d3, hh, mm, ss, ampm] = m;
     let h = +hh;
     if (ampm) {
       const pm = ampm.toLowerCase() === "p";

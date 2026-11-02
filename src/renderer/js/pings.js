@@ -20,10 +20,12 @@ export function parsePing(body) {
     if (!line) continue;
     // El pie "~~~ This was a … broadcast ~~~" puede venir en su propia línea o al final de otra.
     const inline = line.match(FOOTER_RE);
-    const f = inline || line.replace(INVISIBLE, "").match(FOOTER_RE);
+    const clean = line.replace(INVISIBLE, "");
+    const f = inline || clean.match(FOOTER_RE);
     if (f) {
       footer = { from: f[1], to: f[2], at: f[3] };
-      line = inline ? line.replace(inline[0], "").trim() : "";
+      // Si el pie solo se reconoce sin los caracteres invisibles, lo que va delante se toma de la versión limpia.
+      line = inline ? line.replace(inline[0], "").trim() : clean.replace(f[0], "").trim();
       if (!line) continue;
     }
     const m = line.match(FIELD_RE);

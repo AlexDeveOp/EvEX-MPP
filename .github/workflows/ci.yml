@@ -1,4 +1,4 @@
-# Comprueba cada cambio subido a main y cada pull request: sintaxis, traducciones y vulnerabilidades.
+# Comprueba cada cambio subido a main y cada pull request: sintaxis, ESLint, tests, traducciones y vulnerabilidades.
 name: CI
 
 on:
@@ -11,7 +11,12 @@ permissions:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    # La app es para Windows; Linux comprueba que el código no depende de rutas ni saltos de línea de Windows.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -25,6 +30,12 @@ jobs:
 
       - name: Comprobar sintaxis
         run: npm run check
+
+      - name: Revisar el código (ESLint)
+        run: npm run lint
+
+      - name: Tests (incluye integración con el servidor XMPP simulado)
+        run: npm test
 
       - name: Comprobar traducciones
         run: npm run i18n

@@ -13,7 +13,9 @@
     "dist:dir": "electron-builder --win dir --publish never",
     "mock": "node test/mock-xmpp.mjs",
     "i18n": "node scripts/i18n-check.mjs",
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\"",
+    "lint": "eslint ."
   },
   "author": "AlexDeveOp",
   "license": "MIT",
@@ -28,9 +30,12 @@
     "ltx": "^3.1.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "electron": "^45.2.1",
     "electron-builder": "^26.18.0",
     "emojibase-data": "^18.0.0",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
     "lucide-static": "^1.66.0"
   },
   "productName": "EvEX-MPP",

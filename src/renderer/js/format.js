@@ -20,7 +20,7 @@ function plainToHtml(text, { mentionRe, custom }) {
   text = replaceShortcodes(text);
   const pieces = [];
   // Emojis personalizados :nombre:
-  text = text.replace(/:([a-z0-9_+\-]{1,40}):/gi, (m, name) => {
+  text = text.replace(/:([a-z0-9_+-]{1,40}):/gi, (m, name) => {
     const url = custom.get(name.toLowerCase());
     if (!url) return m;
     pieces.push(`<img class="emoji custom" src="${esc(url)}" alt=":${esc(name)}:" title=":${esc(name)}:" draggable="false">`);
@@ -34,6 +34,7 @@ function plainToHtml(text, { mentionRe, custom }) {
   if (mentionRe) html = html.replace(mentionRe, '<mark class="mention">$1</mark>');
   html = emojifyHtml(html);
   html = html.replace(/\n/g, "<br>");
+  // eslint-disable-next-line no-control-regex -- \u0000 marca dónde va cada emoji personalizado; el texto escapado no puede contenerlo.
   return html.replace(/\u0000(\d+)\u0000/g, (_, i) => pieces[i]);
 }
 

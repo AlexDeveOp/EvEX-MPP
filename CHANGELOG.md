@@ -9,10 +9,20 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ### Added
 - Each release includes its provenance attestation as `EvEX-MPP-vX.Y.Z.intoto.jsonl` (also added to 0.4.1).
+- Automated tests (`npm test`, Node's built-in test runner): ping parsing, message formatting and HTML escaping, translations, local history, Pidgin log import, and XMPP integration tests against the fake server (login, wrong password, required TLS, rooms, password-protected rooms).
+- ESLint (`npm run lint`).
+- CI runs syntax check, ESLint, tests, translation check and `npm audit` on Windows and Linux; releases run them too before building.
+- `CONTRIBUTING.md`.
+- `main` and release tags are protected: no deletion or force-push, and commits on `main` must be signed.
 
 ### Changed
 - CodeQL runs from its own workflow (`codeql.yml`, security-extended queries for JavaScript and GitHub Actions) instead of GitHub's default setup.
 - `SECURITY.md` links directly to the private report form and describes the disclosure timeline.
+
+### Fixed
+- Pidgin HTML logs: the last message of each file no longer gets an extra empty line.
+- Fleet pings: a field on the same line as a footer with invisible characters is no longer lost.
+- The fake XMPP server (`test/mock-xmpp.mjs`) closes the stream like a real server, and its port can be set with `MOCK_PORT`.
 
 ### Security
 - Fixed the issues reported by CodeQL: history files are read through a single file handle, media files are copied without a check-then-write race, and the Pidgin log importer strips HTML tags until none are left (imported text was already escaped when shown).

@@ -759,7 +759,7 @@ function buildComposer(c, p) {
 
   function updateSuggestions() {
     const before = ta.value.slice(0, ta.selectionStart);
-    const m = before.match(/(?:^|\s):([a-z0-9_+\-]{2,})$/i);
+    const m = before.match(/(?:^|\s):([a-z0-9_+-]{2,})$/i);
     suggestions = m ? shortcodeSuggestions(m[1]) : [];
     selIndex = 0;
     renderSuggest();
@@ -784,7 +784,7 @@ function buildComposer(c, p) {
     const s = suggestions[i];
     if (!s) return;
     const pos = ta.selectionStart;
-    const before = ta.value.slice(0, pos).replace(/:([a-z0-9_+\-]{2,})$/i, s.custom ? `:${s.code}: ` : `${s.emoji} `);
+    const before = ta.value.slice(0, pos).replace(/:([a-z0-9_+-]{2,})$/i, s.custom ? `:${s.code}: ` : `${s.emoji} `);
     ta.value = before + ta.value.slice(pos);
     ta.selectionStart = ta.selectionEnd = before.length;
     suggestions = [];

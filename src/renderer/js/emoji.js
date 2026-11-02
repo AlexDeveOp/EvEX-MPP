@@ -32,7 +32,7 @@ export function replaceEmoticons(text) {
 }
 
 export function replaceShortcodes(text) {
-  return text.replace(/:([a-z0-9_+\-]{1,40}):/gi, (m, name) => SHORTCODES.get(name.toLowerCase()) || m);
+  return text.replace(/:([a-z0-9_+-]{1,40}):/gi, (m, name) => SHORTCODES.get(name.toLowerCase()) || m);
 }
 
 function codepoints(emoji, sep, keepFe0f) {

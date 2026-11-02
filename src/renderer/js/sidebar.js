@@ -1,5 +1,5 @@
 // Barra lateral: cuentas y estado, pings, salas (favoritas / abiertas) y contactos.
-import { S, api, on, account, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
+import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
 import { h, icon, iconButton, $, clear, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle } from "./dom.js";
 import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
 import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";

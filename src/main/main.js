@@ -1,5 +1,5 @@
 // Proceso principal de EvEX-MPP: ventanas, bandeja, protocolos internos, IPC y conexiones XMPP.
-import { app, BrowserWindow, ipcMain, protocol, net, shell, dialog, Tray, Menu, nativeImage, Notification, powerMonitor, session, clipboard, safeStorage } from "electron";
+import { app, BrowserWindow, ipcMain, protocol, net, shell, dialog, Tray, Menu, nativeImage, Notification, powerMonitor, session, clipboard } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";

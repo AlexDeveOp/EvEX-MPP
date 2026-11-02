@@ -1,11 +1,12 @@
 // Servidor XMPP simulado y mínimo para probar EvEX-MPP sin una cuenta real (sin TLS, contraseña "test").
-// Uso: node test/mock-xmpp.mjs  → cuenta usuario@test.local, servidor 127.0.0.1:5299, seguridad «TLS si está disponible».
+// Uso: node test/mock-xmpp.mjs  → cuenta usuario@test.local, servidor 127.0.0.1:5299 (o MOCK_PORT), seguridad «TLS si está disponible».
 // Ofrece roster, salas MUC (general, operaciones, entrenamiento y "secret" con contraseña "pw"), historial, marcadores
 // y un ping de pingbot@test.local en cada conexión (añade «pingbot» a los remitentes de pings).
 import net from "node:net";
 import Parser from "@xmpp/xml/lib/Parser.js";
 import xml from "@xmpp/xml";
 
+const PORT = Number(process.env.MOCK_PORT) || 5299;
 const DOMAIN = "test.local";
 const CONF = `conference.${DOMAIN}`;
 const ROOMS = {
@@ -37,6 +38,11 @@ net
       });
       parser.on("element", onElement);
       parser.on("error", (e) => log("parse error", e.message));
+      // El cliente cierra la sesión con </stream:stream>: se responde igual y se cierra, como un servidor real.
+      parser.on("end", () => {
+        send("</stream:stream>");
+        sock.end();
+      });
     };
     reset();
     sock.on("data", (d) => {
@@ -201,4 +207,4 @@ net
       }
     }
   })
-  .listen(5299, "127.0.0.1", () => log("mock XMPP en 127.0.0.1:5299"));
+  .listen(PORT, "127.0.0.1", () => log(`mock XMPP en 127.0.0.1:${PORT}`));

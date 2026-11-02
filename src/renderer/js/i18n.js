@@ -30,7 +30,7 @@ function cachedPref() {
   }
 }
 
-let lang = resolveLang(cachedPref());
+const lang = resolveLang(cachedPref());
 document.documentElement.lang = lang;
 
 export const currentLang = () => lang;

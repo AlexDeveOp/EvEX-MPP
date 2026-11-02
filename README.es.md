@@ -102,6 +102,8 @@ npm start          # lanza la app (scripts/start.mjs quita ELECTRON_RUN_AS_NODE,
 npm run dev        # con DevTools
 npm run dist       # instalador + portable en dist/
 npm run assets     # regenera iconos (Lucide) y datos de emojis (emojibase)
+npm test           # tests unitarios y de integración XMPP (contra el servidor simulado)
+npm run lint       # ESLint
 npm run check      # comprueba la sintaxis de todos los ficheros JavaScript
 npm run i18n       # comprueba que todos los textos tienen traducción
 npm run probe      # comprueba TLS y SASL de un servidor sin autenticarse
@@ -118,7 +120,10 @@ src/renderer/    Interfaz en JS y CSS sin compilación (módulos ES)
 src/renderer/locales/  Traducciones (el texto original del código está en español)
 scripts/         Arranque, generación de iconos y recursos, comprobación de traducciones, prueba de conexión
 test/            Servidor XMPP simulado, driver de DevTools y captura de escritorio
+test/unit/       Tests automáticos (node:test); la CI los ejecuta en Windows y Linux
 ```
+
+Las contribuciones son bienvenidas: consulta [CONTRIBUTING.md](CONTRIBUTING.md) (en inglés; también se aceptan issues y PR en español).
 
 ### Traducciones
 

@@ -195,7 +195,7 @@ export class XmppAccount extends EventEmitter {
         await xmpp.stop().catch(() => {});
         this.setState("error", this.describeError(err));
       }
-      throw new Error(this.describeError(err));
+      throw new Error(this.describeError(err), { cause: err });
     }
   }
 

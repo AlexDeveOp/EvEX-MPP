@@ -104,7 +104,7 @@ export function nickColor(nick) {
 }
 
 export function initials(name) {
-  const parts = String(name || "?").replace(/[_.\-]+/g, " ").trim().split(/\s+/);
+  const parts = String(name || "?").replace(/[_.-]+/g, " ").trim().split(/\s+/);
   return ((parts[0]?.[0] || "?") + (parts[1]?.[0] || "")).toUpperCase();
 }
 
