@@ -1,14 +1,16 @@
 // Panel lateral derecho: participantes de la sala activa, agrupados por rol.
 import { S, api, on, roomState } from "./state.js";
-import { h, icon, $, clear, showMenu, toast, prompt, rafThrottle } from "./dom.js";
+import { h, icon, $, clear, showMenu, toast, prompt, rafThrottle, keepHover } from "./dom.js";
 import { openConv } from "./convs.js";
 import { avatarEl } from "./chat.js";
 import { SHOW_LABEL } from "./state.js";
 
 import { t } from "./i18n.js";
 let filter = "";
+let reapplyHover = null;
 
 export function initOccupants() {
+  reapplyHover = keepHover($("#occ-list"), ".occ-item[data-key]");
   const render = rafThrottle(renderOccupants);
   for (const evt of ["active", "occupants", "room", "settings", "avatar"]) on(evt, render);
   $("#occ-filter").addEventListener("input", (e) => {
@@ -25,7 +27,13 @@ const ROLE_GROUPS = [
 ];
 const AFF_ICON = { owner: "crown", admin: "shield", member: null };
 
+// Tras repintar, la fila bajo el ratón sigue señalada (la lista cambia cada vez que alguien entra o sale).
 function renderOccupants() {
+  drawOccupants();
+  reapplyHover?.();
+}
+
+function drawOccupants() {
   const c = S.active && S.convs.get(S.active);
   const panel = $("#occupants");
   const list = $("#occ-list");
@@ -67,6 +75,7 @@ function occupantItem(c, r, o) {
   return h(
     "div",
     {
+      "data-key": o.nick,
       class: `occ-item ${o.show || "online"} ${o.self ? "self" : ""}`,
       title: t("{nick}{x}\n{x2}{x3}\nRol: {role} · Afiliación: {affiliation}", { nick: o.nick, x: o.jid ? `\n${o.jid}` : "", x2: SHOW_LABEL[o.show || "online"], x3: o.status ? ` — ${o.status}` : "", role: o.role, affiliation: o.affiliation }),
       onclick: () => mention(o.nick),

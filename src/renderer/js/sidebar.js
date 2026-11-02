@@ -1,6 +1,6 @@
 // Barra lateral: cuentas y estado, pings, salas (favoritas / abiertas) y contactos.
 import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
-import { h, icon, iconButton, $, clear, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle } from "./dom.js";
+import { h, icon, iconButton, $, clear, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle, keepHover } from "./dom.js";
 import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
 import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
@@ -11,8 +11,10 @@ import { openSearch } from "./search.js";
 import { t } from "./i18n.js";
 const collapsed = new Set(JSON.parse(localStorage.getItem("evex.collapsed") || "[]"));
 let filter = "";
+let reapplyHover = null;
 
 export function initSidebar() {
+  reapplyHover = keepHover($("#sidebar-content"), ".sb-item[data-key]");
   const render = rafThrottle(renderSidebar);
   for (const evt of ["sidebar", "accounts", "roster", "presence", "room", "conn", "settings", "avatar", "tabs"]) on(evt, render);
   const input = $("#sb-filter");
@@ -73,7 +75,7 @@ function renderSidebar() {
   root.append(
     h(
       "div",
-      { class: `sb-item pings ${S.active === PINGS_KEY ? "active" : ""} ${pc.unread ? "unread" : ""}`, onclick: () => openConv(null, "*", "pings") },
+      { class: `sb-item pings ${S.active === PINGS_KEY ? "active" : ""} ${pc.unread ? "unread" : ""}`, "data-key": PINGS_KEY, onclick: () => openConv(null, "*", "pings") },
       icon("siren", "sb-icon"),
       h("span", { class: "sb-name" }, t("Pings de flota")),
       pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,
@@ -90,6 +92,7 @@ function renderSidebar() {
     root.append(h("div", { class: "empty-state small" }, icon("user-plus"), h("p", {}, t("No hay cuentas configuradas.")), h("button", { class: "btn primary", onclick: () => openAccounts() }, t("Añadir cuenta"))));
   }
   root.scrollTop = scroll;
+  reapplyHover?.();
 }
 
 // ---------- cuentas ----------
@@ -204,6 +207,7 @@ function roomItem(acc, room) {
   return h(
     "div",
     {
+      "data-key": key,
       class: `sb-item room ${S.active === key ? "active" : ""} ${r.joined ? "joined" : r.joining ? "joining" : "parted"} ${c?.unread ? "unread" : ""} ${dim ? "quiet-unread" : ""}`,
       title: `${room.jid}${r.subject ? `\n${r.subject}` : ""}`,
       onclick: () => openConv(acc.id, room.jid, "groupchat"),
@@ -351,6 +355,7 @@ function contactItem(acc, c, p) {
   return h(
     "div",
     {
+      "data-key": key,
       class: `sb-item contact ${p.show} ${S.active === key ? "active" : ""} ${conv?.unread ? "unread" : ""}`,
       title: `${c.jid}${p.status ? `\n${p.status}` : ""}`,
       onclick: () => openConv(acc.id, c.jid, "chat"),

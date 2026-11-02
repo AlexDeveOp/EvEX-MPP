@@ -449,7 +449,9 @@ body.resizing {
   color: var(--text2);
   user-select: none;
 }
-.sb-item:hover {
+/* .is-hover: la fila bajo el ratón sigue señalada aunque la lista se repinte (keepHover en dom.js). */
+.sb-item:hover,
+.sb-item.is-hover {
   background: var(--hover);
   color: var(--text);
 }
@@ -547,7 +549,7 @@ body.resizing {
 .sb-quick .icon-btn:not(.on) {
   opacity: 0.45;
 }
-.sb-item:not(:hover) .sb-quick .icon-btn:not(.on) {
+.sb-item:not(:hover):not(.is-hover) .sb-quick .icon-btn:not(.on) {
   visibility: hidden;
 }
 .sb-group {
@@ -806,7 +808,8 @@ body.resizing {
   user-select: none;
   min-height: 30px;
 }
-.occ-item:hover {
+.occ-item:hover,
+.occ-item.is-hover {
   background: var(--hover);
 }
 .occ-item.away .occ-nick,

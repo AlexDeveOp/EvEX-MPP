@@ -270,6 +270,30 @@ export function debounce(fn, ms) {
   };
 }
 
+// Mantiene la fila señalada al repintar una lista. Las filas nuevas no tienen :hover hasta que se mueve el ratón, y en
+// listas que se repintan a menudo (presencias, número de personas) el color parpadeaba. Cada fila lleva data-key; la
+// fila con la misma clave recibe .is-hover en cuanto se pinta. Devuelve la función que hay que llamar tras repintar.
+export function keepHover(root, selector) {
+  let key = null;
+  const apply = () => {
+    for (const el of root.querySelectorAll(".is-hover")) el.classList.remove("is-hover");
+    if (key) for (const el of root.querySelectorAll(selector)) if (el.dataset.key === key) el.classList.add("is-hover");
+  };
+  root.addEventListener("mouseover", (e) => {
+    const it = e.target.closest(selector);
+    const k = it && root.contains(it) ? it.dataset.key || null : null;
+    if (k !== key) {
+      key = k;
+      apply();
+    }
+  });
+  root.addEventListener("mouseleave", () => {
+    key = null;
+    apply();
+  });
+  return apply;
+}
+
 export function rafThrottle(fn) {
   let queued = false;
   return () => {
