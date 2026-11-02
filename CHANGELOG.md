@@ -7,11 +7,19 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-02
+
+First release published from the public repository; the application itself is unchanged from 0.4.0.
+
 ### Added
 - README (English and Spanish) explains commit signing and GitHub vigilant mode.
+- Release files carry a signed build provenance attestation (`gh attestation verify`).
+- OpenSSF Scorecard analysis (weekly and on every push to `main`) with its badge in the README.
+- CodeQL code scanning, secret scanning with push protection and private vulnerability reporting.
 
 ### Changed
 - The whole history is signed: every commit and release tag shows as Verified.
+- GitHub Actions are pinned to full commit SHAs (Dependabot keeps them up to date).
 
 ### Fixed
 - `checksums.txt` is written with LF line endings, so `sha256sum -c checksums.txt` works on Linux, macOS and Git Bash.
@@ -65,7 +73,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/AlexDeveOp/EvEX-MPP/tree/v0.3.0
 [0.2.0]: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/CHANGELOG.md#020---2026-11-02
