@@ -107,9 +107,43 @@ export function themeColors(settings = S.settings) {
   return out;
 }
 
+// Ajustes de una imagen de fondo (los que falten valen lo de antes: llenar, centrada, sin zoom ni filtros).
+export const IMAGE_FITS = ["cover", "contain", "stretch", "tile", "original"];
+const clampNum = (v, min, max, def) => (v != null && Number.isFinite(+v) ? Math.min(max, Math.max(min, +v)) : def);
+export function imageAdjust(bg) {
+  return {
+    fit: IMAGE_FITS.includes(bg?.fit) ? bg.fit : "cover",
+    zoom: clampNum(bg?.zoom, 1, 4, 1),
+    posX: clampNum(bg?.posX, 0, 100, 50),
+    posY: clampNum(bg?.posY, 0, 100, 50),
+    brightness: clampNum(bg?.brightness, 0.3, 1.6, 1),
+    saturate: clampNum(bg?.saturate, 0, 2, 1),
+  };
+}
+
+// Pinta un fondo en una capa (ventana, barra lateral, sala o la vista previa del editor), con encaje, zoom, posición
+// y filtros. El zoom va con transform para que funcione igual con todos los encajes (también el mosaico).
+export function applyBackgroundLayer(el, bg) {
+  if (!el) return;
+  const on = !!bg && bg.type !== "none" && !!bg.value;
+  const s = el.style;
+  s.background = on ? backgroundCss(bg) : "";
+  s.opacity = on ? (bg.opacity ?? 1) : 0;
+  const a = imageAdjust(bg);
+  const isImage = on && bg.type === "image";
+  const filters = [bg?.blur ? `blur(${bg.blur}px)` : "", isImage && a.brightness !== 1 ? `brightness(${a.brightness})` : "", isImage && a.saturate !== 1 ? `saturate(${a.saturate})` : ""];
+  s.filter = filters.filter(Boolean).join(" ");
+  s.transform = isImage && a.zoom !== 1 ? `scale(${a.zoom})` : "";
+  s.transformOrigin = isImage ? `${a.posX}% ${a.posY}%` : "";
+}
+
 export function backgroundCss(bg) {
   if (!bg || bg.type === "none" || !bg.value) return "";
-  if (bg.type === "image") return `url("${bg.value.replace(/["\\\n]/g, encodeURIComponent)}") center / cover no-repeat`;
+  if (bg.type === "image") {
+    const a = imageAdjust(bg);
+    const size = { cover: "cover", contain: "contain", stretch: "100% 100%", tile: "auto", original: "auto" }[a.fit];
+    return `url("${bg.value.replace(/["\\\n]/g, encodeURIComponent)}") ${a.posX}% ${a.posY}% / ${size} ${a.fit === "tile" ? "repeat" : "no-repeat"}`;
+  }
   if (bg.type === "gradient") return GRADIENTS[bg.value] || bg.value;
   if (bg.type === "color") return bg.value;
   return "";
@@ -143,20 +177,12 @@ export function applyAppearance(settings = S.settings) {
   app.classList.toggle("animations", settings.animations !== false);
 
   const bg = settings.background;
-  const layer = document.getElementById("app-bg");
-  layer.style.background = backgroundCss(bg);
-  layer.style.opacity = bg.type === "none" ? 0 : bg.opacity;
-  layer.style.filter = bg.blur ? `blur(${bg.blur}px)` : "";
+  applyBackgroundLayer(document.getElementById("app-bg"), bg);
   root.style.setProperty("--bg-dim", bg.type === "none" ? 1 : 1 - (bg.dim ?? 0.4) * 0.6);
   app.classList.toggle("has-bg", bg.type !== "none" && !!bg.value);
 
   const sb = settings.sidebarBackground;
-  const sbLayer = document.getElementById("sidebar-bg");
-  if (sbLayer) {
-    sbLayer.style.background = backgroundCss(sb);
-    sbLayer.style.opacity = sb.type === "none" ? 0 : sb.opacity;
-    sbLayer.style.filter = sb.blur ? `blur(${sb.blur}px)` : "";
-  }
+  applyBackgroundLayer(document.getElementById("sidebar-bg"), sb);
 
   api("window:titlebar", { color: c.titlebar, symbolColor: c.text }).catch(() => {});
 }

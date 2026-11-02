@@ -3,7 +3,7 @@ import { S, api, emit, saveSettings } from "./state.js";
 import { h, icon, iconButton, modal, field, toggle, select, range, clear, toast, debounce, confirmDialog } from "./dom.js";
 
 const append = (el, ...children) => el.append(...children.filter(Boolean));
-import { PRESETS, TOKENS, GRADIENTS, BUNDLED_FONTS, applyAppearance, themeColors, backgroundCss, resolveThemeId } from "./themes.js";
+import { PRESETS, TOKENS, GRADIENTS, BUNDLED_FONTS, applyAppearance, themeColors, backgroundCss, resolveThemeId, applyBackgroundLayer, imageAdjust } from "./themes.js";
 import { PRESETS as SOUNDS, SOUND_GROUPS, previewSound, outputDevices } from "./sounds.js";
 import { addCustomEmoji, emojifyHtml } from "./emoji.js";
 import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
@@ -248,7 +248,7 @@ const RENDER = {
       group(t("Fondo de la barra lateral"), backgroundEditor(S.settings.sidebarBackground, (fn) => look((x) => fn(x.sidebarBackground)), { noDim: true })),
       group(
         t("Fondos por conversación"),
-        h("p", { class: "muted small" }, t("Clic derecho en una sala o contacto → «Fondo personalizado…».")),
+        h("p", { class: "muted small" }, t("Clic derecho en una sala o contacto → «Fondo personalizado…», o menú ⋮ de la sala → «Fondo de esta conversación…». Imagen de tu PC, pegada, arrastrada o de una dirección de Internet, con zoom, posición y encaje.")),
         Object.keys(S.settings.conversationBackgrounds || {}).length
           ? h(
               "div",
@@ -625,11 +625,73 @@ async function importTheme() {
 
 // ---------- editor de fondos ----------
 
+// Imagen del portapapeles para los fondos: se leen sus bytes aquí y el proceso principal la valida y la guarda.
+const importBlob = async (blob) => api("image:importBytes", new Uint8Array(await blob.arrayBuffer()), blob.type);
+async function pasteImage() {
+  let items;
+  try {
+    items = await navigator.clipboard.read();
+  } catch {
+    throw new Error(t("No se pudo leer el portapapeles. Prueba con Ctrl+V con el editor abierto."));
+  }
+  for (const it of items) {
+    const type = it.types.find((x) => x.startsWith("image/"));
+    if (type) return importBlob(await it.getType(type));
+  }
+  throw new Error(t("No hay ninguna imagen copiada en el portapapeles."));
+}
+
 function backgroundEditor(bg, change, { noDim } = {}) {
   const wrap = h("div", { class: "bg-editor" });
+  // Cambia la imagen por una importada (archivo, arrastrada, pegada o desde una dirección de Internet).
+  const setImage = (url) => {
+    if (!url) return;
+    change((b) => Object.assign(b, { type: "image", value: url }));
+    Object.assign(bg, { type: "image", value: url });
+    render();
+  };
+  const importWith = async (fn) => {
+    try {
+      setImage(await fn());
+    } catch (err) {
+      toast(err.message, { kind: "error", timeout: 8000 });
+    }
+  };
+  // Arrastrar una imagen desde el Explorador o desde el navegador sobre el editor.
+  wrap.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    wrap.classList.add("drop-over");
+  });
+  wrap.addEventListener("dragleave", (e) => e.target === wrap && wrap.classList.remove("drop-over"));
+  wrap.addEventListener("drop", (e) => {
+    e.preventDefault();
+    wrap.classList.remove("drop-over");
+    const file = e.dataTransfer.files?.[0];
+    const filePath = file && window.evex.pathForFile(file);
+    if (filePath) return importWith(() => api("image:importPath", filePath));
+    const url = (e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain") || "").split(/\s+/)[0];
+    if (/^https?:\/\//i.test(url)) return importWith(() => api("image:importUrl", url));
+    toast(t("Suelta aquí una imagen de tu PC o de una web."), { kind: "warn" });
+  });
+
+  // Ctrl+V con el editor abierto: una imagen copiada se importa; una dirección de imagen, se descarga.
+  const onPaste = (e) => {
+    if (!wrap.isConnected) return document.removeEventListener("paste", onPaste);
+    const file = [...(e.clipboardData?.items || [])].find((it) => it.kind === "file" && it.type.startsWith("image/"))?.getAsFile();
+    if (file) {
+      e.preventDefault();
+      return importWith(() => importBlob(file));
+    }
+    const text = e.clipboardData?.getData("text/plain")?.trim() || "";
+    if (/^https?:\/\/\S+$/i.test(text) && !e.target.closest?.("input, textarea")) {
+      e.preventDefault();
+      importWith(() => api("image:importUrl", text));
+    }
+  };
+  document.addEventListener("paste", onPaste);
+
   const render = () => {
     clear(wrap);
-    const swatch = h("div", { class: "bg-preview", style: { background: backgroundCss(bg) || "var(--bg)" } });
     const types = select(
       [
         ["none", t("Sin fondo")],
@@ -643,12 +705,23 @@ function backgroundEditor(bg, change, { noDim } = {}) {
           b.type = v;
           if (v === "gradient" && !GRADIENTS[b.value]) b.value = "nebula";
           if (v === "color" && !/^#/.test(b.value)) b.value = "#101826";
+          if (v === "image" && !String(b.value).startsWith("media:")) b.value = "";
         });
         Object.assign(bg, { type: v });
+        if (v === "image" && !String(bg.value).startsWith("media:")) bg.value = "";
         render();
       },
     );
-    wrap.append(swatch, field(t("Tipo"), types));
+    // Vista previa: en las imágenes se arrastra para mover, la rueda hace zoom y doble clic vuelve al centro.
+    const stage = h("div", { class: `bg-preview ${bg.type === "image" ? "bg-stage" : ""}` });
+    const layer = h("div", { class: "bg-stage-layer" });
+    stage.append(layer);
+    const paint = () => {
+      if (bg.type === "image") applyBackgroundLayer(layer, bg.value ? { ...bg, opacity: 1, blur: 0 } : null);
+      else stage.style.background = backgroundCss(bg) || "var(--bg)";
+    };
+    wrap.append(stage, field(t("Tipo"), types));
+
     if (bg.type === "gradient") {
       wrap.append(
         h(
@@ -670,31 +743,113 @@ function backgroundEditor(bg, change, { noDim } = {}) {
       );
     }
     if (bg.type === "image") {
+      const urlInput = h("input", { class: "input bg-url", type: "url", placeholder: t("…o pega la dirección de una imagen de Internet") });
+      const download = () => urlInput.value.trim() && importWith(() => api("image:importUrl", urlInput.value.trim()));
+      urlInput.addEventListener("keydown", (e) => e.key === "Enter" && download());
       wrap.append(
         h(
           "div",
           { class: "row" },
-          h(
-            "button",
-            {
-              class: "btn",
-              onclick: async () => {
-                const url = await api("file:pick", "image");
-                if (!url) return;
-                change((b) => (b.value = url));
-                bg.value = url;
-                render();
-              },
-            },
-            icon("folder-open"),
-            t("Elegir imagen…"),
-          ),
-          h("span", { class: "muted small" }, t("JPG, PNG, GIF animado o WebP")),
+          h("button", { class: "btn", onclick: () => importWith(() => api("file:pick", "image")) }, icon("folder-open"), t("Elegir imagen…")),
+          h("button", { class: "btn", title: t("Pega una imagen copiada (Ctrl+V): una captura o una imagen copiada de una web"), onclick: () => importWith(pasteImage) }, icon("copy"), t("Pegar imagen")),
+          h("span", { class: "muted small" }, t("o arrástrala aquí desde el Explorador o el navegador. JPG, PNG, GIF animado o WebP.")),
         ),
+        h("div", { class: "row" }, urlInput, h("button", { class: "btn", onclick: download }, icon("download"), t("Descargar"))),
       );
+      if (bg.value) {
+        const a = imageAdjust(bg);
+        const ctl = {};
+        const set = (k, v) => {
+          change((b) => (b[k] = v));
+          bg[k] = v;
+          paint();
+        };
+        // Los deslizadores siguen a lo que se hace con el ratón sobre la vista previa.
+        const slider = (k, min, max, step, fmt) => {
+          const r = range(min, max, step, a[k], (v) => set(k, v), fmt);
+          ctl[k] = r;
+          return r;
+        };
+        const sync = (k, v) => {
+          const inp = ctl[k]?.querySelector("input");
+          if (!inp) return;
+          inp.value = v;
+          inp.dispatchEvent(new Event("input"));
+        };
+        let drag = null;
+        stage.addEventListener("pointerdown", (e) => {
+          const now = imageAdjust(bg);
+          drag = { x: e.clientX, y: e.clientY, posX: now.posX, posY: now.posY, w: stage.clientWidth, h: stage.clientHeight };
+          stage.setPointerCapture(e.pointerId);
+          stage.classList.add("dragging");
+        });
+        stage.addEventListener("pointermove", (e) => {
+          if (!drag) return;
+          const z = imageAdjust(bg).zoom;
+          sync("posX", Math.round(Math.min(100, Math.max(0, drag.posX - (((e.clientX - drag.x) / drag.w) * 100) / z))));
+          sync("posY", Math.round(Math.min(100, Math.max(0, drag.posY - (((e.clientY - drag.y) / drag.h) * 100) / z))));
+        });
+        const end = () => {
+          drag = null;
+          stage.classList.remove("dragging");
+        };
+        stage.addEventListener("pointerup", end);
+        stage.addEventListener("pointercancel", end);
+        stage.addEventListener(
+          "wheel",
+          (e) => {
+            e.preventDefault();
+            sync("zoom", Math.round(Math.min(4, Math.max(1, imageAdjust(bg).zoom - Math.sign(e.deltaY) * 0.1)) * 100) / 100);
+          },
+          { passive: false },
+        );
+        stage.addEventListener("dblclick", () => (sync("posX", 50), sync("posY", 50), sync("zoom", 1)));
+        stage.append(h("span", { class: "bg-stage-hint" }, t("Arrastra para mover · rueda para el zoom · doble clic para centrar")));
+        wrap.append(
+          field(
+            t("Encaje"),
+            select(
+              [
+                ["cover", t("Llenar (recorta lo que sobra)")],
+                ["contain", t("Ver la imagen entera")],
+                ["stretch", t("Estirar")],
+                ["tile", t("Mosaico (repetir)")],
+                ["original", t("Tamaño original")],
+              ],
+              a.fit,
+              (v) => set("fit", v),
+            ),
+          ),
+          field(t("Zoom"), slider("zoom", 1, 4, 0.05, (v) => `${Math.round(v * 100)}%`)),
+          field(t("Posición horizontal"), slider("posX", 0, 100, 1, (v) => `${Math.round(v)}%`)),
+          field(t("Posición vertical"), slider("posY", 0, 100, 1, (v) => `${Math.round(v)}%`)),
+          field(t("Brillo"), slider("brightness", 0.3, 1.6, 0.05, (v) => `${Math.round(v * 100)}%`)),
+          field(t("Saturación"), slider("saturate", 0, 2, 0.05, (v) => `${Math.round(v * 100)}%`)),
+          h(
+            "div",
+            { class: "row" },
+            h(
+              "button",
+              {
+                class: "btn small",
+                onclick: () => {
+                  const reset = { fit: "cover", zoom: 1, posX: 50, posY: 50, brightness: 1, saturate: 1 };
+                  change((b) => Object.assign(b, reset));
+                  Object.assign(bg, reset);
+                  render();
+                },
+              },
+              icon("refresh-cw"),
+              t("Restablecer ajuste"),
+            ),
+          ),
+        );
+      } else {
+        stage.append(h("span", { class: "bg-stage-hint" }, t("Elige, pega o arrastra una imagen")));
+      }
     }
     if (bg.type === "color") {
-      wrap.append(field(t("Color"), h("input", { type: "color", value: bg.value, oninput: (e) => (change((b) => (b.value = e.target.value)), (swatch.style.background = e.target.value)) })));
+      wrap.append(field(t("Color"), h("input", { type: "color", value: bg.value, oninput: (e) => (change((b) => (b.value = e.target.value)), (bg.value = e.target.value), paint()) })));
     }
     if (bg.type !== "none") {
       append(
@@ -704,6 +859,7 @@ function backgroundEditor(bg, change, { noDim } = {}) {
         noDim ? null : field(t("Transparencia de los paneles"), range(0, 1, 0.05, bg.dim ?? 0.4, (v) => change((b) => (b.dim = v)), (v) => `${Math.round(v * 100)}%`)),
       );
     }
+    paint();
   };
   render();
   return wrap;

@@ -988,6 +988,46 @@ select.input {
   border: 1px solid var(--border);
   margin-bottom: 10px;
 }
+/* Vista previa de una imagen de fondo: proporción de una ventana, se arrastra para encuadrar. */
+.bg-preview.bg-stage {
+  position: relative;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  cursor: grab;
+  background: var(--bg);
+  touch-action: none;
+}
+.bg-stage.dragging {
+  cursor: grabbing;
+}
+.bg-stage-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bg-stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.78em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.bg-editor.drop-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+.bg-url {
+  flex: 1;
+  min-width: 240px;
+}
 .gradient-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));

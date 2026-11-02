@@ -744,6 +744,43 @@ function registerIpc() {
     return copyToMedia(r.filePaths[0], kind === "sound" ? "sounds" : "files");
   });
 
+  // Imágenes de fuera de la app para los fondos: arrastradas desde el Explorador, pegadas del portapapeles o desde una
+  // dirección de Internet. Siempre se copian a la carpeta de la app (así el fondo sigue aunque se borre el original).
+  const IMAGE_EXT = FILTERS.image[0].extensions;
+  const MAX_IMAGE = 25 * 1024 * 1024;
+  const saveImageBuffer = (buffer, ext) => {
+    const name = `${crypto.createHash("sha1").update(buffer).digest("hex").slice(0, 20)}.${ext}`;
+    fs.mkdirSync(mediaDir("files"), { recursive: true });
+    try {
+      fs.writeFileSync(mediaDir("files", name), buffer, { flag: "wx" });
+    } catch (err) {
+      if (err.code !== "EEXIST") throw err;
+    }
+    return `media://evex/files/${name}`;
+  };
+  handle("image:importPath", (file) => {
+    const ext = path.extname(String(file || "")).slice(1).toLowerCase();
+    if (!IMAGE_EXT.includes(ext)) throw new Error(t("Ese archivo no es una imagen ({ext}).", { ext: ext || "?" }));
+    const st = fs.statSync(file);
+    if (!st.isFile()) throw new Error(t("Ese archivo no es una imagen ({ext}).", { ext }));
+    if (st.size > MAX_IMAGE) throw new Error(t("La imagen es demasiado grande (máximo {mb} MB).", { mb: 25 }));
+    return copyToMedia(file, "files");
+  });
+  // Imagen pegada (Ctrl+V o «Pegar imagen»): la interfaz la lee del portapapeles y manda sus bytes.
+  // Se comprueba la cabecera del fichero: no basta con el tipo que diga el portapapeles.
+  const MAGIC = { png: [0x89, 0x50, 0x4e, 0x47], jpg: [0xff, 0xd8, 0xff], gif: [0x47, 0x49, 0x46, 0x38], webp: [0x52, 0x49, 0x46, 0x46] };
+  handle("image:importBytes", (data, type) => {
+    const ext = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" }[String(type).toLowerCase()];
+    const buffer = Buffer.from(data instanceof Uint8Array ? data : new Uint8Array(data || []));
+    if (!ext || !MAGIC[ext].every((b, i) => buffer[i] === b)) throw new Error(t("No hay ninguna imagen copiada en el portapapeles."));
+    if (buffer.length > MAX_IMAGE) throw new Error(t("La imagen es demasiado grande (máximo {mb} MB).", { mb: 25 }));
+    return saveImageBuffer(buffer, ext);
+  });
+  handle("image:importUrl", async (url) => {
+    const { buffer, ext } = await downloadGif(String(url || "").trim(), { fetchImpl: (u, opts) => net.fetch(u, opts), maxBytes: MAX_IMAGE });
+    return saveImageBuffer(buffer, ext);
+  });
+
   handle("emoji:import", async () => {
     const r = await dialog.showOpenDialog(win, { title: t("Elige imágenes (GIF, PNG, WebP…) — el nombre del fichero será el :código:"), properties: ["openFile", "multiSelections"], filters: fileFilters("image") });
     if (r.canceled) return [];
@@ -878,7 +915,7 @@ app.whenReady().then(async () => {
   popupIpc(handle);
   applySystemSettings(store.get().settings);
 
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(["notifications", "clipboard-sanitized-write", "media", "fullscreen"].includes(permission)));
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(["notifications", "clipboard-sanitized-write", "clipboard-read", "media", "fullscreen"].includes(permission)));
   // Las imágenes externas (vistas previas, emojis animados) no deben enviar cookies ni referer.
   session.defaultSession.webRequest.onBeforeSendHeaders({ urls: ["https://*/*", "http://*/*"] }, (details, cb) => {
     const h = details.requestHeaders;

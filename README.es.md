@@ -60,8 +60,8 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - 13 temas (Caldari, Amarr, Gallente, Minmatar, AMOLED, Nord, Dracula…), editor de cada color, y exportar/importar temas.
 - Cualquier fuente de Windows, escala y densidad.
 - 4 estilos de mensaje: moderno, burbujas, IRC y Pidgin.
-- Fondos (imagen, GIF o degradado) para la ventana, la barra lateral o cada conversación.
 - **GIFs**: botón *GIF* junto al de emojis. *Mis GIFs* guarda los GIFs que quieras (clic derecho → *Guardar en Mis GIFs*) y funciona sin ningún servicio; búsqueda opcional en GIPHY o KLIPY con tu propia clave gratuita.
+- **Fondos** para la ventana, la barra lateral y cada sala o chat: una imagen de tu PC, pegada (Ctrl+V), arrastrada desde el Explorador o el navegador, o descargada de una dirección de Internet, con encaje (llenar, entera, estirar, mosaico, original), zoom, posición (arrastrándola en la vista previa), brillo, saturación, intensidad y desenfoque; o un degradado o un color.
 - Emojis animados de Google (Noto), Twemoji o los nativos, y emojis propios. Los animados más usados vienen con la app y funcionan sin conexión.
 
 **Escritorio**

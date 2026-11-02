@@ -1,5 +1,5 @@
 // Puente seguro entre la interfaz y el proceso principal. Solo expone canales concretos.
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
 const CHANNELS = [
   "init", "ready", "settings:set",
@@ -10,12 +10,20 @@ const CHANNELS = [
   "roster:add", "roster:remove", "roster:update", "roster:answer",
   "logs:tail", "logs:search", "logs:list",
   "pidgin:scan", "pidgin:import", "pidgin:repairLogs", "sounds:pidginScan", "sounds:pidginImport", "gifs:search", "gifs:save", "gifs:remove",
-  "file:pick", "emoji:import", "theme:export", "theme:import", "avatar:set", "fonts:list",
+  "file:pick", "image:importPath", "image:importBytes", "image:importUrl", "emoji:import", "theme:export", "theme:import", "avatar:set", "fonts:list",
   "notify", "notify:test", "popup:get", "popup:size", "popup:click", "popup:close", "popup:hover", "window:unread", "window:titlebar", "window:focus", "shell:open", "shell:openUserData", "updates:check", "app:quit",
 ];
 const EVENTS = ["xmpp", "accounts", "nav", "window-focus", "import-progress", "switch-account", "popup-close", "update-available", "gif-save"];
 
 contextBridge.exposeInMainWorld("evex", {
+  // Ruta de un archivo arrastrado desde el Explorador (para importarlo como imagen de fondo).
+  pathForFile: (file) => {
+    try {
+      return webUtils.getPathForFile(file) || "";
+    } catch {
+      return "";
+    }
+  },
   async call(channel, ...args) {
     if (!CHANNELS.includes(channel)) throw new Error(`Canal no permitido: ${channel}`);
     const r = await ipcRenderer.invoke(channel, ...args);

@@ -1,6 +1,6 @@
 // Driver mínimo por Chrome DevTools Protocol para automatizar la interfaz.
 // Arranca la app con --remote-debugging-port=9333 y luego: node test/cdp.mjs 9333 pasos.json
-// Cada paso: {eval: "js"} | {shot: "ruta.png"} | {wait: ms} | {move: "selector"} | {click: "selector"} | {wheel: "selector", dy}
+// Cada paso: {eval: "js"} | {shot: "ruta.png"} | {wait: ms} | {move: "selector"} | {click: "selector"} | {wheel: "selector", dy} | {drag: "selector", dx, dy}
 // move/click/wheel usan el ratón real de Chromium (Input.dispatchMouseEvent): así se prueban :hover y los clics de verdad.
 import fs from "node:fs";
 
@@ -43,8 +43,8 @@ for (const s of steps) {
     const v = r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description ?? r.result?.result?.description;
     console.log("EVAL:", s.label || s.eval.slice(0, 60), "=>", typeof v === "string" ? v.slice(0, 1500) : JSON.stringify(v)?.slice(0, 1500));
   }
-  if (s.move || s.click || s.wheel) {
-    const sel = s.move || s.click || s.wheel;
+  if (s.move || s.click || s.wheel || s.drag) {
+    const sel = s.move || s.click || s.wheel || s.drag;
     // El selector va como argumento (no se mete en el código que se ejecuta).
     const g = await send("Runtime.evaluate", { expression: "globalThis" });
     const r = await send("Runtime.callFunctionOn", {
@@ -63,7 +63,12 @@ for (const s of steps) {
         await send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
       }
       if (s.wheel) await send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY: s.dy || 100 });
-      console.log("RATÓN:", s.click ? "clic" : s.wheel ? "rueda" : "encima", sel);
+      if (s.drag) {
+        await send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", buttons: 1, clickCount: 1 });
+        for (let i = 1; i <= 10; i++) await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: x + ((s.dx || 0) * i) / 10, y: y + ((s.dy || 0) * i) / 10, button: "left", buttons: 1 });
+        await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: x + (s.dx || 0), y: y + (s.dy || 0), button: "left", buttons: 0, clickCount: 1 });
+      }
+      console.log("RATÓN:", s.click ? "clic" : s.wheel ? "rueda" : s.drag ? "arrastre" : "encima", sel);
     }
   }
   if (s.shot) {

@@ -60,8 +60,8 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - 13 themes (Caldari, Amarr, Gallente, Minmatar, AMOLED, Nord, Dracula…), a per-color editor, and theme import/export.
 - Any Windows font, UI scale and density.
 - 4 message styles: modern, bubbles, IRC and Pidgin.
-- Backgrounds (image, GIF or gradient) for the window, the sidebar or each conversation.
 - **GIFs**: a *GIF* button next to the emoji one. *My GIFs* keeps the GIFs you save (right-click → *Save to My GIFs*) and works without any service; optional search in GIPHY or KLIPY with your own free key.
+- **Backgrounds** for the window, the sidebar and each room or chat: an image from your PC, pasted (Ctrl+V), dragged from File Explorer or a browser, or downloaded from an Internet address, with fit (fill, whole image, stretch, tile, original), zoom, position (drag it in the preview), brightness, saturation, intensity and blur; or a gradient or color.
 - Animated Google emoji (Noto), Twemoji or native emoji, plus custom emoji. The most used animated emoji come with the app and work offline.
 
 **Desktop**

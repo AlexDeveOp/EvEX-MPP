@@ -6,7 +6,7 @@ import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
 import { playSound } from "./sounds.js";
 import { openGifPicker } from "./gifs.js";
 import { activate, closeConv, openConv, convTitle, markRead, loadHistory, systemMessage, mentionWords, moveTab, notifyMode, getConv } from "./convs.js";
-import { backgroundCss } from "./themes.js";
+import { applyBackgroundLayer } from "./themes.js";
 import { pingCard, pingMatches, pingGroups } from "./pings.js";
 import { openBackgroundEditor } from "./settings.js";
 import { openSearch } from "./search.js";
@@ -311,9 +311,7 @@ function pane(c) {
 
 function applyConvBackground(c, p) {
   const bg = S.settings.conversationBackgrounds?.[c.key];
-  p.bg.style.background = bg ? backgroundCss(bg) : "";
-  p.bg.style.opacity = bg ? bg.opacity : 0;
-  p.bg.style.filter = bg?.blur ? `blur(${bg.blur}px)` : "";
+  applyBackgroundLayer(p.bg, bg);
   p.root.classList.toggle("has-conv-bg", !!bg);
 }
 
