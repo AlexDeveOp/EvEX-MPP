@@ -386,15 +386,18 @@ function renderHeader(c, p) {
     // Tema de la sala: plegado en una línea por defecto; el botón lo despliega y se recuerda por sala.
     const open = !!r.subject && topicOpen(c.conv);
     const subject = h("div", { class: `conv-sub subject ${open ? "open" : ""}`, title: r.subject || "", html: r.subject ? formatBody(r.subject).html : `<span class="muted">${esc(status)}</span>` });
-    let topicBtn = r.subject
-      ? iconButton(open ? "chevron-up" : "chevron-down", open ? t("Plegar el tema de la sala") : t("Desplegar el tema de la sala"), () => {
+    const topicLabel = (isOpen) => (isOpen ? t("Plegar el tema de la sala") : t("Desplegar el tema de la sala"));
+    // Siempre el mismo botón: solo cambian su icono, su texto y su estado.
+    const topicBtn = r.subject
+      ? iconButton(open ? "chevron-up" : "chevron-down", topicLabel(open), () => {
           const now = !subject.classList.contains("open");
           setTopicOpen(c.conv, now);
           subject.classList.toggle("open", now);
           subject.scrollTop = 0;
-          const fresh = iconButton(now ? "chevron-up" : "chevron-down", now ? t("Plegar el tema de la sala") : t("Desplegar el tema de la sala"), topicBtn.onclick, now ? "on" : "");
-          topicBtn.replaceWith(fresh);
-          topicBtn = fresh;
+          topicBtn.replaceChildren(icon(now ? "chevron-up" : "chevron-down"));
+          topicBtn.title = topicLabel(now);
+          topicBtn.setAttribute("aria-label", topicLabel(now));
+          topicBtn.classList.toggle("on", now);
         }, open ? "on" : "")
       : null;
     p.header.append(
