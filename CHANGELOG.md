@@ -1,0 +1,63 @@
+# Changelog
+
+All notable changes to EvEX-MPP are documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Spanish summary / resumen en español: [README.es.md](README.es.md).
+
+## [Unreleased]
+
+## [0.4.0] - 2026-11-02
+
+### Added
+- Interface available in **English and Spanish**, with a language selector in Preferences → Appearance (Automatic follows the Windows language).
+- Translated tray menu, context menus, dialogs, connection errors, pop-up alerts, `/help` and date formats.
+- Emoji names in both languages; the emoji search accepts either.
+- `npm run i18n` checks for missing or unused translations.
+- English README (`README.md`) with a Spanish version (`README.es.md`).
+- `CHANGELOG.md` and `SECURITY.md`.
+- Releases are built by GitHub Actions from the tagged source, with a `checksums.txt` (SHA-256) file and, on public repositories, a signed build provenance attestation.
+- Dependabot configuration for npm packages and GitHub Actions.
+
+### Changed
+- Fatal connection errors (wrong password, missing TLS) are detected with an error flag instead of matching the message text.
+- Interface files are served without the Chromium cache, so updates are always picked up.
+
+## [0.3.0] - 2026-11-02
+
+### Changed
+- Fully generic code and documentation: no defaults tied to a specific server or community.
+- The default list of fleet ping senders is now empty; configure your own in Preferences → Fleet pings.
+- The gold theme is now called "Gold"; older theme ids are mapped automatically.
+
+## [0.2.0] - 2026-11-02
+
+### Added
+- Account switching with saved accounts, and a form for a new account (address, password, server).
+- Custom always-on-top pop-up alerts that slide up from the taskbar, configurable corner and duration; pings stay until closed.
+- Amber "!" in the system tray (optionally blinking) while there are unread fleet pings.
+- A different sound for each kind of alert, with built-in sounds or your own file.
+- Local time and EVE (UTC) time on messages, ping cards and pop-ups, each one optional; EVE clock in the title bar.
+- Minimize to tray option.
+- NSIS installer and portable executable.
+
+### Fixed
+- Removing a room from favorites or auto-join now sticks and is pushed to server bookmarks; rooms removed locally no longer come back from old server bookmarks.
+- Room header icons update immediately.
+- Alerts and sounds keep working while the window is minimized or hidden in the tray.
+
+## [0.1.0] - 2026-11-02
+
+### Added
+- First version: XMPP client built with Electron and `@xmpp/client`.
+- Import of accounts, saved rooms, passwords and history from Pidgin.
+- Favorite and auto-join rooms, server room browser, occupants by role, moderation.
+- Fleet pings shown as cards with FC, formup (Dotlan link), PAP, comms and doctrine.
+- Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
+- Local history with search, mentions and keywords, message correction, IRC-style commands.
+
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/AlexDeveOp/EvEX-MPP/releases/tag/v0.3.0
+[0.2.0]: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/CHANGELOG.md#020---2026-11-02
+[0.1.0]: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/CHANGELOG.md#010---2026-11-02

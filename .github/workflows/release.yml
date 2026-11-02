@@ -1,0 +1,94 @@
+# Publica una versión al subir una etiqueta vX.Y.Z: compila en Windows desde el código de esa etiqueta,
+# comprueba, genera checksums.txt (SHA-256), crea la atestación de procedencia (repos públicos) y la release.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write # crear la release
+      id-token: write # firmar la atestación de procedencia
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Comprobar sintaxis
+        run: npm run check
+
+      - name: Comprobar traducciones
+        run: npm run i18n
+
+      - name: Vulnerabilidades en las dependencias de la app
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: La versión de package.json debe coincidir con la etiqueta
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$version" -ne "${{ github.ref_name }}") { throw "package.json ($version) no coincide con la etiqueta ${{ github.ref_name }}" }
+
+      - name: Compilar instalador y portable
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Generar checksums.txt (SHA-256)
+        shell: pwsh
+        run: |
+          Set-Location dist
+          Get-ChildItem *.exe | Sort-Object Name | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.Name -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Encoding ascii checksums.txt
+          Get-Content checksums.txt
+
+      # Las atestaciones son gratuitas en repositorios públicos; en privados dependen del plan de GitHub.
+      - name: Atestación de procedencia
+        if: github.event.repository.visibility == 'public'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.exe
+            dist/checksums.txt
+
+      - name: Preparar notas desde CHANGELOG.md
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $match = [regex]::Match($changelog, "(?ms)^## \[$([regex]::Escape($version))\][^\n]*\n(.*?)(?=^## \[|\z)")
+          if (-not $match.Success) { throw "CHANGELOG.md no tiene sección para $version" }
+          $verify = if ("${{ github.event.repository.visibility }}" -eq "public") {
+            "`n- Provenance: ``gh attestation verify <file> --repo ${{ github.repository }}``"
+          } else { "" }
+          @"
+          $($match.Groups[1].Value.Trim())
+
+          ### Verify your download / Verifica la descarga
+          - SHA-256: compare ``Get-FileHash <file> -Algorithm SHA256`` with ``checksums.txt``.$verify
+          - Built by GitHub Actions from tag ``${{ github.ref_name }}`` (commit ``${{ github.sha }}``).
+          - Not code-signed yet: SmartScreen → "More info" → "Run anyway" / «Más información» → «Ejecutar de todas formas».
+          "@ | Set-Content -Encoding utf8 notes.md
+          Get-Content notes.md
+
+      - name: Publicar la release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = @(Get-ChildItem dist\*.exe | ForEach-Object FullName) + "dist\checksums.txt"
+          gh release create "${{ github.ref_name }}" @files --title "EvEX-MPP ${{ github.ref_name }}" --notes-file notes.md --verify-tag

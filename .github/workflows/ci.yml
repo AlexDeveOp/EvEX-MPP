@@ -1,0 +1,33 @@
+# Comprueba cada cambio subido a main y cada pull request: sintaxis, traducciones y vulnerabilidades.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Comprobar sintaxis
+        run: npm run check
+
+      - name: Comprobar traducciones
+        run: npm run i18n
+
+      - name: Vulnerabilidades en las dependencias de la app
+        run: npm audit --omit=dev --audit-level=high

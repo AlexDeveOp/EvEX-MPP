@@ -15,7 +15,9 @@ En [Releases](../../releases) hay dos ejecutables:
 | `EvEX-MPP-Setup-<versión>.exe` | **Instalador.** Se instala solo para tu usuario, sin permisos de administrador. Deja elegir carpeta, crea accesos en el escritorio y en el menú Inicio, y se puede anclar a la barra de tareas. Se desinstala desde «Aplicaciones instaladas» y conserva tus datos. |
 | `EvEX-MPP-<versión>-portable.exe` | **Portable.** No se instala. Guarda sus datos en `EvEX-MPP-datos`, junto al `.exe`, así que se puede llevar en un USB. |
 
-Los ejecutables no están firmados, así que la primera vez Windows SmartScreen avisará: «Más información» → «Ejecutar de todas formas».
+Los ejecutables aún no están firmados, así que la primera vez Windows SmartScreen avisará: «Más información» → «Ejecutar de todas formas».
+
+**Verifica la descarga.** Las versiones las compila GitHub Actions a partir del código de la etiqueta e incluyen un archivo `checksums.txt` con el SHA-256 de cada ejecutable. Compáralo con `Get-FileHash <archivo> -Algorithm SHA256` en PowerShell. En [SECURITY.md](SECURITY.md) (en inglés) está el detalle y cómo avisar de un fallo de seguridad, y en [CHANGELOG.md](CHANGELOG.md) los cambios de cada versión.
 
 ## Primer uso
 
@@ -98,6 +100,7 @@ npm start          # lanza la app (scripts/start.mjs quita ELECTRON_RUN_AS_NODE,
 npm run dev        # con DevTools
 npm run dist       # instalador + portable en dist/
 npm run assets     # regenera iconos (Lucide) y datos de emojis (emojibase)
+npm run check      # comprueba la sintaxis de todos los ficheros JavaScript
 npm run i18n       # comprueba que todos los textos tienen traducción
 npm run probe      # comprueba TLS y SASL de un servidor sin autenticarse
 npm run mock       # servidor XMPP simulado en 127.0.0.1:5299 para pruebas

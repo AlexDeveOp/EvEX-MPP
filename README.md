@@ -15,7 +15,9 @@ A Windows desktop XMPP (Jabber) client built for EVE Online communities and alli
 | `EvEX-MPP-Setup-<version>.exe` | **Installer.** Installs for your user only, no administrator rights needed. You can choose the folder; it creates desktop and Start menu shortcuts and can be pinned to the taskbar. Uninstall it from "Installed apps"; your data is kept. |
 | `EvEX-MPP-<version>-portable.exe` | **Portable.** Nothing to install. It keeps its data in an `EvEX-MPP-datos` folder next to the `.exe`, so you can carry it on a USB stick. |
 
-The executables are not code-signed, so the first time Windows SmartScreen will warn you: "More info" → "Run anyway".
+The executables are not code-signed yet, so the first time Windows SmartScreen will warn you: "More info" → "Run anyway".
+
+**Verify your download.** Releases are built by GitHub Actions from the tagged source code and include a `checksums.txt` file with the SHA-256 of each executable. Compare it with `Get-FileHash <file> -Algorithm SHA256` in PowerShell. See [SECURITY.md](SECURITY.md) for details and for how to report a vulnerability, and [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ## First steps
 
@@ -98,6 +100,7 @@ npm start          # runs the app (scripts/start.mjs clears ELECTRON_RUN_AS_NODE
 npm run dev        # with DevTools
 npm run dist       # installer + portable in dist/
 npm run assets     # regenerates icons (Lucide) and emoji data (emojibase)
+npm run check      # syntax check of every JavaScript file
 npm run i18n       # checks that every UI string has a translation
 npm run probe      # checks a server's TLS and SASL without logging in
 npm run mock       # fake XMPP server on 127.0.0.1:5299 for testing
