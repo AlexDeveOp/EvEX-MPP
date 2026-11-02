@@ -45,7 +45,14 @@ for (const s of steps) {
   }
   if (s.move || s.click || s.wheel) {
     const sel = s.move || s.click || s.wheel;
-    const r = await send("Runtime.evaluate", { expression: `(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const b = e.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; })()`, returnByValue: true });
+    // El selector va como argumento (no se mete en el código que se ejecuta).
+    const g = await send("Runtime.evaluate", { expression: "globalThis" });
+    const r = await send("Runtime.callFunctionOn", {
+      objectId: g.result?.result?.objectId,
+      functionDeclaration: "function (sel) { const e = document.querySelector(sel); if (!e) return null; const b = e.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }",
+      arguments: [{ value: sel }],
+      returnByValue: true,
+    });
     const pos = r.result?.result?.value;
     if (!pos) console.log("RATÓN: no existe", sel);
     else {
