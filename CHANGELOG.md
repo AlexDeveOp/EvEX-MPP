@@ -7,6 +7,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- Privacy policy (`PRIVACY.md`, English and Spanish): what is stored, every network connection the app makes and how to turn each one off. A summary is shown by the installer before installing.
+- "Code signing policy" section in the README, in preparation for code signing through SignPath Foundation.
+
 ## [0.4.2] - 2026-11-02
 
 Maintenance release: bug fixes found by the new automated tests, plus fixes for CodeQL findings.

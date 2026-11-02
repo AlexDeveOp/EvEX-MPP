@@ -97,7 +97,7 @@ jobs:
           ### Verify your download / Verifica la descarga
           - SHA-256: compare ``Get-FileHash <file> -Algorithm SHA256`` with ``checksums.txt``.$verify
           - Built by GitHub Actions from tag ``${{ github.ref_name }}`` (commit ``${{ github.sha }}``).
-          - Not code-signed yet: SmartScreen → "More info" → "Run anyway" / «Más información» → «Ejecutar de todas formas».
+          - Not code-signed yet: SmartScreen → "More info" → "Run anyway" / «Más información» → «Ejecutar de todas formas». [Code signing policy](https://github.com/${{ github.repository }}#code-signing-policy) · [Privacy policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY.md)
           "@ | Set-Content -Encoding utf8 notes.md
           Get-Content notes.md
 

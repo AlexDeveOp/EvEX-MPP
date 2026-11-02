@@ -15,7 +15,7 @@ En [Releases](../../releases) hay dos ejecutables:
 | `EvEX-MPP-Setup-<versión>.exe` | **Instalador.** Se instala solo para tu usuario, sin permisos de administrador. Deja elegir carpeta, crea accesos en el escritorio y en el menú Inicio, y se puede anclar a la barra de tareas. Se desinstala desde «Aplicaciones instaladas» y conserva tus datos. |
 | `EvEX-MPP-<versión>-portable.exe` | **Portable.** No se instala. Guarda sus datos en `EvEX-MPP-datos`, junto al `.exe`, así que se puede llevar en un USB. |
 
-Los ejecutables aún no están firmados, así que la primera vez Windows SmartScreen avisará: «Más información» → «Ejecutar de todas formas».
+Los ejecutables aún no están firmados, así que la primera vez Windows SmartScreen avisará: «Más información» → «Ejecutar de todas formas». Consulta la [política de firma de código](#política-de-firma-de-código-code-signing-policy).
 
 **Verifica la descarga.** Las versiones las compila GitHub Actions a partir del código de la etiqueta e incluyen un archivo `checksums.txt` con el SHA-256 de cada ejecutable. Compáralo con `Get-FileHash <archivo> -Algorithm SHA256` en PowerShell. En [SECURITY.md](SECURITY.md) (en inglés) está el detalle y cómo avisar de un fallo de seguridad, y en [CHANGELOG.md](CHANGELOG.md) los cambios de cada versión.
 
@@ -87,12 +87,24 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Las contraseñas se cifran con DPAPI de Windows (`safeStorage`), así que en otro PC se vuelven a pedir.
 - La interfaz corre aislada (`contextIsolation`, `sandbox`, CSP estricta) y solo habla con el proceso principal por canales concretos.
 - El ejecutable lleva desactivados los *fuses* `RunAsNode`, `NODE_OPTIONS` y los argumentos de inspección.
+- Sin telemetría, analíticas ni comprobación de actualizaciones. A qué se conecta la app, y cómo desactivar cada conexión, está en la [política de privacidad](PRIVACY.md#política-de-privacidad).
 
 **Commits firmados.** Todos los commits y etiquetas de versión de este repositorio están firmados con la clave SSH de firma del autor, y GitHub los muestra como **Verified** (verificados). La cuenta tiene activado el *modo vigilante* de GitHub: cualquier commit atribuido al autor que **no** esté firmado aparecería como **Unverified** (no verificado). Así una suplantación se detecta a simple vista: cualquiera puede poner el nombre y el correo de otra persona en un commit, pero nadie más puede firmar con su clave. Si alguna vez ves aquí un commit del autor marcado como Unverified, desconfía y avisa (consulta [SECURITY.md](SECURITY.md)).
 
 Pidgin guarda las contraseñas **en texto plano** en `%APPDATA%\.purple\accounts.xml`. Si dejas de usarlo, conviene borrarlas de ahí.
 
 Si usas Pidgin a la vez, los pings se entregan al cliente con **mayor prioridad**. Súbela en Cuentas → Conexión avanzada.
+
+## Política de firma de código (Code signing policy)
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). (Firma de código gratuita de SignPath.io, con certificado de SignPath Foundation.) *La solicitud está enviada; las versiones todavía no van firmadas. Esta sección lo indicará cuando lo estén.*
+
+- **Autores y revisores (committers and reviewers):** [AlexDeveOp](https://github.com/AlexDeveOp)
+- **Aprobadores (approvers):** [AlexDeveOp](https://github.com/AlexDeveOp)
+- Solo se envían a firmar los ejecutables que compila GitHub Actions en sus propios servidores a partir de una etiqueta de versión firmada de este repositorio ([release.yml](.github/workflows/release.yml)). Cada firma se aprueba a mano.
+- Los cambios de personas que no son autores (pull requests) se revisan antes de aceptarlos. Los commits de `main` tienen que ir firmados, y `main` no se puede sobrescribir ni borrar.
+- Todo el equipo usa verificación en dos pasos en GitHub y en SignPath.
+- **Privacidad:** el programa no envía ningún dato al desarrollador. Solo se conecta a los servidores XMPP que configures y a las fuentes de emojis, vistas previas y diccionarios del corrector que se indican en la [política de privacidad](PRIVACY.md#política-de-privacidad). Todas se pueden desactivar.
 
 ## Desarrollo
 

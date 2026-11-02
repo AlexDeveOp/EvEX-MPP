@@ -1,0 +1,37 @@
+EvEX-MPP - privacidad y licencia
+
+PRIVACIDAD
+EvEX-MPP no tiene telemetría, analíticas, publicidad, informes de errores ni comprobación automática de actualizaciones. El desarrollador no recibe ningún dato de la app. Tus cuentas, contraseñas cifradas e historial se guardan solo en este PC.
+
+La app solo se conecta a:
+- los servidores XMPP que configures;
+- Google Fonts (fonts.gstatic.com) para mostrar los emojis con el estilo por defecto «Noto animados». Desactivar: Preferencias > Emojis > Dibujo de los emojis > Nativos de Windows;
+- las webs enlazadas en los mensajes y YouTube (i.ytimg.com) para las vistas previas de imágenes y vídeos. Desactivar: Preferencias > Mensajes > Contenido > Vista previa de imágenes y vídeos de YouTube;
+- Google, una vez por idioma, para descargar los diccionarios del corrector. Desactivar: Preferencias > Comportamiento > Escritura > Corrector ortográfico.
+
+Política completa: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/PRIVACY.md#política-de-privacidad
+
+Para desinstalar: Configuración de Windows > Aplicaciones > Aplicaciones instaladas > EvEX-MPP. Tus datos de %APPDATA%\EvEX-MPP se conservan; borra esa carpeta para eliminarlos.
+
+LICENCIA (MIT, en inglés)
+MIT License
+
+Copyright (c) 2026 AlexDeveOp
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

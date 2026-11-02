@@ -15,7 +15,7 @@ A Windows desktop XMPP (Jabber) client built for EVE Online communities and alli
 | `EvEX-MPP-Setup-<version>.exe` | **Installer.** Installs for your user only, no administrator rights needed. You can choose the folder; it creates desktop and Start menu shortcuts and can be pinned to the taskbar. Uninstall it from "Installed apps"; your data is kept. |
 | `EvEX-MPP-<version>-portable.exe` | **Portable.** Nothing to install. It keeps its data in an `EvEX-MPP-datos` folder next to the `.exe`, so you can carry it on a USB stick. |
 
-The executables are not code-signed yet, so the first time Windows SmartScreen will warn you: "More info" → "Run anyway".
+The executables are not code-signed yet, so the first time Windows SmartScreen will warn you: "More info" → "Run anyway". See the [code signing policy](#code-signing-policy).
 
 **Verify your download.** Releases are built by GitHub Actions from the tagged source code and include a `checksums.txt` file with the SHA-256 of each executable. Compare it with `Get-FileHash <file> -Algorithm SHA256` in PowerShell. See [SECURITY.md](SECURITY.md) for details and for how to report a vulnerability, and [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
@@ -87,12 +87,24 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Passwords are encrypted with Windows DPAPI (`safeStorage`), so on another PC you will be asked for them again.
 - The interface runs isolated (`contextIsolation`, `sandbox`, strict CSP) and only talks to the main process through a fixed set of channels.
 - The executable ships with the `RunAsNode`, `NODE_OPTIONS` and inspector *fuses* disabled.
+- No telemetry, analytics or update checks. What the app connects to, and how to turn each connection off, is listed in the [privacy policy](PRIVACY.md).
 
 **Signed commits.** Every commit and release tag in this repository is signed with the maintainer’s SSH signing key, so GitHub shows them as **Verified**. The account has GitHub’s *vigilant mode* turned on: any commit attributed to the maintainer that is **not** signed would be marked **Unverified**, which makes impersonation easy to spot (anyone can put someone else’s name and email in a git commit, but nobody else can sign with their key). If you ever see an Unverified commit from the maintainer here, treat it as suspicious and report it (see [SECURITY.md](SECURITY.md)).
 
 Pidgin stores passwords **in plain text** in `%APPDATA%\.purple\accounts.xml`. If you stop using it, it is a good idea to remove them from there.
 
 If you run Pidgin at the same time, pings are delivered to the client with the **highest priority**. Raise it in Accounts → Advanced connection.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). *The application has been submitted; releases are not signed yet. This section will say so when they are.*
+
+- **Committers and reviewers:** [AlexDeveOp](https://github.com/AlexDeveOp)
+- **Approvers:** [AlexDeveOp](https://github.com/AlexDeveOp)
+- Only executables built by GitHub Actions on GitHub-hosted runners, from a signed release tag of this repository ([release.yml](.github/workflows/release.yml)), are submitted for signing. Every signing request is approved manually.
+- Changes from people who are not committers (pull requests) are reviewed before they are merged. Commits on `main` must be signed, and `main` cannot be force-pushed or deleted.
+- All team members use multi-factor authentication on GitHub and SignPath.
+- **Privacy:** this program does not send any information to the developer. It connects only to the XMPP servers you configure, and to the emoji, link-preview and spell-check sources listed in the [privacy policy](PRIVACY.md). Each of them can be turned off.
 
 ## Development
 
