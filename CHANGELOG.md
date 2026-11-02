@@ -11,6 +11,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Each release includes its provenance attestation as `EvEX-MPP-vX.Y.Z.intoto.jsonl` (also added to 0.4.1).
 
 ### Changed
+- CodeQL runs from its own workflow (`codeql.yml`, security-extended queries for JavaScript and GitHub Actions) instead of GitHub's default setup.
 - `SECURITY.md` links directly to the private report form and describes the disclosure timeline.
 
 ### Security
