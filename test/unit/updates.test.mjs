@@ -37,3 +37,12 @@ test("checkForUpdates: misma versión, prerelease y errores", async () => {
   await assert.rejects(checkForUpdates({ currentVersion: "0.4.2", repo: "o/r", fetchImpl: fakeFetch({}, 403) }), /403/);
   await assert.rejects(checkForUpdates({ currentVersion: "0.4.2", repo: "o/r", fetchImpl: fakeFetch({ tag_name: "latest" }) }), /no válida/i);
 });
+
+test("checkForUpdates rechaza un repositorio con formato extraño sin hacer la petición", async () => {
+  let called = false;
+  const spy = async () => ((called = true), { ok: true, json: async () => ({}) });
+  for (const repo of ["../../evil", "o/r/../x", "o r/x", "", "o/r?x=1"]) {
+    await assert.rejects(checkForUpdates({ currentVersion: "0.4.2", repo, fetchImpl: spy }));
+  }
+  assert.equal(called, false);
+});

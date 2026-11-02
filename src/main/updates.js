@@ -22,6 +22,8 @@ export function compareVersions(a, b) {
   return x[3].localeCompare(y[3], "en", { numeric: true });
 }
 
+const REPO_RE = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
+
 // "https://github.com/owner/repo.git" o "git+https://…" → "owner/repo".
 export function repoFromUrl(url) {
   const m = String(url || "").match(/github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/);
@@ -30,6 +32,7 @@ export function repoFromUrl(url) {
 
 // Devuelve { latest, url, newer } o lanza un error con un mensaje legible.
 export async function checkForUpdates({ currentVersion, repo, fetchImpl = fetch, timeoutMs = 15000 }) {
+  if (!REPO_RE.test(String(repo))) throw new Error(t("No se conoce el repositorio de la app."));
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   let res;

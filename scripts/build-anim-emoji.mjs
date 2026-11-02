@@ -23,6 +23,9 @@ const key = (cp) => cp.replace(/_fe0f/g, "");
 const SKIN = /_?1f3f[b-f]/;
 
 const api = await (await fetch(API)).json();
+// Los códigos vienen de Internet: solo se aceptan hexadecimales unidos por "_" (se usan como nombre de fichero).
+const VALID_CP = /^[0-9a-f]{2,6}(?:_[0-9a-f]{2,6})*$/;
+api.icons = api.icons.filter((i) => VALID_CP.test(i.codepoint));
 const byCp = new Map(api.icons.map((i) => [i.codepoint, i]));
 const chosen = [];
 for (const i of [...api.icons].sort((a, b) => b.popularity - a.popularity)) {
@@ -45,7 +48,9 @@ for (const [n, cp] of chosen.entries()) {
     .resize(SIZE, SIZE)
     .webp({ quality: 60, effort: 6, minSize: true, mixed: true })
     .toBuffer();
-  fs.writeFileSync(path.join(outDir, `${key(cp)}.webp`), out);
+  const file = path.join(outDir, `${key(cp)}.webp`);
+  if (path.dirname(file) !== outDir) throw new Error(`nombre no válido: ${cp}`);
+  fs.writeFileSync(file, out);
   bytes += out.length;
   done.push(key(cp));
   console.log(`${n + 1}/${chosen.length} ${cp} ${Math.round(out.length / 1024)} KB`);
