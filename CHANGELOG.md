@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- README (English and Spanish) explains commit signing, GitHub vigilant mode and why the two oldest commits show as Unverified.
+
 ### Fixed
 - `checksums.txt` is written with LF line endings, so `sha256sum -c checksums.txt` works on Linux, macOS and Git Bash. The v0.4.0 file was re-uploaded with the same hashes.
 

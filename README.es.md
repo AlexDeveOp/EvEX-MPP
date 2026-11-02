@@ -88,6 +88,10 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - La interfaz corre aislada (`contextIsolation`, `sandbox`, CSP estricta) y solo habla con el proceso principal por canales concretos.
 - El ejecutable lleva desactivados los *fuses* `RunAsNode`, `NODE_OPTIONS` y los argumentos de inspección.
 
+**Commits firmados.** Desde la versión 0.4.0, todos los commits y las etiquetas de versión se firman con la clave SSH de firma del autor, y GitHub los muestra como **Verified** (verificados). La cuenta tiene activado el *modo vigilante* de GitHub: cualquier commit atribuido al autor que **no** esté firmado aparece como **Unverified** (no verificado). Así una suplantación se detecta a simple vista: cualquiera puede poner el nombre y el correo de otra persona en un commit, pero nadie más puede firmar con su clave.
+
+Los dos commits más antiguos del historial, `f7efcc8` (0.3.0) y `a6700f0` (la interfaz en inglés y español), son anteriores a la configuración de la firma y por eso aparecen como **Unverified**. No han sido alterados: firmarlos ahora obligaría a reescribir el historial publicado, que sería peor para la transparencia. Todos los commits desde la 0.4.0 están firmados.
+
 Pidgin guarda las contraseñas **en texto plano** en `%APPDATA%\.purple\accounts.xml`. Si dejas de usarlo, conviene borrarlas de ahí.
 
 Si usas Pidgin a la vez, los pings se entregan al cliente con **mayor prioridad**. Súbela en Cuentas → Conexión avanzada.
