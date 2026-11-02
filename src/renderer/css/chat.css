@@ -26,7 +26,8 @@
 
 .conv-header {
   display: flex;
-  align-items: center;
+  /* Arriba y no centrado: con el tema desplegado los botones no bajan. */
+  align-items: flex-start;
   gap: 12px;
   min-height: 58px;
   padding: 8px 12px 8px 16px;
@@ -95,18 +96,29 @@
   text-overflow: ellipsis;
   margin-top: 2px;
 }
+/* Tema plegado: solo la primera línea (aunque tenga saltos de línea). Sin efecto al pasar el ratón: cambiaba la
+   altura de la cabecera bajo el puntero y hacía temblar la vista. */
 .conv-sub.subject {
-  display: block;
-}
-.conv-sub.subject:hover {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
   white-space: normal;
-  max-height: 6em;
+  overflow: hidden;
+}
+.conv-sub.subject.open {
+  display: block;
+  -webkit-line-clamp: unset;
+  max-height: 10em;
   overflow-y: auto;
+  padding-right: 4px;
 }
 .conv-actions {
   display: flex;
   align-items: center;
   gap: 2px;
+  /* A la altura del nombre de la sala, medio centímetro por debajo de la barra de pestañas. */
+  margin-top: 4px;
+  flex: none;
 }
 
 .conv-body {

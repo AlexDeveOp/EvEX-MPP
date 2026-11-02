@@ -20,6 +20,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Several alerts of the same kind arriving at once ring only once.
 
 ### Fixed
+- Room topics with several lines were shown in full, and hovering them shrank the header under the mouse so it flickered between both sizes. The topic is now collapsed to one line by default, with a button next to the star, bolt and bell to expand it (with its own scroll bar if long); the choice is remembered per room ([#4](https://github.com/AlexDeveOp/EvEX-MPP/issues/4)).
+- The room header buttons stay at the top, level with the room name, instead of moving down when the topic is long.
 - The whole window could shift up by about 30 px, hiding the title bar: the window could no longer be moved and Preferences could not be opened. The blurred background layers were slightly taller than the window, which made the page scrollable ([#3](https://github.com/AlexDeveOp/EvEX-MPP/issues/3)).
 - The room invitation notice was not translated.
 

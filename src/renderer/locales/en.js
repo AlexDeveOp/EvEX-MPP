@@ -750,4 +750,6 @@ export default {
   "Ese enlace no es una imagen ({type}).": "That link is not an image ({type}).",
   "La imagen es demasiado grande (máximo {mb} MB).": "The image is too large (maximum {mb} MB).",
   "Guardar en Mis GIFs": "Save to My GIFs",
+  "Plegar el tema de la sala": "Collapse the room topic",
+  "Desplegar el tema de la sala": "Expand the room topic",
 };

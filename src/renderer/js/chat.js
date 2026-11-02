@@ -383,7 +383,20 @@ function renderHeader(c, p) {
     const r = roomState(c.accountId, c.conv);
     const room = acc?.rooms.find((x) => x.jid === c.conv);
     const status = r.joined ? `${r.occupants.size} participantes` : r.joining ? t("Entrando…") : r.error ? t("Error: {error}", { error: r.error }) : conn(c.accountId).state === "online" ? t("No estás en la sala") : t("Sin conexión");
-    const subject = h("div", { class: "conv-sub subject", title: r.subject || "", html: r.subject ? formatBody(r.subject).html : `<span class="muted">${esc(status)}</span>` });
+    // Tema de la sala: plegado en una línea por defecto; el botón lo despliega y se recuerda por sala.
+    const open = !!r.subject && topicOpen(c.conv);
+    const subject = h("div", { class: `conv-sub subject ${open ? "open" : ""}`, title: r.subject || "", html: r.subject ? formatBody(r.subject).html : `<span class="muted">${esc(status)}</span>` });
+    let topicBtn = r.subject
+      ? iconButton(open ? "chevron-up" : "chevron-down", open ? t("Plegar el tema de la sala") : t("Desplegar el tema de la sala"), () => {
+          const now = !subject.classList.contains("open");
+          setTopicOpen(c.conv, now);
+          subject.classList.toggle("open", now);
+          subject.scrollTop = 0;
+          const fresh = iconButton(now ? "chevron-up" : "chevron-down", now ? t("Plegar el tema de la sala") : t("Desplegar el tema de la sala"), topicBtn.onclick, now ? "on" : "");
+          topicBtn.replaceWith(fresh);
+          topicBtn = fresh;
+        }, open ? "on" : "")
+      : null;
     p.header.append(
       h("div", { class: `conv-avatar room ${r.joined ? "" : "off"}` }, icon("hash")),
       h(
@@ -396,6 +409,7 @@ function renderHeader(c, p) {
         "div",
         { class: "conv-actions" },
         !r.joined && !r.joining ? h("button", { class: "btn small primary", onclick: () => rejoin(c) }, icon("log-in"), t("Entrar")) : null,
+        topicBtn,
         iconButton("star", isFavorite(room) ? t("Favorita (clic para quitarla de la lista)") : t("Añadir a favoritas"), () => toggleFavorite(c.accountId, c.conv), isFavorite(room) ? "on star" : ""),
         iconButton("zap", room?.autojoin ? t("Se abre al iniciar (clic para desactivar)") : t("Abrir automáticamente al iniciar"), () => toggleAutojoin(c.accountId, c.conv), room?.autojoin ? "on zap" : ""),
         iconButton(notifyMode(c) === "none" ? "bell-off" : notifyMode(c) === "all" ? "bell-ring" : "bell", t("Notificaciones"), (e) => menuFor(e.currentTarget, convMenu(c).filter((x) => x.checked !== undefined || x.header))),
@@ -1068,3 +1082,21 @@ async function runCommand(c, text) {
 }
 
 export { getConv };
+
+// Salas con el tema desplegado (preferencia de este equipo).
+const TOPIC_KEY = "evex.topicOpen";
+function topicOpen(room) {
+  try {
+    return JSON.parse(localStorage.getItem(TOPIC_KEY) || "[]").includes(room);
+  } catch {
+    return false;
+  }
+}
+function setTopicOpen(room, open) {
+  try {
+    const set = new Set(JSON.parse(localStorage.getItem(TOPIC_KEY) || "[]"));
+    if (open) set.add(room);
+    else set.delete(room);
+    localStorage.setItem(TOPIC_KEY, JSON.stringify([...set]));
+  } catch {}
+}
