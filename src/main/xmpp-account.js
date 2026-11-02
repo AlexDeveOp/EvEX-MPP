@@ -73,10 +73,11 @@ function stanzaErrorText(el) {
 }
 
 export class XmppAccount extends EventEmitter {
-  constructor(acc, { avatarDir }) {
+  constructor(acc, { avatarDir, version = "" }) {
     super();
     this.acc = acc;
     this.avatarDir = avatarDir;
+    this.version = version; // se responde a las consultas de versión (XEP-0092)
     this.xmpp = null;
     this.state = "offline";
     this.ownJid = null;
@@ -129,7 +130,7 @@ export class XmppAccount extends EventEmitter {
     this.xmpp = xmpp;
 
     xmpp.iqCallee.get(NS.VERSION, "query", () =>
-      xml("query", { xmlns: NS.VERSION }, xml("name", {}, "EvEX-MPP"), xml("version", {}, "0.1.0"), xml("os", {}, process.platform)),
+      xml("query", { xmlns: NS.VERSION }, xml("name", {}, "EvEX-MPP"), xml("version", {}, this.version), xml("os", {}, process.platform)),
     );
     xmpp.iqCallee.get(NS.DISCO_INFO, "query", () =>
       xml("query", { xmlns: NS.DISCO_INFO }, xml("identity", { category: "client", type: "pc", name: "EvEX-MPP" }), ...FEATURES.map((v) => xml("feature", { var: v }))),

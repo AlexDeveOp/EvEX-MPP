@@ -3,6 +3,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { xml } from "@xmpp/client";
 import { XmppAccount } from "../../src/main/xmpp-account.js";
 import { tempDir } from "./helpers.mjs";
 
@@ -20,7 +21,7 @@ before(async () => {
 after(() => mock?.kill());
 
 function account(t, extra = {}) {
-  const acc = new XmppAccount({ id: "t1", jid: "usuario@test.local", host: "127.0.0.1", port: PORT, security: "opportunistic", ...extra }, { avatarDir: tempDir(t) });
+  const acc = new XmppAccount({ id: "t1", jid: "usuario@test.local", host: "127.0.0.1", port: PORT, security: "opportunistic", ...extra }, { avatarDir: tempDir(t), version: "9.8.7" });
   const events = [];
   acc.on("event", (e) => events.push(e));
   t.after(() => acc.disconnect(true).catch(() => {}));
@@ -100,6 +101,25 @@ test("entrar en una sala al conectar no la vuelve a unir ni pierde los ocupantes
   assert.equal(sent.length, 1, `entradas enviadas a la sala: ${sent.join(", ")}`);
   const nicks = [...acc.rooms.get("general@conference.test.local").occupants.keys()].sort();
   assert.deepEqual(nicks, ["piloto_dos", "piloto_tres", "piloto_uno", "probador"]);
+});
+
+test("responde a la consulta de versión (XEP-0092) con la versión de la app", async (t) => {
+  const { acc, waitFor } = account(t);
+  await acc.connect("test");
+  await waitFor((e) => e.type === "status" && e.state === "online");
+  const replies = [];
+  const origSend = acc.xmpp.send.bind(acc.xmpp);
+  acc.xmpp.send = (el) => {
+    if (el.attrs?.id === "v1") replies.push(el);
+    return origSend(el);
+  };
+  // Simula que otro cliente pregunta la versión.
+  acc.xmpp.emit("element", xml("iq", { type: "get", id: "v1", from: "alice@test.local/phone", to: acc.ownJid }, xml("query", { xmlns: "jabber:iq:version" })));
+  await new Promise((r) => setTimeout(r, 300));
+  assert.equal(replies.length, 1);
+  const q = replies[0].getChild("query", "jabber:iq:version");
+  assert.equal(q?.getChildText("name"), "EvEX-MPP");
+  assert.equal(q?.getChildText("version"), "9.8.7");
 });
 
 test("una sala con contraseña rechaza la entrada sin ella", async (t) => {

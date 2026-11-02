@@ -7,6 +7,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-02
+
+Maintenance release: bug fixes found by the new automated tests, plus fixes for CodeQL findings.
+
 ### Added
 - Each release includes its provenance attestation as `EvEX-MPP-vX.Y.Z.intoto.jsonl` (also added to 0.4.1).
 - Automated tests (`npm test`, Node's built-in test runner): ping parsing, message formatting and HTML escaping, translations, local history, Pidgin log import, and XMPP integration tests against the fake server (login, wrong password, required TLS, rooms, password-protected rooms).
@@ -21,9 +25,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - `SECURITY.md` links directly to the private report form and describes the disclosure timeline.
 
 ### Fixed
-- Auto-join rooms were joined twice right after connecting; the second join could empty the occupant list (only you were shown). Found by the new integration tests.
-- Pidgin HTML logs: the last message of each file no longer gets an extra empty line.
-- Fleet pings: a field on the same line as a footer with invisible characters is no longer lost.
+- Auto-join rooms were joined twice right after connecting; the second join could empty the occupant list (only you were shown). Found by the new integration tests ([#1](https://github.com/AlexDeveOp/EvEX-MPP/issues/1)).
+- Pidgin HTML logs: the last message of each file no longer gets an extra empty line ([#2](https://github.com/AlexDeveOp/EvEX-MPP/issues/2)).
+- Fleet pings: a field on the same line as a footer with invisible characters is no longer lost ([#2](https://github.com/AlexDeveOp/EvEX-MPP/issues/2)).
+- Software version requests from other clients (XEP-0092) were answered with `0.1.0`; they now return the real app version.
 - The fake XMPP server (`test/mock-xmpp.mjs`) closes the stream like a real server, and its port can be set with `MOCK_PORT`.
 
 ### Security
@@ -95,7 +100,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/AlexDeveOp/EvEX-MPP/tree/v0.3.0

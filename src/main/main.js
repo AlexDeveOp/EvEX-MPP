@@ -367,7 +367,7 @@ function getConn(id) {
   const acc = store.getAccount(id);
   if (!acc) throw new Error(t("Cuenta no encontrada"));
   if (!x) {
-    x = new XmppAccount(acc, { avatarDir: avatarDir() });
+    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion() });
     x.historyOptions = (roomJid) => historyOptions(id, roomJid);
     x.on("event", (ev) => onAccountEvent(x, ev));
     accounts.set(id, x);
