@@ -60,12 +60,20 @@ jobs:
 
       # Las atestaciones son gratuitas en repositorios públicos; en privados dependen del plan de GitHub.
       - name: Atestación de procedencia
+        id: attest
         if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             dist/*.exe
             dist/checksums.txt
+
+      # La atestación también va como fichero en la release, para verificarla sin conexión
+      # (`gh attestation verify <fichero> --bundle <.intoto.jsonl> --repo ...`) y para que Scorecard la detecte.
+      - name: Copiar la atestación a dist
+        if: steps.attest.outcome == 'success'
+        shell: pwsh
+        run: Copy-Item "${{ steps.attest.outputs.bundle-path }}" "dist/EvEX-MPP-${{ github.ref_name }}.intoto.jsonl"
 
       - name: Preparar notas desde CHANGELOG.md
         shell: pwsh
@@ -92,5 +100,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $files = @(Get-ChildItem dist\*.exe | ForEach-Object FullName) + "dist\checksums.txt"
+          $files = @(Get-ChildItem dist\*.exe, dist\*.intoto.jsonl | ForEach-Object FullName) + "dist\checksums.txt"
           gh release create "${{ github.ref_name }}" @files --title "EvEX-MPP ${{ github.ref_name }}" --notes-file notes.md --verify-tag

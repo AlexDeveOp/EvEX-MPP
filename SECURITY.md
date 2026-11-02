@@ -13,9 +13,12 @@ Only the latest release receives security fixes.
 
 Please **do not open a public issue** for security problems.
 
-Report it privately through GitHub: go to the **Security** tab of this repository → **Report a vulnerability**. Include the version, what you did, what happened and, if possible, how to reproduce it.
+Report it privately through GitHub: open https://github.com/AlexDeveOp/EvEX-MPP/security/advisories/new (or the **Security** tab → **Report a vulnerability**). Include the version, what you did, what happened and, if possible, how to reproduce it.
 
-You should get a first answer within 7 days. Once a fix is released, the report is published as a security advisory and you are credited unless you prefer otherwise.
+Disclosure process:
+1. You get a first answer within 7 days confirming whether the vulnerability is accepted.
+2. Accepted vulnerabilities are fixed in a new release, normally within 30 days; you are kept informed in the private advisory.
+3. After the fix is released, the advisory is published (with a CVE when it applies) and you are credited unless you prefer otherwise. Please keep the details private until then.
 
 ## Verifying a download
 
@@ -23,14 +26,15 @@ Every release is built by GitHub Actions from the tagged source code and include
 
 1. Check the SHA-256 hash of the file you downloaded (PowerShell):
    ```powershell
-   Get-FileHash .\EvEX-MPP-Setup-0.4.0.exe -Algorithm SHA256
+   Get-FileHash .\EvEX-MPP-Setup-0.4.1.exe -Algorithm SHA256
    ```
    It must match the line for that file in `checksums.txt`.
 2. When the repository is public, releases also carry a signed build provenance attestation. With the GitHub CLI:
    ```
-   gh attestation verify EvEX-MPP-Setup-0.4.0.exe --repo AlexDeveOp/EvEX-MPP
+   gh attestation verify EvEX-MPP-Setup-0.4.1.exe --repo AlexDeveOp/EvEX-MPP
    ```
    This proves the file was built by this repository's release workflow from a specific commit.
+   The attestation is also attached to the release as `EvEX-MPP-vX.Y.Z.intoto.jsonl`; add `--bundle <that file>` to check it without querying GitHub's attestation API.
 
 The executables are not code-signed yet, so Windows SmartScreen may warn the first time ("More info" → "Run anyway").
 
