@@ -49,12 +49,52 @@ function fieldValue(key, value) {
   return h("span", { html: formatBody(value).html });
 }
 
+// ---------- pings recientes: la sirena late ----------
+
+const SEEN_KEY = "evex.pingsSeenAt";
+// Momento en que se salió por última vez de la vista de pings (para el modo «hasta volver a abrirlos»).
+export function pingsSeenAt() {
+  try {
+    return Number(localStorage.getItem(SEEN_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+export function markPingsSeen(ts = Date.now()) {
+  try {
+    localStorage.setItem(SEEN_KEY, String(ts));
+  } catch {}
+}
+
+// ¿Late la sirena de este ping? Según Preferencias → Pings de flota.
+export function isFreshPing(ts, mode = S.settings?.pingHighlight ?? "60", now = Date.now(), seenAt = pingsSeenAt()) {
+  if (mode === "unseen") return ts > seenAt;
+  const minutes = Number(mode) || 0;
+  return minutes > 0 && now - ts < minutes * 60e3;
+}
+
+// Apaga a su hora la sirena de las tarjetas visibles (antes seguía latiendo hasta que la vista se repintaba).
+// El temporizador solo funciona mientras queda alguna sirena latiendo.
+let sweepTimer = null;
+function sweepFresh() {
+  const cards = document.querySelectorAll(".ping-card.fresh");
+  for (const card of cards) if (!isFreshPing(Number(card.dataset.ts))) card.classList.remove("fresh");
+  if (!document.querySelector(".ping-card.fresh")) {
+    clearInterval(sweepTimer);
+    sweepTimer = null;
+  }
+}
+function watchFresh() {
+  sweepTimer ??= setInterval(sweepFresh, 30000);
+}
+
 export function pingCard(m) {
   const p = parsePing(m.body);
-  const age = Date.now() - m.ts;
+  const fresh = isFreshPing(m.ts);
+  if (fresh) watchFresh();
   const card = h(
     "article",
-    { class: `ping-card ${age < 3600e3 ? "fresh" : ""}`, dataset: { key: m.key } },
+    { class: `ping-card ${fresh ? "fresh" : ""}`, dataset: { key: m.key, ts: String(m.ts) } },
     h(
       "header",
       { class: "ping-head" },

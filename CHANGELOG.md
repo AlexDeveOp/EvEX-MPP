@@ -13,6 +13,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Optional ping repeat: the ping sound repeats every N seconds (up to a maximum) until you look at the window.
 - *Import Pidgin sounds*: copies the sounds of your installed Pidgin (your custom ones from `prefs.xml` if you set any) and lets you choose which alerts use them. Pidgin's files are never distributed with EvEX-MPP.
 - Five new built-in sounds: Bubble, Radar, Warp jump, Signal lost and Signal restored.
+- *Preferences → Fleet pings → Visual cue*: choose how long the siren of recent pings pulses: never, 5/15/30 minutes, 1 hour (default, as before), 2 hours, or until you open the pings again (only pings that arrived since you last left the pings view).
 - **GIFs**: a *GIF* button in the message box. *My GIFs* keeps the GIFs you save (right-click on an image → *Save to My GIFs*, or paste a link) with a local thumbnail, and works without any external service. Optional search in GIPHY or KLIPY with your own free key (off by default), shown as their terms require ("Powered by GIPHY", results unchanged and never stored). GIFs are sent as their link and as an XEP-0066 attachment, so other clients show the image.
 
 ### Changed
@@ -20,6 +21,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Several alerts of the same kind arriving at once ring only once.
 
 ### Fixed
+- The siren of recent fleet pings kept pulsing after its hour had passed if the pings view stayed open: it was only checked when the view was drawn. Cards are now re-checked every 30 seconds while any siren is pulsing ([#8](https://github.com/AlexDeveOp/EvEX-MPP/issues/8)).
 - The hover color of rows in the room/contact list and the occupant list sometimes flickered while moving the mouse. These lists are redrawn whenever someone joins, leaves or changes presence (several times per second in big rooms), and the new rows had no hover state until the mouse moved again. The row under the mouse now stays highlighted across redraws ([#7](https://github.com/AlexDeveOp/EvEX-MPP/issues/7)).
 - The tab bar showed scroll bars. It now has a fixed height that fits the tabs exactly; when there are more tabs than fit, the mouse wheel scrolls them sideways and the active tab is always brought into view ([#5](https://github.com/AlexDeveOp/EvEX-MPP/issues/5)).
 - Room rows in the sidebar jittered when hovered or clicked, and the member count flashed for an instant: the count was swapped for the star and bolt buttons, which have different widths. Now nothing changes size or intensity: the count always stays, the star of favorite rooms and the bolt of auto-join rooms are always visible, and the other buttons have reserved space and only appear while hovering the row ([#6](https://github.com/AlexDeveOp/EvEX-MPP/issues/6)).

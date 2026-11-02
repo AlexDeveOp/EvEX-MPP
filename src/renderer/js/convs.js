@@ -3,7 +3,7 @@ import { S, api, emit, convKey, account, roomState, displayName, saveSettings, P
 import { mentionRegex, fmtTime, fmtEve } from "./format.js";
 import { playSound, startPingRepeat } from "./sounds.js";
 import { toast } from "./dom.js";
-import { parsePing } from "./pings.js";
+import { parsePing, markPingsSeen } from "./pings.js";
 import { themeColors } from "./themes.js";
 import { replaceShortcodes } from "./emoji.js";
 
@@ -137,8 +137,13 @@ export async function openConv(accountId, conv, type, { focus = true, join = tru
   return c;
 }
 
+// Cerrar la app estando en la vista de pings también cuenta como haberlos visto.
+window.addEventListener("beforeunload", () => S.active === PINGS_KEY && markPingsSeen());
+
 export function activate(key) {
   if (!S.convs.has(key)) return;
+  // Al salir de la vista de pings, los que había ya cuentan como vistos (modo «hasta volver a abrirlos»).
+  if (S.active === PINGS_KEY && key !== PINGS_KEY) markPingsSeen();
   S.active = key;
   markRead(key);
   emit("active", S.convs.get(key));

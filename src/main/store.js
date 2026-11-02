@@ -74,6 +74,8 @@ export const DEFAULT_SETTINGS = {
     roomModes: {},
   },
   pingSenders: [],
+  // Cuánto late la sirena de los pings recientes: minutos ("0" = nunca) o "unseen" (hasta volver a abrir los pings).
+  pingHighlight: "60",
   behavior: {
     enterToSend: true,
     sendTyping: true,

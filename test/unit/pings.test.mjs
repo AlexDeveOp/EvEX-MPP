@@ -64,3 +64,23 @@ test("pingGroups devuelve los destinatarios sin repetir y ordenados", () => {
   const other = PING.replace("to all", "to caps");
   assert.deepEqual(pingGroups([{ body: PING }, { body: other }, { body: PING }, { body: "sin pie" }]), ["all", "caps"]);
 });
+
+test("isFreshPing: la sirena late según la duración elegida", async () => {
+  const { isFreshPing } = await import("../../src/renderer/js/pings.js");
+  const now = Date.UTC(2026, 10, 3, 12, 0, 0);
+  const min = 60e3;
+  assert.equal(isFreshPing(now - 59 * min, "60", now), true);
+  assert.equal(isFreshPing(now - 61 * min, "60", now), false, "a la hora deja de latir");
+  assert.equal(isFreshPing(now - 4 * min, "5", now), true);
+  assert.equal(isFreshPing(now - 6 * min, "5", now), false);
+  assert.equal(isFreshPing(now, "0", now), false, "«Nunca» no late ni con un ping recién llegado");
+  assert.equal(isFreshPing(now - 90 * min, "120", now), true);
+});
+
+test("isFreshPing: «hasta volver a abrir los pings» depende de cuándo se salió de la vista", async () => {
+  const { isFreshPing } = await import("../../src/renderer/js/pings.js");
+  const seenAt = Date.UTC(2026, 10, 3, 10, 0, 0);
+  const now = Date.UTC(2026, 10, 3, 18, 0, 0);
+  assert.equal(isFreshPing(seenAt + 1000, "unseen", now, seenAt), true, "llegó después: late aunque tenga horas");
+  assert.equal(isFreshPing(seenAt - 1000, "unseen", now, seenAt), false, "ya estaba al salir: no late");
+});

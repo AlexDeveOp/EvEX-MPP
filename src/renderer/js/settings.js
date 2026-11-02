@@ -484,6 +484,26 @@ const RENDER = {
         field(t("Direcciones (una por línea)"), senders),
       ),
       group(
+        t("Aviso visual"),
+        field(
+          t("La sirena de los pings recientes late…"),
+          select(
+            [
+              ["0", t("Nunca")],
+              ["5", t("Durante 5 minutos")],
+              ["15", t("Durante 15 minutos")],
+              ["30", t("Durante 30 minutos")],
+              ["60", t("Durante 1 hora")],
+              ["120", t("Durante 2 horas")],
+              ["unseen", t("Hasta que vuelvas a abrir los pings")],
+            ],
+            s.pingHighlight ?? "60",
+            (v) => full((x) => (x.pingHighlight = v)),
+          ),
+          t("Con «hasta que vuelvas a abrir los pings» solo laten los que han llegado desde la última vez que saliste de la vista de pings. Si desactivas las animaciones (Apariencia), no late nunca."),
+        ),
+      ),
+      group(
         t("Importante si usas Pidgin a la vez"),
         h(
           "p",
