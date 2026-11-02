@@ -7,6 +7,20 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- More alerts with sound: message sent, connection lost, connection restored, contact comes online or goes offline, contact request and room invitation. The new ones are off or discreet by default; contacts stay silent for the first seconds after connecting so the initial burst does not ring.
+- Each sound has its own volume on top of the master volume, and you can choose the audio output device (e.g. your headset).
+- Optional ping repeat: the ping sound repeats every N seconds (up to a maximum) until you look at the window.
+- *Import Pidgin sounds*: copies the sounds of your installed Pidgin (your custom ones from `prefs.xml` if you set any) and lets you choose which alerts use them. Pidgin's files are never distributed with EvEX-MPP.
+- Five new built-in sounds: Bubble, Radar, Warp jump, Signal lost and Signal restored.
+
+### Changed
+- *Do not disturb* now also lets connection lost/restored sounds through, like fleet pings.
+- Several alerts of the same kind arriving at once ring only once.
+
+### Fixed
+- The room invitation notice was not translated.
+
 ## [0.5.0] - 2026-11-02
 
 Privacy and offline release: the most used animated emoji come with the app, an optional new-version notice, and a privacy policy that lists every network connection.

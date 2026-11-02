@@ -3,6 +3,7 @@ import { S, api, on, emit, account, roomState, contact, bestPresence, avatarUrl,
 import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, debounce } from "./dom.js";
 import { formatBody, previewHtml, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes } from "./format.js";
 import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
+import { playSound } from "./sounds.js";
 import { activate, closeConv, openConv, convTitle, markRead, loadHistory, systemMessage, mentionWords, moveTab, notifyMode, getConv } from "./convs.js";
 import { backgroundCss } from "./themes.js";
 import { pingCard, pingMatches, pingGroups } from "./pings.js";
@@ -851,6 +852,7 @@ function buildComposer(c, p) {
     clearTimeout(typingTimer);
     try {
       await api("msg:send", c.accountId, { to: c.conv, body, type: c.type === "groupchat" ? "groupchat" : "chat" });
+      playSound("sent");
     } catch (e) {
       ta.value = body;
       autosize();

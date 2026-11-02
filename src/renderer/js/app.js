@@ -11,6 +11,7 @@ import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } 
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openSearch } from "./search.js";
 import { showUpdate } from "./updates.js";
+import { playSound, stopPingRepeat } from "./sounds.js";
 
 import { t, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
@@ -42,6 +43,7 @@ async function boot() {
   onMain("update-available", showUpdate);
   onMain("window-focus", (f) => {
     S.focused = f;
+    if (f) stopPingRepeat();
     if (f && S.active) markRead(S.active);
   });
 
@@ -128,6 +130,17 @@ const HANDLERS = {
       }
       emit("presence", { accountId: id });
     }
+    // Sonidos de conexión: perdida (caída o error inesperado) y recuperada tras una caída.
+    if (was === "online" && (ev.state === "reconnecting" || ev.state === "error")) {
+      st.dropped = true;
+      playSound("disconnected");
+    }
+    if (ev.state === "online" && was !== "online") {
+      st.onlineAt = Date.now();
+      if (st.dropped) playSound("reconnected");
+      st.dropped = false;
+    }
+    if (ev.state === "offline") st.dropped = false;
     if (ev.state === "error" && was !== "error") toast(`${account(id)?.alias}: ${ev.error}`, { kind: "error", timeout: 10000, actions: [{ label: t("Configurar"), action: () => openAccounts(id) }] });
     if (ev.state === "online" && was !== "online") {
       // Al conectar, las salas con pestaña abierta se marcan como "entrando" (el proceso principal se encarga de unirse).
@@ -163,12 +176,18 @@ const HANDLERS = {
   },
   presence(id, ev) {
     const c = contact(id, ev.jid);
+    const wasOnline = c.resources.size > 0;
     if (ev.available) c.resources.set(ev.resource, { show: ev.show, status: ev.status, priority: ev.priority });
     else c.resources.delete(ev.resource);
+    // Contacto que se conecta o se desconecta (como en Pidgin). Los primeros segundos tras conectar no suenan:
+    // es cuando el servidor manda de golpe la presencia de todos.
+    const isOnline = c.resources.size > 0;
+    if (c.inRoster && wasOnline !== isOnline && Date.now() - (conn(id).onlineAt || 0) > 8000) playSound(isOnline ? "contactOnline" : "contactOffline");
     if (ev.avatar) S.avatarOf.set(ev.jid, ev.avatar);
     emit("presence", { accountId: id, jid: ev.jid });
   },
   "subscribe-request"(id, ev) {
+    playSound("subscribe");
     toast(t("{x} quiere añadirte a sus contactos", { x: ev.nick || ev.jid }), {
       kind: "info",
       timeout: 0,
@@ -278,7 +297,9 @@ const HANDLERS = {
     emit("room", { accountId: id, room: ev.room });
   },
   invite(id, ev) {
-    toast(`${ev.from} te invita a ${ev.room}${ev.reason ? `: «${ev.reason}»` : ""}`, {
+    playSound("invite");
+    const text = ev.reason ? t("{from} te invita a {room}: «{reason}»", { from: ev.from, room: ev.room, reason: ev.reason }) : t("{from} te invita a {room}", { from: ev.from, room: ev.room });
+    toast(text, {
       timeout: 0,
       icon: "door-open",
       actions: [{ label: t("Unirse"), primary: true, action: () => (ev.password ? openJoinRoom(id, { room: ev.room, password: ev.password }) : openConv(id, ev.room, "groupchat")) }],

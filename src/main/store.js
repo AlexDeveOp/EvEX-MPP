@@ -46,14 +46,23 @@ export const DEFAULT_SETTINGS = {
     showPreview: true,
     flashTaskbar: true,
     sound: true,
-    // Sonido por tipo de aviso: preset sintetizado o un archivo propio ("custom" + file).
+    // Sonido por tipo de aviso: preset sintetizado o un archivo propio ("custom" + file), con su volumen (0–1).
     sounds: {
-      private: { preset: "chime", file: "" },
-      mention: { preset: "ding", file: "" },
-      room: { preset: "pop", file: "" },
-      ping: { preset: "alarm", file: "" },
+      private: { preset: "chime", file: "", volume: 1 },
+      mention: { preset: "ding", file: "", volume: 1 },
+      room: { preset: "pop", file: "", volume: 1 },
+      sent: { preset: "none", file: "", volume: 1 },
+      ping: { preset: "alarm", file: "", volume: 1 },
+      disconnected: { preset: "down", file: "", volume: 1 },
+      reconnected: { preset: "up", file: "", volume: 1 },
+      contactOnline: { preset: "none", file: "", volume: 1 },
+      contactOffline: { preset: "none", file: "", volume: 1 },
+      subscribe: { preset: "bubble", file: "", volume: 1 },
+      invite: { preset: "ding", file: "", volume: 1 },
     },
     volume: 0.6,
+    outputDevice: "", // "" = salida predeterminada de Windows
+    pingRepeat: { enabled: false, interval: 30, times: 5 }, // repetir el sonido del ping hasta mirar la ventana
     popupStyle: "custom",
     popupCorner: "bottom-left",
     popupDuration: 8,

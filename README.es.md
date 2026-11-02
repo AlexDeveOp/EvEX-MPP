@@ -45,7 +45,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - **Burbuja propia** que sube desde la barra de tareas (por defecto abajo a la izquierda) y queda **siempre encima**, también sobre EVE en ventana sin bordes. Los pings se quedan hasta que los cierras.
 - Opcionalmente, la notificación de Windows en lugar de la burbuja, o ambas.
 - **«!» ámbar parpadeando en la bandeja** mientras haya pings sin leer, y parpadeo de la barra de tareas.
-- **Sonido distinto para cada tipo** (privado, mención, sala, ping): 9 sonidos incluidos o un archivo tuyo, con volumen.
+- **Sonido distinto para cada tipo de aviso**: privado, mención, sala, mensaje enviado, ping, conexión perdida y recuperada, contactos que se conectan o desconectan, solicitudes de contacto e invitaciones a salas. 13 sonidos incluidos o un archivo tuyo, cada uno con su volumen, elección de la salida de audio (p. ej. los auriculares), repetición opcional del ping hasta que mires la ventana e **Importar sonidos de Pidgin** (se copian de tu Pidgin instalado).
 - Todo funciona igual con la ventana **minimizada o escondida en la bandeja**.
 
 **Mensajes**

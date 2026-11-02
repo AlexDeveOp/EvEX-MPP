@@ -4,7 +4,7 @@ import { h, icon, iconButton, modal, field, toggle, select, range, clear, toast,
 
 const append = (el, ...children) => el.append(...children.filter(Boolean));
 import { PRESETS, TOKENS, GRADIENTS, BUNDLED_FONTS, applyAppearance, themeColors, backgroundCss, resolveThemeId } from "./themes.js";
-import { PRESETS as SOUNDS, SOUND_KINDS, previewSound } from "./sounds.js";
+import { PRESETS as SOUNDS, SOUND_GROUPS, previewSound, outputDevices } from "./sounds.js";
 import { addCustomEmoji, emojifyHtml } from "./emoji.js";
 import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
 import { checkUpdatesNow } from "./updates.js";
@@ -360,36 +360,43 @@ const RENDER = {
     const kw = h("textarea", { class: "input", rows: 2, placeholder: t("Una palabra o frase por línea (p. ej. «cyno», «titan», tu nombre de personaje)"), value: (n.keywords || []).join("\n") });
     kw.value = (n.keywords || []).join("\n");
     kw.addEventListener("change", () => full((x) => (x.notifications.keywords = kw.value.split("\n").map((s) => s.trim()).filter(Boolean))));
-    // Una fila por tipo de aviso: lista de sonidos (o archivo propio) y botón de prueba.
+    // Una fila por tipo de aviso: lista de sonidos (o archivo propio), volumen propio, prueba y elegir archivo.
     const soundRow = (kind, label) => {
       const cur = () => S.settings.notifications.sounds[kind];
-      const fileLabel = h("span", { class: "muted small ellipsis" }, cur().file ? t("Archivo propio") : "");
       const sel = select([...Object.entries(SOUNDS).map(([k, v]) => [k, t(v.name)]), ["custom", t("Archivo propio…")]], cur().preset, async (v) => {
         if (v === "custom" && !cur().file) {
           const url = await api("file:pick", "sound");
           if (!url) return (sel.value = cur().preset);
-          set((x) => (x.sounds[kind] = { preset: "custom", file: url }));
-          fileLabel.textContent = t("Archivo propio");
+          set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: "custom", file: url }));
         } else set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: v }));
         previewSound(cur());
       });
       const pick = iconButton("folder-open", t("Elegir otro archivo de sonido"), async () => {
         const url = await api("file:pick", "sound");
         if (!url) return;
-        set((x) => (x.sounds[kind] = { preset: "custom", file: url }));
+        set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: "custom", file: url }));
         sel.value = "custom";
-        fileLabel.textContent = t("Archivo propio");
         previewSound(cur());
       });
-      return field(label, h("div", { class: "row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cur())), pick, fileLabel));
+      const vol = range(0, 1, 0.05, cur().volume ?? 1, (v) => set((x) => (x.sounds[kind] = { ...x.sounds[kind], volume: v })), (v) => `${Math.round(v * 100)}%`);
+      vol.classList.add("sound-volume");
+      vol.title = t("Volumen de este sonido");
+      return field(t(label), h("div", { class: "row sound-row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cur())), pick, vol));
     };
+    // Salida de audio: se rellena al abrir (la lista depende de los dispositivos conectados).
+    const device = select([["", t("Predeterminada de Windows")]], n.outputDevice || "", (v) => (set((x) => (x.outputDevice = v)), previewSound(S.settings.notifications.sounds.private)));
+    outputDevices().then((list) => {
+      for (const d of list) device.append(h("option", { value: d.id }, d.label));
+      device.value = list.some((d) => d.id === n.outputDevice) ? n.outputDevice : "";
+    });
+    const r = n.pingRepeat || { enabled: false, interval: 30, times: 5 };
     return h(
       "div",
       {},
       group(
         t("General"),
         toggle(n.enabled, (v) => set((x) => (x.enabled = v)), t("Notificaciones de escritorio")),
-        toggle(n.dnd, (v) => set((x) => (x.dnd = v)), t("No molestar"), t("Silencia todo excepto los pings de flota")),
+        toggle(n.dnd, (v) => set((x) => (x.dnd = v)), t("No molestar"), t("Silencia todo excepto los pings de flota y los avisos de conexión perdida o recuperada")),
         toggle(n.showPreview, (v) => set((x) => (x.showPreview = v)), t("Mostrar el texto del mensaje en la notificación")),
         toggle(n.flashTaskbar, (v) => set((x) => (x.flashTaskbar = v)), t("Hacer parpadear la barra de tareas")),
       ),
@@ -442,8 +449,22 @@ const RENDER = {
       group(
         t("Sonidos"),
         toggle(n.sound, (v) => set((x) => (x.sound = v)), t("Reproducir sonidos")),
-        SOUND_KINDS.map(([kind, label]) => soundRow(kind, label)),
-        field(t("Volumen"), range(0, 1, 0.05, n.volume, (v) => set((x) => (x.volume = v)), (v) => `${Math.round(v * 100)}%`)),
+        field(t("Volumen general"), range(0, 1, 0.05, n.volume, (v) => set((x) => (x.volume = v)), (v) => `${Math.round(v * 100)}%`)),
+        field(t("Salida de audio"), device, t("Por ejemplo, los auriculares para oír los avisos mientras juegas")),
+        h("div", { class: "row" }, h("button", { class: "btn", onclick: importPidginSounds }, icon("import"), t("Importar sonidos de Pidgin"))),
+      ),
+      SOUND_GROUPS.map(([name, kinds]) =>
+        group(
+          t("Sonidos: {group}", { group: t(name) }),
+          kinds.map(([kind, label]) => soundRow(kind, label)),
+          name === "Flota"
+            ? [
+                toggle(r.enabled, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, enabled: v })), t("Repetir el sonido del ping hasta que mires la ventana"), t("Para no perderte un ping si estás lejos del ordenador")),
+                field(t("Repetir cada"), range(10, 120, 5, r.interval, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, interval: v })), (v) => `${v} s`)),
+                field(t("Máximo de repeticiones"), range(1, 20, 1, r.times, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, times: v })), (v) => `${v}`)),
+              ]
+            : null,
+        ),
       ),
     );
   },
@@ -693,6 +714,40 @@ export function openBackgroundEditor(key) {
       },
       "spacer",
       { label: t("Listo"), primary: true, action: (c) => (apply(), c()) },
+    ],
+  });
+}
+
+// Copia los sonidos del Pidgin instalado (los personalizados si los hay) y deja elegir a qué avisos aplicarlos.
+async function importPidginSounds() {
+  const scan = await api("sounds:pidginScan");
+  if (!scan.found) return toast(t("No se ha encontrado Pidgin instalado ni sonidos configurados en él."), { kind: "warn" });
+  const label = Object.fromEntries(SOUND_GROUPS.flatMap(([, kinds]) => kinds));
+  // Los de contactos vienen desmarcados: en salas grandes suenan mucho.
+  const checks = Object.entries(scan.sounds).map(([kind, info]) => {
+    const input = h("input", { type: "checkbox", checked: !kind.startsWith("contact") });
+    return { kind, input, row: h("label", { class: "check-row" }, input, h("span", {}, t(label[kind])), h("span", { class: "muted small" }, `${info.name}${info.custom ? ` (${t("personalizado")})` : ""}`)) };
+  });
+  modal({
+    title: t("Importar sonidos de Pidgin"),
+    body: h("div", {}, h("p", { class: "muted small" }, t("Se copian del Pidgin instalado en tu PC. El ping de flota no se cambia.")), checks.map((c) => c.row)),
+    actions: [
+      { label: t("Cancelar"), action: (close) => close() },
+      {
+        label: t("Importar"),
+        primary: true,
+        action: async (close) => {
+          const kinds = checks.filter((c) => c.input.checked).map((c) => c.kind);
+          const urls = await api("sounds:pidginImport", kinds);
+          look((x) => {
+            for (const [kind, url] of Object.entries(urls)) x.notifications.sounds[kind] = { ...x.notifications.sounds[kind], preset: "custom", file: url };
+          });
+          close();
+          toast(t("Sonidos de Pidgin importados: {n}", { n: Object.keys(urls).length }), { kind: "ok" });
+          // Volver a pintar la pestaña para que se vean los sonidos nuevos.
+          document.querySelector('.settings-tab[data-tab="notifications"]')?.click();
+        },
+      },
     ],
   });
 }

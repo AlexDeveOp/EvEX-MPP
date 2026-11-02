@@ -78,6 +78,43 @@ export function scanPidgin({ includePasswords = false } = {}) {
   return { found: true, dir, accounts };
 }
 
+// ---------- sonidos ----------
+
+// Sonidos de Pidgin y a qué aviso de EvEX-MPP corresponden (nombre del evento en prefs.xml → fichero por defecto).
+const PIDGIN_SOUNDS = {
+  private: ["im_recv", "receive.wav"],
+  mention: ["nick_said", "alert.wav"],
+  room: ["chat_msg_recv", "receive.wav"],
+  sent: ["send_im", "send.wav"],
+  contactOnline: ["login", "login.wav"],
+  contactOffline: ["logout", "logout.wav"],
+};
+
+// Carpetas donde el instalador de Pidgin deja sus sonidos.
+export function pidginSoundDirs() {
+  return [process.env["ProgramFiles(x86)"], process.env.ProgramFiles, process.env.ProgramW6432]
+    .filter(Boolean)
+    .map((p) => path.join(p, "Pidgin", "sounds", "purple"));
+}
+
+// Busca los sonidos de Pidgin sin copiar nada: los personalizados de prefs.xml y, si no, los que trae Pidgin.
+// Pidgin es GPL: sus ficheros no se incluyen en EvEX-MPP, solo se copian del Pidgin que el usuario ya tiene.
+export function scanPidginSounds({ prefsFile = path.join(purpleDir(), "prefs.xml"), soundDirs = pidginSoundDirs() } = {}) {
+  const custom = {};
+  const prefs = readXml(prefsFile);
+  const find = (el, name) => el?.getChildren("pref").find((c) => c.attrs.name === name);
+  const files = find(find(find(prefs, "pidgin"), "sound"), "file");
+  for (const f of files?.getChildren("pref") || []) if (f.attrs.value) custom[f.attrs.name] = f.attrs.value;
+  const dir = soundDirs.find((d) => fs.existsSync(d)) || null;
+  const out = {};
+  for (const [kind, [event, def]] of Object.entries(PIDGIN_SOUNDS)) {
+    const candidates = [custom[event], dir && path.join(dir, def)].filter(Boolean);
+    const file = candidates.find((c) => /\.(wav|mp3|ogg|flac|m4a)$/i.test(c) && fs.existsSync(c));
+    if (file) out[kind] = { file, custom: file === custom[event] };
+  }
+  return { found: Object.keys(out).length > 0, dir, sounds: out };
+}
+
 // ---------- registros ----------
 
 const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };

@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import * as store from "./store.js";
 import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
-import { scanPidgin, importLogs } from "./pidgin-import.js";
+import { scanPidgin, importLogs, scanPidginSounds } from "./pidgin-import.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, closeAllPopups } from "./popups.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
@@ -642,6 +642,18 @@ function registerIpc() {
   handle("logs:tail", (id, conv, limit, beforeTs) => logs.tail(id, conv, limit, beforeTs));
   handle("logs:search", (id, opts) => logs.search(id, opts));
   handle("logs:list", (id) => logs.listConversations(id));
+
+  // Sonidos de Pidgin: se buscan en el Pidgin instalado y se copian a la carpeta de la app (no se incluyen con EvEX-MPP).
+  handle("sounds:pidginScan", () => {
+    const r = scanPidginSounds();
+    return { found: r.found, sounds: Object.fromEntries(Object.entries(r.sounds).map(([k, v]) => [k, { name: path.basename(v.file), custom: v.custom }])) };
+  });
+  handle("sounds:pidginImport", (kinds) => {
+    const r = scanPidginSounds();
+    const out = {};
+    for (const k of kinds || []) if (r.sounds[k]) out[k] = copyToMedia(r.sounds[k].file, "sounds");
+    return out;
+  });
 
   handle("pidgin:scan", () => {
     const r = scanPidgin();

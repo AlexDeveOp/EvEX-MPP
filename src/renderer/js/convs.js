@@ -1,7 +1,7 @@
 // Conversaciones abiertas: pestañas, entrada de mensajes, no leídos, menciones, notificaciones y pings.
 import { S, api, emit, convKey, account, roomState, displayName, saveSettings, PINGS_KEY, conn } from "./state.js";
 import { mentionRegex, fmtTime, fmtEve } from "./format.js";
-import { playSound } from "./sounds.js";
+import { playSound, startPingRepeat } from "./sounds.js";
 import { toast } from "./dom.js";
 import { parsePing } from "./pings.js";
 import { themeColors } from "./themes.js";
@@ -348,6 +348,7 @@ function notifyPing(m) {
   const n = S.settings.notifications;
   if (!n.enabled || !n.pings) return;
   playSound("ping");
+  startPingRepeat();
   // La burbuja muestra el ping ya desglosado: título, campos (FC, formup, doctrina…) y quién lo envía.
   const p = parsePing(m.body);
   const clean = (s) => s.replace(INVISIBLE, "").trim();
