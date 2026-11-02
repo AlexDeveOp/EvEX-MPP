@@ -1,6 +1,7 @@
 // Sonidos sintetizados con WebAudio (sin ficheros) y reproducción de sonidos propios por tipo de aviso.
 import { S } from "./state.js";
 
+import { t, tk } from "./i18n.js";
 let ctx = null;
 const ac = () => (ctx ||= new AudioContext());
 
@@ -31,15 +32,15 @@ function master() {
 }
 
 export const PRESETS = {
-  none: { name: "Sin sonido", play() {} },
-  chime: { name: "Campanilla", play: () => (tone(880, 0, 0.35, { gain: 0.25 }), tone(1320, 0.09, 0.45, { gain: 0.2 })) },
-  pop: { name: "Pop", play: () => tone(520, 0, 0.12, { type: "triangle", gain: 0.45, slide: 900 }) },
-  ding: { name: "Ding", play: () => (tone(1568, 0, 0.6, { gain: 0.22 }), tone(3136, 0, 0.3, { gain: 0.05 })) },
-  blip: { name: "Blip digital", play: () => (tone(1200, 0, 0.06, { type: "square", gain: 0.12 }), tone(1800, 0.07, 0.06, { type: "square", gain: 0.12 })) },
-  knock: { name: "Toc toc", play: () => (tone(180, 0, 0.09, { type: "triangle", gain: 0.6 }), tone(170, 0.16, 0.09, { type: "triangle", gain: 0.6 })) },
-  sonar: { name: "Sonar", play: () => tone(1046, 0, 1.2, { gain: 0.3, slide: 1000 }) },
+  none: { name: tk("Sin sonido"), play() {} },
+  chime: { name: tk("Campanilla"), play: () => (tone(880, 0, 0.35, { gain: 0.25 }), tone(1320, 0.09, 0.45, { gain: 0.2 })) },
+  pop: { name: tk("Pop"), play: () => tone(520, 0, 0.12, { type: "triangle", gain: 0.45, slide: 900 }) },
+  ding: { name: tk("Ding"), play: () => (tone(1568, 0, 0.6, { gain: 0.22 }), tone(3136, 0, 0.3, { gain: 0.05 })) },
+  blip: { name: tk("Blip digital"), play: () => (tone(1200, 0, 0.06, { type: "square", gain: 0.12 }), tone(1800, 0.07, 0.06, { type: "square", gain: 0.12 })) },
+  knock: { name: tk("Toc toc"), play: () => (tone(180, 0, 0.09, { type: "triangle", gain: 0.6 }), tone(170, 0.16, 0.09, { type: "triangle", gain: 0.6 })) },
+  sonar: { name: tk("Sonar"), play: () => tone(1046, 0, 1.2, { gain: 0.3, slide: 1000 }) },
   alarm: {
-    name: "Alarma de flota",
+    name: tk("Alarma de flota"),
     play: () => {
       for (let i = 0; i < 3; i++) {
         tone(740, i * 0.32, 0.15, { type: "sawtooth", gain: 0.13 });
@@ -47,14 +48,14 @@ export const PRESETS = {
       }
     },
   },
-  klaxon: { name: "Klaxon", play: () => [0, 0.45].forEach((t) => tone(440, t, 0.4, { type: "square", gain: 0.12, slide: 330 })) },
+  klaxon: { name: tk("Klaxon"), play: () => [0, 0.45].forEach((at) => tone(440, at, 0.4, { type: "square", gain: 0.12, slide: 330 })) },
 };
 
 export const SOUND_KINDS = [
-  ["private", "Mensaje privado"],
-  ["mention", "Mención en una sala"],
-  ["room", "Mensaje en sala (si avisa de todo)"],
-  ["ping", "Ping de flota"],
+  ["private", t("Mensaje privado")],
+  ["mention", t("Mención en una sala")],
+  ["room", t("Mensaje en sala (si avisa de todo)")],
+  ["ping", t("Ping de flota")],
 ];
 
 function play(sound) {

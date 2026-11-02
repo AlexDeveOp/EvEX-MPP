@@ -44,7 +44,13 @@ const es = JSON.parse(fs.readFileSync(nm("emojibase-data", "es", "compact.json")
 const github = JSON.parse(fs.readFileSync(nm("emojibase-data", "en", "shortcodes", "github.json"), "utf8"));
 const messages = JSON.parse(fs.readFileSync(nm("emojibase-data", "es", "messages.json"), "utf8"));
 
-const groups = messages.groups.filter((g) => g.key !== "component").map((g) => ({ id: g.order, key: g.key, name: g.message }));
+// Nombres en español e inglés: la interfaz muestra los del idioma activo y el buscador acepta ambos.
+const enList = JSON.parse(fs.readFileSync(nm("emojibase-data", "en", "compact.json"), "utf8"));
+const enByHex = new Map(enList.map((e) => [e.hexcode, e]));
+const enMessages = JSON.parse(fs.readFileSync(nm("emojibase-data", "en", "messages.json"), "utf8"));
+const enGroup = new Map(enMessages.groups.map((g) => [g.key, g.message]));
+
+const groups = messages.groups.filter((g) => g.key !== "component").map((g) => ({ id: g.order, key: g.key, name: g.message, nameEn: enGroup.get(g.key) || g.message }));
 const list = es
   .filter((e) => e.group !== undefined && e.group !== 2)
   .sort((a, b) => a.order - b.order)
@@ -52,15 +58,14 @@ const list = es
     const sc = github[e.hexcode];
     const shortcodes = sc ? (Array.isArray(sc) ? sc : [sc]) : [];
     const skins = e.skins ? e.skins.map((s) => s.unicode) : undefined;
-    const row = [e.unicode, e.label, shortcodes, e.group, (e.tags || []).join(" "), e.hexcode];
-    if (skins) row.push(skins);
-    return row;
+    const en = enByHex.get(e.hexcode);
+    return [e.unicode, e.label, shortcodes, e.group, (e.tags || []).join(" "), e.hexcode, skins || 0, en?.label || e.label, (en?.tags || []).join(" ")];
   });
 
 fs.writeFileSync(
   path.join(outDir, "emoji.js"),
   `// Generado por scripts/build-assets.mjs a partir de emojibase-data (MIT). No editar a mano.\n` +
-    `// Formato: [emoji, nombre, shortcodes, grupo, etiquetas, hexcode, tonos?]\n` +
+    `// Formato: [emoji, nombre_es, shortcodes, grupo, etiquetas_es, hexcode, tonos o 0, nombre_en, etiquetas_en]\n` +
     `export const EMOJI_GROUPS = ${JSON.stringify(groups)};\n` +
     `export const EMOJI = ${JSON.stringify(list)};\n`,
 );

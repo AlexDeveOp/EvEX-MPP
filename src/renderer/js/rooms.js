@@ -4,13 +4,14 @@ import { h, icon, iconButton, modal, field, toast, clear, fill, debounce } from 
 import { openConv } from "./convs.js";
 import { toggleFavorite, toggleAutojoin } from "./chat.js";
 
+import { t } from "./i18n.js";
 const isFav = (r) => !!(r && (r.favorite || r.autojoin));
 const cache = new Map(); // servidor -> { rooms, at }
 const infoCache = new Map();
 
 export function openRoomBrowser(accountId) {
   const acc = account(accountId);
-  if (conn(accountId).state !== "online") return toast("Conéctate primero para explorar las salas.", { kind: "warn" });
+  if (conn(accountId).state !== "online") return toast(t("Conéctate primero para explorar las salas."), { kind: "warn" });
   let server = acc.conferenceServer || `conference.${acc.jid.split("@")[1]}`;
   let rooms = [];
   let sort = "name";
@@ -18,9 +19,9 @@ export function openRoomBrowser(accountId) {
   let selected = null;
 
   const serverInput = h("input", { class: "input", value: server });
-  const filterInput = h("input", { class: "input", placeholder: "Filtrar por nombre o dirección…", autofocus: true });
+  const filterInput = h("input", { class: "input", placeholder: t("Filtrar por nombre o dirección…"), autofocus: true });
   const table = h("div", { class: "room-table" });
-  const details = h("div", { class: "room-details" }, h("div", { class: "empty-state small" }, icon("compass"), h("p", {}, "Selecciona una sala para ver sus detalles")));
+  const details = h("div", { class: "room-details" }, h("div", { class: "empty-state small" }, icon("compass"), h("p", {}, t("Selecciona una sala para ver sus detalles"))));
   const status = h("span", { class: "muted" });
 
   async function load(force) {
@@ -30,14 +31,14 @@ export function openRoomBrowser(accountId) {
       render();
       return;
     }
-    status.textContent = "Cargando lista de salas…";
-    clear(table).append(h("div", { class: "loading" }, h("span", { class: "spinner" }), "Consultando el servidor…"));
+    status.textContent = t("Cargando lista de salas…");
+    clear(table).append(h("div", { class: "loading" }, h("span", { class: "spinner" }), t("Consultando el servidor…")));
     try {
       rooms = await api("room:list", accountId, server);
       cache.set(server, { rooms, at: Date.now() });
       render();
     } catch (e) {
-      clear(table).append(h("div", { class: "empty-state small" }, icon("triangle-alert"), h("p", {}, `Error: ${e.message}`)));
+      clear(table).append(h("div", { class: "empty-state small" }, icon("triangle-alert"), h("p", {}, t("Error: {message}", { message: e.message }))));
       status.textContent = "";
     }
   }
@@ -52,15 +53,15 @@ export function openRoomBrowser(accountId) {
       if (sort === "fav") return (isFav(accRooms.get(b.jid)) ? 1 : 0) - (isFav(accRooms.get(a.jid)) ? 1 : 0) || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
-    status.textContent = `${list.length} de ${rooms.length} salas en ${server}`;
+    status.textContent = t("{shown} de {total} salas en {server}", { shown: list.length, total: rooms.length, server });
     clear(table);
     table.append(
       h(
         "div",
         { class: "room-row head" },
-        h("span", { class: "c-name", onclick: () => ((sort = "name"), render()) }, "Sala", sort === "name" ? icon("chevron-down") : null),
-        h("span", { class: "c-users", onclick: () => ((sort = "users"), render()) }, "Usuarios", sort === "users" ? icon("chevron-down") : null),
-        h("span", { class: "c-flags", onclick: () => ((sort = "fav"), render()) }, "Lista", sort === "fav" ? icon("chevron-down") : null),
+        h("span", { class: "c-name", onclick: () => ((sort = "name"), render()) }, t("Sala"), sort === "name" ? icon("chevron-down") : null),
+        h("span", { class: "c-users", onclick: () => ((sort = "users"), render()) }, t("Usuarios"), sort === "users" ? icon("chevron-down") : null),
+        h("span", { class: "c-flags", onclick: () => ((sort = "fav"), render()) }, t("Lista"), sort === "fav" ? icon("chevron-down") : null),
       ),
     );
     const frag = document.createDocumentFragment();
@@ -81,15 +82,15 @@ export function openRoomBrowser(accountId) {
           h(
             "span",
             { class: "c-flags" },
-            iconButton("star", (mine?.favorite || mine?.autojoin) ? "Quitar de favoritas" : "Añadir a favoritas", async (e) => (e.stopPropagation(), await toggleFavorite(accountId, r.jid), fixName(r), render()), (mine?.favorite || mine?.autojoin) ? "on star" : ""),
-            iconButton("zap", mine?.autojoin ? "Se abre al iniciar" : "Abrir al iniciar", async (e) => (e.stopPropagation(), await toggleAutojoin(accountId, r.jid), fixName(r), render()), mine?.autojoin ? "on zap" : ""),
+            iconButton("star", (mine?.favorite || mine?.autojoin) ? t("Quitar de favoritas") : t("Añadir a favoritas"), async (e) => (e.stopPropagation(), await toggleFavorite(accountId, r.jid), fixName(r), render()), (mine?.favorite || mine?.autojoin) ? "on star" : ""),
+            iconButton("zap", mine?.autojoin ? t("Se abre al iniciar") : t("Abrir al iniciar"), async (e) => (e.stopPropagation(), await toggleAutojoin(accountId, r.jid), fixName(r), render()), mine?.autojoin ? "on zap" : ""),
           ),
         ),
       );
     }
     table.append(frag);
-    if (list.length > 1500) table.append(h("div", { class: "muted pad" }, `Mostrando 1500 de ${list.length}; usa el filtro.`));
-    if (!list.length) table.append(h("div", { class: "empty-state small" }, h("p", {}, "No hay salas que coincidan.")));
+    if (list.length > 1500) table.append(h("div", { class: "muted pad" }, t("Mostrando 1500 de {total}; usa el filtro.", { total: list.length })));
+    if (!list.length) table.append(h("div", { class: "empty-state small" }, h("p", {}, t("No hay salas que coincidan."))));
   }
 
   async function fixName(r) {
@@ -103,7 +104,7 @@ export function openRoomBrowser(accountId) {
   async function select(r) {
     selected = r.jid;
     render();
-    clear(details).append(h("div", { class: "loading" }, h("span", { class: "spinner" }), "Cargando información…"));
+    clear(details).append(h("div", { class: "loading" }, h("span", { class: "spinner" }), t("Cargando información…")));
     let info = infoCache.get(r.jid);
     try {
       if (!info) {
@@ -126,17 +127,17 @@ export function openRoomBrowser(accountId) {
         "div",
         { class: "chips" },
         info.occupants != null ? h("span", { class: "chip" }, icon("users"), `${info.occupants} usuarios`) : null,
-        info.passwordProtected ? h("span", { class: "chip warn" }, icon("lock"), "Con contraseña") : null,
-        info.membersOnly ? h("span", { class: "chip" }, icon("shield"), "Solo miembros") : null,
-        info.moderated ? h("span", { class: "chip" }, icon("mic-off"), "Moderada") : null,
-        info.persistent ? h("span", { class: "chip" }, icon("database"), "Persistente") : null,
+        info.passwordProtected ? h("span", { class: "chip warn" }, icon("lock"), t("Con contraseña")) : null,
+        info.membersOnly ? h("span", { class: "chip" }, icon("shield"), t("Solo miembros")) : null,
+        info.moderated ? h("span", { class: "chip" }, icon("mic-off"), t("Moderada")) : null,
+        info.persistent ? h("span", { class: "chip" }, icon("database"), t("Persistente")) : null,
       ),
       h(
         "div",
         { class: "room-detail-actions" },
-        h("button", { class: "btn primary", onclick: () => join(r, info) }, icon("log-in"), "Unirse"),
-        h("button", { class: `btn ${(mine?.favorite || mine?.autojoin) ? "active" : ""}`, onclick: async () => (await toggleFavorite(accountId, r.jid), await fixName(r), select(r)) }, icon("star"), (mine?.favorite || mine?.autojoin) ? "En favoritas" : "Añadir a favoritas"),
-        h("button", { class: `btn ${mine?.autojoin ? "active" : ""}`, onclick: async () => (await toggleAutojoin(accountId, r.jid), await fixName(r), select(r)) }, icon("zap"), mine?.autojoin ? "Se abre al iniciar" : "Abrir al iniciar"),
+        h("button", { class: "btn primary", onclick: () => join(r, info) }, icon("log-in"), t("Unirse")),
+        h("button", { class: `btn ${(mine?.favorite || mine?.autojoin) ? "active" : ""}`, onclick: async () => (await toggleFavorite(accountId, r.jid), await fixName(r), select(r)) }, icon("star"), (mine?.favorite || mine?.autojoin) ? t("En favoritas") : t("Añadir a favoritas")),
+        h("button", { class: `btn ${mine?.autojoin ? "active" : ""}`, onclick: async () => (await toggleAutojoin(accountId, r.jid), await fixName(r), select(r)) }, icon("zap"), mine?.autojoin ? t("Se abre al iniciar") : t("Abrir al iniciar")),
       ),
     );
     render();
@@ -154,7 +155,7 @@ export function openRoomBrowser(accountId) {
   async function loadAllInfo() {
     const pending = rooms.filter((r) => !infoCache.has(r.jid));
     let done = 0;
-    status.textContent = `Consultando usuarios… 0/${pending.length}`;
+    status.textContent = t("Consultando usuarios… 0/{length}", { length: pending.length });
     const worker = async () => {
       while (pending.length) {
         const r = pending.shift();
@@ -164,7 +165,7 @@ export function openRoomBrowser(accountId) {
           infoCache.set(r.jid, { occupants: null });
         }
         done++;
-        if (done % 10 === 0) status.textContent = `Consultando usuarios… ${done}`;
+        if (done % 10 === 0) status.textContent = t("Consultando usuarios… {done}", { done });
       }
     };
     await Promise.all([worker(), worker(), worker(), worker()]);
@@ -174,10 +175,10 @@ export function openRoomBrowser(accountId) {
 
   filterInput.addEventListener("input", debounce(render, 120));
   serverInput.addEventListener("keydown", (e) => e.key === "Enter" && load(true));
-  const favToggle = h("label", { class: "check" }, h("input", { type: "checkbox", onchange: (e) => ((onlyFav = e.target.checked), render()) }), "Solo favoritas");
+  const favToggle = h("label", { class: "check" }, h("input", { type: "checkbox", onchange: (e) => ((onlyFav = e.target.checked), render()) }), t("Solo favoritas"));
 
   const m = modal({
-    title: "Explorar salas",
+    title: t("Explorar salas"),
     icon: "compass",
     wide: true,
     className: "room-browser",
@@ -187,24 +188,24 @@ export function openRoomBrowser(accountId) {
       h(
         "div",
         { class: "rb-toolbar" },
-        h("div", { class: "input-group" }, icon("server"), serverInput, h("button", { class: "btn", onclick: () => load(true) }, icon("refresh-cw"), "Listar")),
+        h("div", { class: "input-group" }, icon("server"), serverInput, h("button", { class: "btn", onclick: () => load(true) }, icon("refresh-cw"), t("Listar"))),
         h("div", { class: "input-group grow" }, icon("search"), filterInput),
         favToggle,
-        h("button", { class: "btn ghost", title: "Consulta cuántos usuarios tiene cada sala (puede tardar)", onclick: loadAllInfo }, icon("users"), "Contar usuarios"),
+        h("button", { class: "btn ghost", title: t("Consulta cuántos usuarios tiene cada sala (puede tardar)"), onclick: loadAllInfo }, icon("users"), t("Contar usuarios")),
       ),
       h("div", { class: "rb-main" }, table, details),
       h("div", { class: "rb-status" }, status),
     ),
-    actions: [{ label: "Unirse por nombre…", icon: "plus", action: (close) => (close(), openJoinRoom(accountId)) }, "spacer", { label: "Cerrar", action: (c) => c() }],
+    actions: [{ label: t("Unirse por nombre…"), icon: "plus", action: (close) => (close(), openJoinRoom(accountId)) }, "spacer", { label: t("Cerrar"), action: (c) => c() }],
   });
   load(false);
 }
 
 export function openJoinRoom(accountId, preset = {}) {
   const acc = account(accountId);
-  const roomInput = h("input", { class: "input", placeholder: "nombre-de-sala o sala@conference.servidor", value: preset.room || "", autofocus: true });
+  const roomInput = h("input", { class: "input", placeholder: t("nombre-de-sala o sala@conference.servidor"), value: preset.room || "", autofocus: true });
   const nickInput = h("input", { class: "input", value: preset.nick || acc.nick });
-  const passInput = h("input", { class: "input", type: "password", value: preset.password || "", placeholder: "Solo si la sala la requiere" });
+  const passInput = h("input", { class: "input", type: "password", value: preset.password || "", placeholder: t("Solo si la sala la requiere") });
   const fav = h("input", { type: "checkbox", checked: true });
   const auto = h("input", { type: "checkbox" });
   const doJoin = async (close) => {
@@ -220,24 +221,24 @@ export function openJoinRoom(accountId, preset = {}) {
     }
     close();
     const r = roomState(accountId, jid);
-    if (conn(accountId).state !== "online") return toast("Sin conexión: la sala se abrirá al conectar.", { kind: "warn" });
+    if (conn(accountId).state !== "online") return toast(t("Sin conexión: la sala se abrirá al conectar."), { kind: "warn" });
     r.joining = true;
     await openConv(accountId, jid, "groupchat", { join: false });
     api("room:join", accountId, jid, nick || null, passInput.value || null).catch((e) => toast(e.message, { kind: "error" }));
   };
   const m = modal({
-    title: "Unirse a una sala",
+    title: t("Unirse a una sala"),
     icon: "log-in",
     body: h(
       "div",
       { class: "form" },
-      field("Sala", roomInput, `Servidor por defecto: ${acc.conferenceServer}`),
-      field("Apodo", nickInput),
-      field("Contraseña", passInput),
-      h("label", { class: "check" }, fav, "Guardar en favoritas"),
-      h("label", { class: "check" }, auto, "Abrir automáticamente al iniciar"),
+      field(t("Sala"), roomInput, t("Servidor por defecto: {conferenceServer}", { conferenceServer: acc.conferenceServer })),
+      field(t("Apodo"), nickInput),
+      field(t("Contraseña"), passInput),
+      h("label", { class: "check" }, fav, t("Guardar en favoritas")),
+      h("label", { class: "check" }, auto, t("Abrir automáticamente al iniciar")),
     ),
-    actions: ["spacer", { label: "Cancelar", action: (c) => c() }, { label: "Unirse", primary: true, icon: "log-in", action: doJoin }],
+    actions: ["spacer", { label: t("Cancelar"), action: (c) => c() }, { label: t("Unirse"), primary: true, icon: "log-in", action: doJoin }],
   });
   roomInput.addEventListener("keydown", (e) => e.key === "Enter" && doJoin(m.close));
   return m;

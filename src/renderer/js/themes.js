@@ -1,27 +1,28 @@
 // Temas predefinidos, fuentes y aplicación de la apariencia (colores, fondos, tipografía, densidad).
 import { S, api } from "./state.js";
 
+import { t, tk } from "./i18n.js";
 export const TOKENS = [
-  ["bg", "Fondo principal"],
-  ["bg2", "Barra lateral"],
-  ["bg3", "Paneles y campos"],
-  ["surface", "Tarjetas y menús"],
-  ["hover", "Elemento resaltado"],
-  ["border", "Bordes"],
-  ["text", "Texto"],
-  ["text2", "Texto secundario"],
-  ["accent", "Color de acento"],
-  ["accent2", "Acento secundario"],
-  ["accentText", "Texto sobre acento"],
-  ["link", "Enlaces"],
-  ["mention", "Fondo de mención"],
-  ["bubbleIn", "Burbuja recibida"],
-  ["bubbleOut", "Burbuja enviada"],
-  ["bubbleOutText", "Texto burbuja enviada"],
-  ["titlebar", "Barra de título"],
-  ["ok", "Conectado / éxito"],
-  ["warn", "Ausente / aviso"],
-  ["danger", "Ocupado / error"],
+  ["bg", t("Fondo principal")],
+  ["bg2", t("Barra lateral")],
+  ["bg3", t("Paneles y campos")],
+  ["surface", t("Tarjetas y menús")],
+  ["hover", t("Elemento resaltado")],
+  ["border", t("Bordes")],
+  ["text", t("Texto")],
+  ["text2", t("Texto secundario")],
+  ["accent", t("Color de acento")],
+  ["accent2", t("Acento secundario")],
+  ["accentText", t("Texto sobre acento")],
+  ["link", t("Enlaces")],
+  ["mention", t("Fondo de mención")],
+  ["bubbleIn", t("Burbuja recibida")],
+  ["bubbleOut", t("Burbuja enviada")],
+  ["bubbleOutText", t("Texto burbuja enviada")],
+  ["titlebar", t("Barra de título")],
+  ["ok", t("Conectado / éxito")],
+  ["warn", t("Ausente / aviso")],
+  ["danger", t("Ocupado / error")],
 ];
 
 const dark = {
@@ -38,19 +39,19 @@ const light = {
 };
 
 export const PRESETS = {
-  "eve-dark": { name: "EvEX Oscuro", ...dark },
-  gold: { name: "Oro", ...dark, bg: "#0f0f0c", bg2: "#14140f", bg3: "#1b1b14", surface: "#212117", hover: "#2a2a1c", border: "#34331f", accent: "#e8c547", accent2: "#f59e0b", accentText: "#1a1600", link: "#f2d36b", mention: "#e8c54726", bubbleOut: "#8a7420", titlebar: "#0b0b08" },
-  caldari: { name: "Caldari (acero)", ...dark, bg: "#0b1218", bg2: "#0e161e", bg3: "#13202b", surface: "#172634", hover: "#1d3042", border: "#24394d", accent: "#5ab8e6", accent2: "#9ad4f0", accentText: "#06131b", link: "#7cc9ee", mention: "#5ab8e624", bubbleOut: "#1d5f80", titlebar: "#081016" },
-  amarr: { name: "Amarr (oro imperial)", ...dark, bg: "#16110a", bg2: "#1b150c", bg3: "#241b10", surface: "#2b2114", hover: "#352816", border: "#43331c", text: "#f4e9d6", text2: "#b5a385", accent: "#d4a24c", accent2: "#f0d18a", accentText: "#1a1205", link: "#e8bf6c", mention: "#d4a24c26", bubbleOut: "#7d5a1e", titlebar: "#120d07" },
-  gallente: { name: "Gallente (esmeralda)", ...dark, bg: "#0a1411", bg2: "#0d1a16", bg3: "#11231d", surface: "#152b24", hover: "#1a362d", border: "#214236", accent: "#34d399", accent2: "#5eead4", accentText: "#03140d", link: "#6ee7b7", mention: "#34d39924", bubbleOut: "#0f6b4f", titlebar: "#08100d" },
-  minmatar: { name: "Minmatar (óxido)", ...dark, bg: "#140d0b", bg2: "#1a110e", bg3: "#231713", surface: "#2a1c17", hover: "#35231c", border: "#432c22", text: "#f2e4dc", text2: "#b09184", accent: "#e0663a", accent2: "#f59e0b", accentText: "#1a0802", link: "#f08a62", mention: "#e0663a26", bubbleOut: "#8a3517", titlebar: "#100a08" },
-  amoled: { name: "AMOLED negro", ...dark, bg: "#000000", bg2: "#050505", bg3: "#0c0c0c", surface: "#121212", hover: "#1b1b1b", border: "#222222", bubbleIn: "#121212", titlebar: "#000000" },
-  nord: { name: "Nord", ...dark, bg: "#2e3440", bg2: "#2b303b", bg3: "#3b4252", surface: "#3b4252", hover: "#434c5e", border: "#4c566a", text: "#eceff4", text2: "#a3adbf", accent: "#88c0d0", accent2: "#b48ead", accentText: "#1d232d", link: "#8fbcbb", mention: "#88c0d02e", bubbleIn: "#3b4252", bubbleOut: "#5e81ac", titlebar: "#272c36", ok: "#a3be8c", warn: "#ebcb8b", danger: "#bf616a" },
-  dracula: { name: "Dracula", ...dark, bg: "#282a36", bg2: "#21222c", bg3: "#343746", surface: "#343746", hover: "#3e4153", border: "#44475a", text: "#f8f8f2", text2: "#a4a9c6", accent: "#bd93f9", accent2: "#ff79c6", accentText: "#1a1325", link: "#8be9fd", mention: "#bd93f92e", bubbleIn: "#343746", bubbleOut: "#6c4bb8", titlebar: "#1e1f28", ok: "#50fa7b", warn: "#f1fa8c", danger: "#ff5555" },
-  synthwave: { name: "Synthwave", ...dark, bg: "#1a1028", bg2: "#1e1230", bg3: "#28183f", surface: "#2d1b47", hover: "#382257", border: "#46296b", text: "#f6eaff", text2: "#b59ad6", accent: "#ff3ea5", accent2: "#00e5ff", accentText: "#ffffff", link: "#5ef0ff", mention: "#ff3ea52e", bubbleIn: "#2d1b47", bubbleOut: "#b31d78", titlebar: "#150c21" },
-  light: { name: "Claro", ...light },
-  pidgin: { name: "Clásico (estilo Pidgin)", ...light, bg: "#ffffff", bg2: "#ececec", bg3: "#f6f6f6", surface: "#ffffff", hover: "#dcdcdc", border: "#c4c4c4", accent: "#3465a4", accent2: "#a82f2f", link: "#204a87", mention: "#fce94f80", bubbleIn: "#f2f2f2", bubbleOut: "#3465a4", titlebar: "#e4e4e4" },
-  solarized: { name: "Solarized claro", ...light, bg: "#fdf6e3", bg2: "#eee8d5", bg3: "#f5efdc", surface: "#fdf6e3", hover: "#e6dfc8", border: "#d8cfb4", text: "#3c4a50", text2: "#6f7f84", accent: "#268bd2", accent2: "#d33682", link: "#2075b5", mention: "#b5890033", bubbleIn: "#eee8d5", bubbleOut: "#268bd2", titlebar: "#eee8d5", ok: "#859900", warn: "#b58900", danger: "#dc322f" },
+  "eve-dark": { name: tk("EvEX Oscuro"), ...dark },
+  gold: { name: tk("Oro"), ...dark, bg: "#0f0f0c", bg2: "#14140f", bg3: "#1b1b14", surface: "#212117", hover: "#2a2a1c", border: "#34331f", accent: "#e8c547", accent2: "#f59e0b", accentText: "#1a1600", link: "#f2d36b", mention: "#e8c54726", bubbleOut: "#8a7420", titlebar: "#0b0b08" },
+  caldari: { name: tk("Caldari (acero)"), ...dark, bg: "#0b1218", bg2: "#0e161e", bg3: "#13202b", surface: "#172634", hover: "#1d3042", border: "#24394d", accent: "#5ab8e6", accent2: "#9ad4f0", accentText: "#06131b", link: "#7cc9ee", mention: "#5ab8e624", bubbleOut: "#1d5f80", titlebar: "#081016" },
+  amarr: { name: tk("Amarr (oro imperial)"), ...dark, bg: "#16110a", bg2: "#1b150c", bg3: "#241b10", surface: "#2b2114", hover: "#352816", border: "#43331c", text: "#f4e9d6", text2: "#b5a385", accent: "#d4a24c", accent2: "#f0d18a", accentText: "#1a1205", link: "#e8bf6c", mention: "#d4a24c26", bubbleOut: "#7d5a1e", titlebar: "#120d07" },
+  gallente: { name: tk("Gallente (esmeralda)"), ...dark, bg: "#0a1411", bg2: "#0d1a16", bg3: "#11231d", surface: "#152b24", hover: "#1a362d", border: "#214236", accent: "#34d399", accent2: "#5eead4", accentText: "#03140d", link: "#6ee7b7", mention: "#34d39924", bubbleOut: "#0f6b4f", titlebar: "#08100d" },
+  minmatar: { name: tk("Minmatar (óxido)"), ...dark, bg: "#140d0b", bg2: "#1a110e", bg3: "#231713", surface: "#2a1c17", hover: "#35231c", border: "#432c22", text: "#f2e4dc", text2: "#b09184", accent: "#e0663a", accent2: "#f59e0b", accentText: "#1a0802", link: "#f08a62", mention: "#e0663a26", bubbleOut: "#8a3517", titlebar: "#100a08" },
+  amoled: { name: tk("AMOLED negro"), ...dark, bg: "#000000", bg2: "#050505", bg3: "#0c0c0c", surface: "#121212", hover: "#1b1b1b", border: "#222222", bubbleIn: "#121212", titlebar: "#000000" },
+  nord: { name: tk("Nord"), ...dark, bg: "#2e3440", bg2: "#2b303b", bg3: "#3b4252", surface: "#3b4252", hover: "#434c5e", border: "#4c566a", text: "#eceff4", text2: "#a3adbf", accent: "#88c0d0", accent2: "#b48ead", accentText: "#1d232d", link: "#8fbcbb", mention: "#88c0d02e", bubbleIn: "#3b4252", bubbleOut: "#5e81ac", titlebar: "#272c36", ok: "#a3be8c", warn: "#ebcb8b", danger: "#bf616a" },
+  dracula: { name: tk("Dracula"), ...dark, bg: "#282a36", bg2: "#21222c", bg3: "#343746", surface: "#343746", hover: "#3e4153", border: "#44475a", text: "#f8f8f2", text2: "#a4a9c6", accent: "#bd93f9", accent2: "#ff79c6", accentText: "#1a1325", link: "#8be9fd", mention: "#bd93f92e", bubbleIn: "#343746", bubbleOut: "#6c4bb8", titlebar: "#1e1f28", ok: "#50fa7b", warn: "#f1fa8c", danger: "#ff5555" },
+  synthwave: { name: tk("Synthwave"), ...dark, bg: "#1a1028", bg2: "#1e1230", bg3: "#28183f", surface: "#2d1b47", hover: "#382257", border: "#46296b", text: "#f6eaff", text2: "#b59ad6", accent: "#ff3ea5", accent2: "#00e5ff", accentText: "#ffffff", link: "#5ef0ff", mention: "#ff3ea52e", bubbleIn: "#2d1b47", bubbleOut: "#b31d78", titlebar: "#150c21" },
+  light: { name: tk("Claro"), ...light },
+  pidgin: { name: tk("Clásico (estilo Pidgin)"), ...light, bg: "#ffffff", bg2: "#ececec", bg3: "#f6f6f6", surface: "#ffffff", hover: "#dcdcdc", border: "#c4c4c4", accent: "#3465a4", accent2: "#a82f2f", link: "#204a87", mention: "#fce94f80", bubbleIn: "#f2f2f2", bubbleOut: "#3465a4", titlebar: "#e4e4e4" },
+  solarized: { name: tk("Solarized claro"), ...light, bg: "#fdf6e3", bg2: "#eee8d5", bg3: "#f5efdc", surface: "#fdf6e3", hover: "#e6dfc8", border: "#d8cfb4", text: "#3c4a50", text2: "#6f7f84", accent: "#268bd2", accent2: "#d33682", link: "#2075b5", mention: "#b5890033", bubbleIn: "#eee8d5", bubbleOut: "#268bd2", titlebar: "#eee8d5", ok: "#859900", warn: "#b58900", danger: "#dc322f" },
 };
 
 export const GRADIENTS = {
@@ -65,13 +66,13 @@ export const GRADIENTS = {
 };
 
 export const BUNDLED_FONTS = [
-  ["Inter Variable", "Inter (moderna)"],
-  ["Nunito Variable", "Nunito (redondeada)"],
-  ["Rajdhani", "Rajdhani (sci-fi)"],
-  ["Orbitron Variable", "Orbitron (futurista)"],
-  ["JetBrains Mono Variable", "JetBrains Mono (monoespaciada)"],
-  ["Segoe UI", "Segoe UI (Windows)"],
-  ["system-ui", "Fuente del sistema"],
+  ["Inter Variable", t("Inter (moderna)")],
+  ["Nunito Variable", t("Nunito (redondeada)")],
+  ["Rajdhani", t("Rajdhani (sci-fi)")],
+  ["Orbitron Variable", t("Orbitron (futurista)")],
+  ["JetBrains Mono Variable", t("JetBrains Mono (monoespaciada)")],
+  ["Segoe UI", t("Segoe UI (Windows)")],
+  ["system-ui", t("Fuente del sistema")],
 ];
 
 const FONT_CSS = {

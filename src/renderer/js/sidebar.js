@@ -8,6 +8,7 @@ import { openAccounts, connectWithPrompt, openSwitchAccount } from "./accounts.j
 import { openBackgroundEditor } from "./settings.js";
 import { openSearch } from "./search.js";
 
+import { t } from "./i18n.js";
 const collapsed = new Set(JSON.parse(localStorage.getItem("evex.collapsed") || "[]"));
 let filter = "";
 
@@ -59,7 +60,7 @@ function section(id, title, count, actions, content) {
   );
 }
 
-const matches = (...texts) => !filter || texts.some((t) => String(t || "").toLowerCase().includes(filter));
+const matches = (...texts) => !filter || texts.some((s) => String(s || "").toLowerCase().includes(filter));
 
 function renderSidebar() {
   const root = $("#sidebar-content");
@@ -74,7 +75,7 @@ function renderSidebar() {
       "div",
       { class: `sb-item pings ${S.active === PINGS_KEY ? "active" : ""} ${pc.unread ? "unread" : ""}`, onclick: () => openConv(null, "*", "pings") },
       icon("siren", "sb-icon"),
-      h("span", { class: "sb-name" }, "Pings de flota"),
+      h("span", { class: "sb-name" }, t("Pings de flota")),
       pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,
     ),
   );
@@ -86,7 +87,7 @@ function renderSidebar() {
     root.append(contactsSection(acc));
   }
   if (!S.accounts.length) {
-    root.append(h("div", { class: "empty-state small" }, icon("user-plus"), h("p", {}, "No hay cuentas configuradas."), h("button", { class: "btn primary", onclick: () => openAccounts() }, "Añadir cuenta")));
+    root.append(h("div", { class: "empty-state small" }, icon("user-plus"), h("p", {}, t("No hay cuentas configuradas.")), h("button", { class: "btn primary", onclick: () => openAccounts() }, t("Añadir cuenta"))));
   }
   root.scrollTop = scroll;
 }
@@ -94,11 +95,11 @@ function renderSidebar() {
 // ---------- cuentas ----------
 
 const STATUS_OPTIONS = [
-  ["", "Disponible", "online"],
-  ["chat", "Hablador", "chat"],
-  ["away", "Ausente", "away"],
-  ["xa", "Ausente (extendido)", "xa"],
-  ["dnd", "No molestar", "dnd"],
+  ["", t("Disponible"), "online"],
+  ["chat", t("Hablador"), "chat"],
+  ["away", t("Ausente"), "away"],
+  ["xa", t("Ausente (extendido)"), "xa"],
+  ["dnd", t("No molestar"), "dnd"],
 ];
 
 function accountCards() {
@@ -107,7 +108,7 @@ function accountCards() {
     const st = conn(acc.id);
     const online = st.state === "online";
     const show = online ? st.show || "online" : st.state === "connecting" || st.state === "reconnecting" ? "connecting" : "offline";
-    const label = online ? SHOW_LABEL[st.show || ""] : { connecting: "Conectando…", reconnecting: "Reconectando…", error: "Error", offline: "Desconectado" }[st.state] || st.state;
+    const label = online ? SHOW_LABEL[st.show || ""] : { connecting: t("Conectando…"), reconnecting: t("Reconectando…"), error: t("Error"), offline: t("Desconectado") }[st.state] || st.state;
     const card = h(
       "div",
       { class: `account-card ${st.state}` },
@@ -127,8 +128,8 @@ function accountCards() {
         st.state === "error" && st.error ? h("div", { class: "account-error", title: st.error }, st.error) : null,
       ),
       online
-        ? iconButton("power", "Desconectar", () => api("account:disconnect", acc.id))
-        : iconButton("log-in", "Conectar", () => connectWithPrompt(acc.id), "accent"),
+        ? iconButton("power", t("Desconectar"), () => api("account:disconnect", acc.id))
+        : iconButton("log-in", t("Conectar"), () => connectWithPrompt(acc.id), "accent"),
     );
     wrap.append(card);
   }
@@ -151,19 +152,19 @@ function statusMenu(acc) {
     })),
     "-",
     {
-      label: "Mensaje de estado…",
+      label: t("Mensaje de estado…"),
       icon: "square-pen",
       disabled: !online,
       action: async () => {
-        const msg = await prompt({ title: "Mensaje de estado", label: "Lo verán tus contactos y las salas", value: st.statusText || "", icon: "square-pen" });
+        const msg = await prompt({ title: t("Mensaje de estado"), label: t("Lo verán tus contactos y las salas"), value: st.statusText || "", icon: "square-pen" });
         if (msg != null) api("presence:set", acc.id, st.show || "", msg);
       },
     },
-    { label: "Cambiar mi avatar…", icon: "image", disabled: !online, action: () => api("avatar:set", acc.id).catch((e) => toast(e.message, { kind: "error" })) },
+    { label: t("Cambiar mi avatar…"), icon: "image", disabled: !online, action: () => api("avatar:set", acc.id).catch((e) => toast(e.message, { kind: "error" })) },
     "-",
-    online ? { label: "Desconectar", icon: "power", action: () => api("account:disconnect", acc.id) } : { label: "Conectar", icon: "log-in", action: () => connectWithPrompt(acc.id) },
-    { label: "Cambiar de cuenta…", icon: "refresh-cw", action: openSwitchAccount },
-    { label: "Configurar cuenta…", icon: "user-cog", action: () => openAccounts(acc.id) },
+    online ? { label: t("Desconectar"), icon: "power", action: () => api("account:disconnect", acc.id) } : { label: t("Conectar"), icon: "log-in", action: () => connectWithPrompt(acc.id) },
+    { label: t("Cambiar de cuenta…"), icon: "refresh-cw", action: openSwitchAccount },
+    { label: t("Configurar cuenta…"), icon: "user-cog", action: () => openAccounts(acc.id) },
   ];
 }
 
@@ -182,13 +183,13 @@ function roomsSection(acc) {
   const sortRooms = (a, b) => (a.name || a.jid).localeCompare(b.name || b.jid);
   const favItems = favorites.sort(sortRooms).filter((r) => matches(r.name, r.jid)).map((r) => roomItem(acc, r));
   const otherItems = others.sort(sortRooms).filter((r) => matches(r.name, r.jid)).map((r) => roomItem(acc, r));
-  const items = [...favItems, ...(otherItems.length ? [h("div", { class: "sb-subhead" }, "Abiertas ahora (no favoritas)"), ...otherItems] : [])];
+  const items = [...favItems, ...(otherItems.length ? [h("div", { class: "sb-subhead" }, t("Abiertas ahora (no favoritas)")), ...otherItems] : [])];
   return section(
     `rooms:${acc.id}`,
-    S.accounts.length > 1 ? `Salas favoritas · ${acc.alias}` : "Salas favoritas",
+    S.accounts.length > 1 ? t("Salas favoritas · {alias}", { alias: acc.alias }) : t("Salas favoritas"),
     `${[...live.values()].filter((r) => r.joined).length}/${favorites.length}`,
-    [iconButton("compass", "Explorar salas del servidor", () => openRoomBrowser(acc.id)), iconButton("plus", "Unirse a una sala", () => openJoinRoom(acc.id))],
-    items.length ? items : h("div", { class: "sb-empty" }, filter ? "Sin resultados" : "Sin salas. Usa ", !filter ? h("a", { href: "#", onclick: (e) => (e.preventDefault(), openRoomBrowser(acc.id)) }, "Explorar salas") : null),
+    [iconButton("compass", t("Explorar salas del servidor"), () => openRoomBrowser(acc.id)), iconButton("plus", t("Unirse a una sala"), () => openJoinRoom(acc.id))],
+    items.length ? items : h("div", { class: "sb-empty" }, filter ? t("Sin resultados") : t("Sin salas. Usa "), !filter ? h("a", { href: "#", onclick: (e) => (e.preventDefault(), openRoomBrowser(acc.id)) }, t("Explorar salas")) : null),
   );
 }
 
@@ -218,8 +219,8 @@ function roomItem(acc, room) {
     h(
       "span",
       { class: "sb-quick" },
-      iconButton("zap", room.autojoin ? "Se abre al iniciar" : "Abrir al iniciar", (e) => (e.stopPropagation(), toggleAutojoin(acc.id, room.jid)), room.autojoin ? "on zap" : ""),
-      iconButton("star", fav ? "Favorita (clic para quitarla)" : "Añadir a favoritas", (e) => (e.stopPropagation(), toggleFavorite(acc.id, room.jid)), fav ? "on star" : ""),
+      iconButton("zap", room.autojoin ? t("Se abre al iniciar") : t("Abrir al iniciar"), (e) => (e.stopPropagation(), toggleAutojoin(acc.id, room.jid)), room.autojoin ? "on zap" : ""),
+      iconButton("star", fav ? t("Favorita (clic para quitarla)") : t("Añadir a favoritas"), (e) => (e.stopPropagation(), toggleFavorite(acc.id, room.jid)), fav ? "on star" : ""),
     ),
   );
 }
@@ -228,17 +229,17 @@ function roomMenu(acc, room) {
   const key = convKey(acc.id, room.jid);
   const r = roomState(acc.id, room.jid);
   return [
-    { label: r.joined ? "Abrir" : "Entrar", icon: "log-in", action: () => openConv(acc.id, room.jid, "groupchat") },
-    r.joined || r.joining ? { label: "Salir de la sala", icon: "door-open", action: () => closeConv(key) } : null,
+    { label: r.joined ? t("Abrir") : t("Entrar"), icon: "log-in", action: () => openConv(acc.id, room.jid, "groupchat") },
+    r.joined || r.joining ? { label: t("Salir de la sala"), icon: "door-open", action: () => closeConv(key) } : null,
     "-",
-    { label: "Favorita", icon: "star", checked: !!(room.favorite || room.autojoin), action: () => toggleFavorite(acc.id, room.jid) },
-    { label: "Entrar automáticamente al iniciar", icon: "zap", checked: !!room.autojoin, action: () => toggleAutojoin(acc.id, room.jid) },
-    { header: "Notificaciones" },
+    { label: t("Favorita"), icon: "star", checked: !!(room.favorite || room.autojoin), action: () => toggleFavorite(acc.id, room.jid) },
+    { label: t("Entrar automáticamente al iniciar"), icon: "zap", checked: !!room.autojoin, action: () => toggleAutojoin(acc.id, room.jid) },
+    { header: t("Notificaciones") },
     ...[
-      ["default", "Por defecto"],
-      ["all", "Todos los mensajes"],
-      ["mentions", "Solo menciones"],
-      ["none", "Silenciada"],
+      ["default", t("Por defecto")],
+      ["all", t("Todos los mensajes")],
+      ["mentions", t("Solo menciones")],
+      ["none", t("Silenciada")],
     ].map(([v, l]) => ({
       label: l,
       checked: (S.settings.notifications.roomModes[key] || "default") === v,
@@ -250,38 +251,38 @@ function roomMenu(acc, room) {
     })),
     "-",
     {
-      label: "Renombrar…",
+      label: t("Renombrar…"),
       icon: "pencil",
       disabled: room.temp,
       action: async () => {
-        const name = await prompt({ title: "Nombre de la sala", label: room.jid, value: room.name, icon: "pencil" });
+        const name = await prompt({ title: t("Nombre de la sala"), label: room.jid, value: room.name, icon: "pencil" });
         if (name == null) return;
         acc.rooms.find((x) => x.jid === room.jid).name = name.trim() || room.jid.split("@")[0];
         saveRooms(acc.id);
       },
     },
     {
-      label: "Apodo en esta sala…",
+      label: t("Apodo en esta sala…"),
       icon: "user",
       disabled: room.temp,
       action: async () => {
-        const nick = await prompt({ title: "Apodo para esta sala", label: "Vacío = apodo de la cuenta", value: room.nick || "", icon: "user" });
+        const nick = await prompt({ title: t("Apodo para esta sala"), label: t("Vacío = apodo de la cuenta"), value: room.nick || "", icon: "user" });
         if (nick == null) return;
         acc.rooms.find((x) => x.jid === room.jid).nick = nick.trim();
         saveRooms(acc.id);
       },
     },
-    { label: "Fondo personalizado…", icon: "image", action: () => openBackgroundEditor(key) },
-    { label: "Buscar en el historial", icon: "search", action: () => openSearch({ accountId: acc.id, conv: room.jid }) },
-    { label: "Copiar dirección", icon: "copy", action: () => navigator.clipboard.writeText(room.jid) },
+    { label: t("Fondo personalizado…"), icon: "image", action: () => openBackgroundEditor(key) },
+    { label: t("Buscar en el historial"), icon: "search", action: () => openSearch({ accountId: acc.id, conv: room.jid }) },
+    { label: t("Copiar dirección"), icon: "copy", action: () => navigator.clipboard.writeText(room.jid) },
     "-",
     !room.temp
       ? {
-          label: "Quitar de la lista",
+          label: t("Quitar de la lista"),
           icon: "trash-2",
           danger: true,
           action: async () => {
-            if (!(await confirmDialog({ title: "Quitar sala", message: `¿Quitar ${room.name} de tu lista de salas? El historial local se conserva.`, okLabel: "Quitar", danger: true }))) return;
+            if (!(await confirmDialog({ title: t("Quitar sala"), message: t("¿Quitar {name} de tu lista de salas? El historial local se conserva.", { name: room.name }), okLabel: t("Quitar"), danger: true }))) return;
             acc.rooms = acc.rooms.filter((x) => x.jid !== room.jid);
             saveRooms(acc.id);
           },
@@ -302,7 +303,7 @@ function contactsSection(acc) {
     if (p.show !== "offline") online++;
     if (!showOffline && p.show === "offline" && !S.convs.get(convKey(acc.id, c.jid))?.unread) continue;
     if (!matches(c.name, c.jid)) continue;
-    for (const g of c.groups.length ? c.groups : ["Contactos"]) {
+    for (const g of c.groups.length ? c.groups : [t("Contactos")]) {
       if (!groups.has(g)) groups.set(g, []);
       groups.get(g).push({ c, p });
     }
@@ -331,14 +332,14 @@ function contactsSection(acc) {
     );
     if (!isCollapsed) for (const { c, p } of list) content.push(contactItem(acc, c, p));
   }
-  if (!content.length) content.push(h("div", { class: "sb-empty" }, conn(acc.id).state === "online" ? (filter ? "Sin resultados" : "Nadie conectado") : "Sin conexión"));
+  if (!content.length) content.push(h("div", { class: "sb-empty" }, conn(acc.id).state === "online" ? (filter ? t("Sin resultados") : t("Nadie conectado")) : t("Sin conexión")));
   return section(
     `contacts:${acc.id}`,
-    S.accounts.length > 1 ? `Contactos · ${acc.alias}` : "Contactos",
+    S.accounts.length > 1 ? t("Contactos · {alias}", { alias: acc.alias }) : t("Contactos"),
     `${online}/${roster.length}`,
     [
-      iconButton(showOffline ? "eye" : "eye-off", showOffline ? "Ocultar desconectados" : "Mostrar desconectados", () => updateSettings((s) => (s.behavior.showOffline = !s.behavior.showOffline)), showOffline ? "on" : ""),
-      iconButton("user-plus", "Añadir contacto", () => addContact(acc)),
+      iconButton(showOffline ? "eye" : "eye-off", showOffline ? t("Ocultar desconectados") : t("Mostrar desconectados"), () => updateSettings((s) => (s.behavior.showOffline = !s.behavior.showOffline)), showOffline ? "on" : ""),
+      iconButton("user-plus", t("Añadir contacto"), () => addContact(acc)),
     ],
     content,
   );
@@ -366,44 +367,44 @@ function contactItem(acc, c, p) {
 
 function contactMenu(acc, c) {
   return [
-    { label: "Enviar mensaje", icon: "message-square", action: () => openConv(acc.id, c.jid, "chat") },
-    { label: "Buscar en el historial", icon: "search", action: () => openSearch({ accountId: acc.id, conv: c.jid }) },
+    { label: t("Enviar mensaje"), icon: "message-square", action: () => openConv(acc.id, c.jid, "chat") },
+    { label: t("Buscar en el historial"), icon: "search", action: () => openSearch({ accountId: acc.id, conv: c.jid }) },
     "-",
     {
-      label: "Renombrar…",
+      label: t("Renombrar…"),
       icon: "pencil",
       action: async () => {
-        const name = await prompt({ title: "Renombrar contacto", label: c.jid, value: c.name, icon: "pencil" });
+        const name = await prompt({ title: t("Renombrar contacto"), label: c.jid, value: c.name, icon: "pencil" });
         if (name != null) api("roster:update", acc.id, c.jid, name.trim(), c.groups).catch((e) => toast(e.message, { kind: "error" }));
       },
     },
     {
-      label: "Cambiar grupo…",
+      label: t("Cambiar grupo…"),
       icon: "folder-open",
       action: async () => {
-        const g = await prompt({ title: "Grupos", label: "Separados por comas", value: c.groups.join(", "), icon: "folder-open" });
+        const g = await prompt({ title: t("Grupos"), label: t("Separados por comas"), value: c.groups.join(", "), icon: "folder-open" });
         if (g != null) api("roster:update", acc.id, c.jid, c.name, g.split(",").map((x) => x.trim()).filter(Boolean)).catch((e) => toast(e.message, { kind: "error" }));
       },
     },
-    { label: "Fondo personalizado…", icon: "image", action: () => openBackgroundEditor(convKey(acc.id, c.jid)) },
-    { label: "Copiar dirección", icon: "copy", action: () => navigator.clipboard.writeText(c.jid) },
+    { label: t("Fondo personalizado…"), icon: "image", action: () => openBackgroundEditor(convKey(acc.id, c.jid)) },
+    { label: t("Copiar dirección"), icon: "copy", action: () => navigator.clipboard.writeText(c.jid) },
     "-",
     {
-      label: "Eliminar contacto",
+      label: t("Eliminar contacto"),
       icon: "trash-2",
       danger: true,
       action: async () => {
-        if (await confirmDialog({ title: "Eliminar contacto", message: `¿Eliminar a ${c.name || c.jid} de tu lista?`, okLabel: "Eliminar", danger: true })) api("roster:remove", acc.id, c.jid);
+        if (await confirmDialog({ title: t("Eliminar contacto"), message: t("¿Eliminar a {x} de tu lista?", { x: c.name || c.jid }), okLabel: t("Eliminar"), danger: true })) api("roster:remove", acc.id, c.jid);
       },
     },
   ];
 }
 
 async function addContact(acc) {
-  const jid = await prompt({ title: "Añadir contacto", label: "Dirección XMPP", placeholder: `usuario@${acc.jid.split("@")[1]}`, icon: "user-plus" });
+  const jid = await prompt({ title: t("Añadir contacto"), label: t("Dirección XMPP"), placeholder: `usuario@${acc.jid.split("@")[1]}`, icon: "user-plus" });
   if (!jid) return;
   const full = jid.includes("@") ? jid.trim().toLowerCase() : `${jid.trim().toLowerCase()}@${acc.jid.split("@")[1]}`;
-  api("roster:add", acc.id, full, "", []).then(() => toast(`Solicitud enviada a ${full}`, { kind: "ok" })).catch((e) => toast(e.message, { kind: "error" }));
+  api("roster:add", acc.id, full, "", []).then(() => toast(t("Solicitud enviada a {full}", { full }), { kind: "ok" })).catch((e) => toast(e.message, { kind: "error" }));
 }
 
 export { avatarUrl };

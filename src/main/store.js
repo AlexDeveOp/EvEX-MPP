@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { t } from "./i18n.js";
 const dir = () => app.getPath("userData");
 const configFile = () => path.join(dir(), "config.json");
 const secretsFile = () => path.join(dir(), "secrets.json");
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS = {
   nickColors: true,
   timeFormat: "24",
   showSeconds: false,
+  language: "auto",
   showLocalTime: true,
   showEveTime: true,
   showEveClock: true,
@@ -208,7 +210,7 @@ export async function setPassword(accountId, password) {
     try {
       enc = (await safeStorage.encryptStringAsync(password)).toString("base64");
     } catch {
-      throw new Error("El cifrado del sistema no está disponible; no se puede guardar la contraseña de forma segura.");
+      throw new Error(t("El cifrado del sistema no está disponible; no se puede guardar la contraseña de forma segura."));
     }
   }
   const secrets = readJson(secretsFile(), {});

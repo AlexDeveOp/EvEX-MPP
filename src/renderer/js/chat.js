@@ -9,6 +9,7 @@ import { pingCard, pingMatches, pingGroups } from "./pings.js";
 import { openBackgroundEditor } from "./settings.js";
 import { openSearch } from "./search.js";
 
+import { t } from "./i18n.js";
 const panes = new Map();
 
 export function initChat() {
@@ -68,8 +69,8 @@ export function initChat() {
       const c = S.convs.get(key);
       if (!c) continue;
       let changed = false;
-      for (const [nick, t] of c.typing) {
-        if (now - t.ts > 30000) {
+      for (const [nick, typing] of c.typing) {
+        if (now - typing.ts > 30000) {
           c.typing.delete(nick);
           changed = true;
         }
@@ -118,7 +119,7 @@ function renderTabs() {
         "button",
         {
           class: "tab-close",
-          title: "Cerrar",
+          title: t("Cerrar"),
           onclick: (e) => {
             e.stopPropagation();
             closeConv(key);
@@ -140,34 +141,34 @@ function tabIcon(c) {
 }
 
 export function convMenu(c) {
-  if (c.type === "pings") return [{ label: "Cerrar", icon: "x", action: () => closeConv(c.key) }];
+  if (c.type === "pings") return [{ label: t("Cerrar"), icon: "x", action: () => closeConv(c.key) }];
   const acc = account(c.accountId);
   const room = acc?.rooms.find((r) => r.jid === c.conv);
   const items = [];
   if (c.type === "groupchat") {
     items.push(
-      { label: isFavorite(room) ? "Quitar de favoritas" : "Añadir a favoritas", icon: isFavorite(room) ? "star-off" : "star", action: () => toggleFavorite(c.accountId, c.conv) },
-      { label: "Entrar automáticamente", icon: "zap", checked: !!room?.autojoin, action: () => toggleAutojoin(c.accountId, c.conv) },
+      { label: isFavorite(room) ? t("Quitar de favoritas") : t("Añadir a favoritas"), icon: isFavorite(room) ? "star-off" : "star", action: () => toggleFavorite(c.accountId, c.conv) },
+      { label: t("Entrar automáticamente"), icon: "zap", checked: !!room?.autojoin, action: () => toggleAutojoin(c.accountId, c.conv) },
       "-",
-      { header: "Notificaciones" },
+      { header: t("Notificaciones") },
       ...[
-        ["default", "Por defecto"],
-        ["all", "Todos los mensajes"],
-        ["mentions", "Solo menciones"],
-        ["none", "Silenciada"],
+        ["default", t("Por defecto")],
+        ["all", t("Todos los mensajes")],
+        ["mentions", t("Solo menciones")],
+        ["none", t("Silenciada")],
       ].map(([v, l]) => ({ label: l, checked: (S.settings.notifications.roomModes[c.key] || "default") === v, action: () => setRoomNotify(c, v) })),
       "-",
-      { label: "Cambiar apodo…", icon: "pencil", action: () => changeNick(c) },
-      { label: "Invitar a alguien…", icon: "user-plus", action: () => inviteTo(c) },
-      { label: "Volver a entrar", icon: "refresh-cw", action: () => rejoin(c) },
+      { label: t("Cambiar apodo…"), icon: "pencil", action: () => changeNick(c) },
+      { label: t("Invitar a alguien…"), icon: "user-plus", action: () => inviteTo(c) },
+      { label: t("Volver a entrar"), icon: "refresh-cw", action: () => rejoin(c) },
     );
   }
   items.push(
-    { label: "Fondo de esta conversación…", icon: "image", action: () => openBackgroundEditor(c.key) },
-    { label: "Buscar en el historial", icon: "search", action: () => openSearch({ accountId: c.accountId, conv: c.conv }) },
-    { label: "Copiar dirección", icon: "copy", action: () => navigator.clipboard.writeText(c.conv) },
+    { label: t("Fondo de esta conversación…"), icon: "image", action: () => openBackgroundEditor(c.key) },
+    { label: t("Buscar en el historial"), icon: "search", action: () => openSearch({ accountId: c.accountId, conv: c.conv }) },
+    { label: t("Copiar dirección"), icon: "copy", action: () => navigator.clipboard.writeText(c.conv) },
     "-",
-    { label: c.type === "groupchat" ? "Salir de la sala" : "Cerrar", icon: c.type === "groupchat" ? "door-open" : "x", danger: c.type === "groupchat", action: () => closeConv(c.key) },
+    { label: c.type === "groupchat" ? t("Salir de la sala") : t("Cerrar"), icon: c.type === "groupchat" ? "door-open" : "x", danger: c.type === "groupchat", action: () => closeConv(c.key) },
   );
   return items;
 }
@@ -202,7 +203,7 @@ export async function toggleFavorite(accountId, jid) {
       timeout: 5000,
       actions: [
         {
-          label: "Deshacer",
+          label: t("Deshacer"),
           action: async () => {
             const a = account(accountId);
             if (a.rooms.some((r) => r.jid === jid)) return;
@@ -217,7 +218,7 @@ export async function toggleFavorite(accountId, jid) {
   if (room) room.favorite = true;
   else acc.rooms.push({ jid, name: jid.split("@")[0], autojoin: false, favorite: true, notify: "default" });
   await saveRooms(accountId);
-  toast(`${room?.name || jid.split("@")[0]} añadida a favoritas`, { kind: "ok", timeout: 2500 });
+  toast(t("{x} añadida a favoritas", { x: room?.name || jid.split("@")[0] }), { kind: "ok", timeout: 2500 });
 }
 
 export async function toggleAutojoin(accountId, jid) {
@@ -231,18 +232,18 @@ export async function toggleAutojoin(accountId, jid) {
     if (room.autojoin) room.favorite = true;
   }
   await saveRooms(accountId);
-  toast(room.autojoin ? `Se entrará en ${room.name} al iniciar` : `${room.name} ya no se abrirá al iniciar (sigue en favoritas)`, { kind: "ok", timeout: 2500 });
+  toast(room.autojoin ? t("Se entrará en {name} al iniciar", { name: room.name }) : t("{name} ya no se abrirá al iniciar (sigue en favoritas)", { name: room.name }), { kind: "ok", timeout: 2500 });
 }
 
 async function changeNick(c) {
   const r = roomState(c.accountId, c.conv);
-  const nick = await prompt({ title: "Cambiar apodo", label: `Nuevo apodo en ${convTitle(c)}`, value: r.nick, icon: "pencil" });
+  const nick = await prompt({ title: t("Cambiar apodo"), label: t("Nuevo apodo en {convTitle}", { convTitle: convTitle(c) }), value: r.nick, icon: "pencil" });
   if (nick && nick !== r.nick) api("room:nick", c.accountId, c.conv, nick).catch((e) => toast(e.message, { kind: "error" }));
 }
 
 async function inviteTo(c) {
-  const jid = await prompt({ title: "Invitar a la sala", label: "Dirección (usuario@ejemplo.com)", icon: "user-plus" });
-  if (jid) api("room:invite", c.accountId, c.conv, jid.trim(), "").then(() => systemMessage(c, `Invitación enviada a ${jid}`)).catch((e) => toast(e.message, { kind: "error" }));
+  const jid = await prompt({ title: t("Invitar a la sala"), label: t("Dirección (usuario@ejemplo.com)"), icon: "user-plus" });
+  if (jid) api("room:invite", c.accountId, c.conv, jid.trim(), "").then(() => systemMessage(c, t("Invitación enviada a {jid}", { jid }))).catch((e) => toast(e.message, { kind: "error" }));
 }
 
 // ---------- panel de conversación ----------
@@ -347,10 +348,10 @@ function renderHeader(c, p) {
     const groups = pingGroups(c.messages);
     p.header.append(
       h("div", { class: "conv-avatar ping" }, icon("siren")),
-      h("div", { class: "conv-title" }, h("h1", {}, "Pings de flota"), h("div", { class: "conv-sub" }, S.settings.pingSenders.length ? `${c.messages.length} broadcasts · remitentes: ${S.settings.pingSenders.join(", ")}` : "Sin remitentes configurados: añádelos en Preferencias → Pings de flota")),
+      h("div", { class: "conv-title" }, h("h1", {}, t("Pings de flota")), h("div", { class: "conv-sub" }, S.settings.pingSenders.length ? t("{length} broadcasts · remitentes: {join}", { length: c.messages.length, join: S.settings.pingSenders.join(", ") }) : t("Sin remitentes configurados: añádelos en Preferencias → Pings de flota"))),
       h("input", {
         class: "input small",
-        placeholder: "Filtrar pings…",
+        placeholder: t("Filtrar pings…"),
         value: p.filter.query,
         oninput: (e) => {
           p.filter.query = e.target.value;
@@ -366,10 +367,10 @@ function renderHeader(c, p) {
             renderAllMessages(c, p);
           },
         },
-        h("option", { value: "" }, "Todos los grupos"),
+        h("option", { value: "" }, t("Todos los grupos")),
         groups.map((g) => h("option", { value: g, selected: g === p.filter.group }, g)),
       ),
-      iconButton("refresh-cw", "Recargar", () => {
+      iconButton("refresh-cw", t("Recargar"), () => {
         c.loaded = false;
         loadHistory(c);
       }),
@@ -379,7 +380,7 @@ function renderHeader(c, p) {
   if (c.type === "groupchat") {
     const r = roomState(c.accountId, c.conv);
     const room = acc?.rooms.find((x) => x.jid === c.conv);
-    const status = r.joined ? `${r.occupants.size} participantes` : r.joining ? "Entrando…" : r.error ? `Error: ${r.error}` : conn(c.accountId).state === "online" ? "No estás en la sala" : "Sin conexión";
+    const status = r.joined ? `${r.occupants.size} participantes` : r.joining ? t("Entrando…") : r.error ? t("Error: {error}", { error: r.error }) : conn(c.accountId).state === "online" ? t("No estás en la sala") : t("Sin conexión");
     const subject = h("div", { class: "conv-sub subject", title: r.subject || "", html: r.subject ? formatBody(r.subject).html : `<span class="muted">${esc(status)}</span>` });
     p.header.append(
       h("div", { class: `conv-avatar room ${r.joined ? "" : "off"}` }, icon("hash")),
@@ -392,13 +393,13 @@ function renderHeader(c, p) {
       h(
         "div",
         { class: "conv-actions" },
-        !r.joined && !r.joining ? h("button", { class: "btn small primary", onclick: () => rejoin(c) }, icon("log-in"), "Entrar") : null,
-        iconButton("star", isFavorite(room) ? "Favorita (clic para quitarla de la lista)" : "Añadir a favoritas", () => toggleFavorite(c.accountId, c.conv), isFavorite(room) ? "on star" : ""),
-        iconButton("zap", room?.autojoin ? "Se abre al iniciar (clic para desactivar)" : "Abrir automáticamente al iniciar", () => toggleAutojoin(c.accountId, c.conv), room?.autojoin ? "on zap" : ""),
-        iconButton(notifyMode(c) === "none" ? "bell-off" : notifyMode(c) === "all" ? "bell-ring" : "bell", "Notificaciones", (e) => menuFor(e.currentTarget, convMenu(c).filter((x) => x.checked !== undefined || x.header))),
-        iconButton("search", "Buscar en el historial", () => openSearch({ accountId: c.accountId, conv: c.conv })),
-        iconButton("panel-right", "Mostrar/ocultar participantes", () => updateSettings((s) => (s.layout.showOccupants = !s.layout.showOccupants))),
-        iconButton("ellipsis-vertical", "Más opciones", (e) => menuFor(e.currentTarget, convMenu(c))),
+        !r.joined && !r.joining ? h("button", { class: "btn small primary", onclick: () => rejoin(c) }, icon("log-in"), t("Entrar")) : null,
+        iconButton("star", isFavorite(room) ? t("Favorita (clic para quitarla de la lista)") : t("Añadir a favoritas"), () => toggleFavorite(c.accountId, c.conv), isFavorite(room) ? "on star" : ""),
+        iconButton("zap", room?.autojoin ? t("Se abre al iniciar (clic para desactivar)") : t("Abrir automáticamente al iniciar"), () => toggleAutojoin(c.accountId, c.conv), room?.autojoin ? "on zap" : ""),
+        iconButton(notifyMode(c) === "none" ? "bell-off" : notifyMode(c) === "all" ? "bell-ring" : "bell", t("Notificaciones"), (e) => menuFor(e.currentTarget, convMenu(c).filter((x) => x.checked !== undefined || x.header))),
+        iconButton("search", t("Buscar en el historial"), () => openSearch({ accountId: c.accountId, conv: c.conv })),
+        iconButton("panel-right", t("Mostrar/ocultar participantes"), () => updateSettings((s) => (s.layout.showOccupants = !s.layout.showOccupants))),
+        iconButton("ellipsis-vertical", t("Más opciones"), (e) => menuFor(e.currentTarget, convMenu(c))),
       ),
     );
     return;
@@ -412,14 +413,14 @@ function renderHeader(c, p) {
     h(
       "div",
       { class: "conv-title" },
-      h("h1", {}, convTitle(c), h("span", { class: "conv-jid" }, isMucPm ? `privado en ${bare.split("@")[0]}` : bare)),
+      h("h1", {}, convTitle(c), h("span", { class: "conv-jid" }, isMucPm ? t("privado en {room}", { room: bare.split("@")[0] }) : bare)),
       h("div", { class: "conv-sub" }, h("span", { class: `presence-dot ${pr.show}` }), ` ${SHOW_LABEL[pr.show] || pr.show}`, pr.status ? h("span", { class: "muted", html: ` — ${formatBody(pr.status).html}` }) : null),
     ),
     h(
       "div",
       { class: "conv-actions" },
-      iconButton("search", "Buscar en el historial", () => openSearch({ accountId: c.accountId, conv: c.conv })),
-      iconButton("ellipsis-vertical", "Más opciones", (e) => menuFor(e.currentTarget, convMenu(c))),
+      iconButton("search", t("Buscar en el historial"), () => openSearch({ accountId: c.accountId, conv: c.conv })),
+      iconButton("ellipsis-vertical", t("Más opciones"), (e) => menuFor(e.currentTarget, convMenu(c))),
     ),
   );
 }
@@ -459,16 +460,16 @@ function renderAllMessages(c, p, prependedCount) {
   clear(p.list);
   if (c.type === "pings") {
     const shown = c.messages.filter((m) => pingMatches(m, p.filter.query, p.filter.group)).slice(-400).reverse();
-    if (!shown.length) p.list.append(h("div", { class: "empty-state" }, icon("radio"), h("p", {}, c.loaded ? "No hay pings que mostrar." : "Cargando…")));
+    if (!shown.length) p.list.append(h("div", { class: "empty-state" }, icon("radio"), h("p", {}, c.loaded ? t("No hay pings que mostrar.") : t("Cargando…"))));
     for (const m of shown) p.list.append(pingCard(m));
     p.lastRendered = null;
     p.scroller.scrollTop = 0;
     return;
   }
-  if (!c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, "Desplázate hacia arriba para cargar más"));
-  if (c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, icon("history"), " Inicio del historial local"));
+  if (!c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, t("Desplázate hacia arriba para cargar más")));
+  if (c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, icon("history"), t(" Inicio del historial local")));
   if (!c.messages.length) {
-    p.list.append(h("div", { class: "empty-state" }, icon(c.type === "groupchat" ? "hash" : "message-circle"), h("p", {}, c.type === "groupchat" ? "Aún no hay mensajes en esta sala." : "Escribe el primer mensaje.")));
+    p.list.append(h("div", { class: "empty-state" }, icon(c.type === "groupchat" ? "hash" : "message-circle"), h("p", {}, c.type === "groupchat" ? t("Aún no hay mensajes en esta sala.") : t("Escribe el primer mensaje."))));
   }
   let prev = null;
   const frag = document.createDocumentFragment();
@@ -531,7 +532,7 @@ function insertUnreadMarker(c, p) {
   p.list.querySelector(".unread-marker")?.remove();
   const el = p.list.querySelector(`.msg[data-key="${CSS.escape(c.firstUnreadKey)}"]`);
   if (!el) return;
-  el.before(h("div", { class: "unread-marker" }, h("span", {}, "Mensajes nuevos")));
+  el.before(h("div", { class: "unread-marker" }, h("span", {}, t("Mensajes nuevos"))));
   if (p.atBottom !== false) {
     requestAnimationFrame(() => el.scrollIntoView({ block: "center" }));
     p.atBottom = false;
@@ -567,7 +568,7 @@ function messageEl(c, m, cont) {
     quote ? h("blockquote", { html: formatBody(quote).html }) : null,
     action ? h("span", { class: "action-nick", style: { color } }, `* ${m.nick} `) : null,
     h("span", { class: "msg-text", html: fb.html }),
-    m.edited ? h("span", { class: "edited", title: "Mensaje corregido" }, " (editado)") : null,
+    m.edited ? h("span", { class: "edited", title: t("Mensaje corregido") }, " (editado)") : null,
   );
   const previews = [...fb.previews];
   if (m.oob && !previews.some((x) => x.url === m.oob)) previews.push({ type: /\.(png|jpe?g|gif|webp)$/i.test(m.oob) ? "image" : "link", url: m.oob });
@@ -590,7 +591,7 @@ function messageEl(c, m, cont) {
         h("span", { class: "msg-nick", dataset: { nick: m.nick } }, m.nick),
         localTime(m.ts, "msg-time"),
         eveTime(m.ts),
-        m.out && c.type === "chat" ? h("span", { class: `receipt ${m.received ? "ok" : ""}`, title: m.received ? "Entregado" : "Enviado" }, icon(m.received ? "check-check" : "check")) : null,
+        m.out && c.type === "chat" ? h("span", { class: `receipt ${m.received ? "ok" : ""}`, title: m.received ? t("Entregado") : t("Enviado") }, icon(m.received ? "check-check" : "check")) : null,
       ),
       bodyEl,
       prevEl,
@@ -599,10 +600,10 @@ function messageEl(c, m, cont) {
     h(
       "div",
       { class: "msg-actions" },
-      iconButton("reply", "Citar", () => quoteMessage(c, m)),
-      c.type === "groupchat" && !m.out ? iconButton("at-sign", "Mencionar", () => insertMention(c, m.nick)) : null,
-      iconButton("copy", "Copiar", () => navigator.clipboard.writeText(m.body)),
-      m.out && m.id ? iconButton("pencil", "Corregir", () => startEdit(c, m)) : null,
+      iconButton("reply", t("Citar"), () => quoteMessage(c, m)),
+      c.type === "groupchat" && !m.out ? iconButton("at-sign", t("Mencionar"), () => insertMention(c, m.nick)) : null,
+      iconButton("copy", t("Copiar"), () => navigator.clipboard.writeText(m.body)),
+      m.out && m.id ? iconButton("pencil", t("Corregir"), () => startEdit(c, m)) : null,
     ),
   );
 }
@@ -616,7 +617,7 @@ function localTime(ts, cls) {
 // Hora EVE junto a la local, con otro estilo para distinguirlas.
 function eveTime(ts) {
   if (S.settings.showEveTime === false) return null;
-  return h("time", { class: "msg-eve", title: fmtTimes(ts) }, `EVE ${fmtEve(ts)}`);
+  return h("time", { class: "msg-eve", title: fmtTimes(ts) }, t("EVE {eve}", { eve: fmtEve(ts) }));
 }
 
 function splitQuote(body) {
@@ -637,14 +638,14 @@ export function markReceipt(accountId, conv, id) {
 
 function messageMenu(c, m) {
   return [
-    { label: "Copiar texto", icon: "copy", action: () => navigator.clipboard.writeText(m.body) },
-    { label: "Citar", icon: "quote", action: () => quoteMessage(c, m) },
-    c.type === "groupchat" && !m.out ? { label: `Mencionar a ${m.nick}`, icon: "at-sign", action: () => insertMention(c, m.nick) } : null,
-    c.type === "groupchat" && !m.out ? { label: "Mensaje privado", icon: "message-square", action: () => openConv(c.accountId, `${c.conv}/${m.nick}`, "chat") } : null,
-    m.out && m.id ? { label: "Corregir mensaje", icon: "pencil", action: () => startEdit(c, m) } : null,
+    { label: t("Copiar texto"), icon: "copy", action: () => navigator.clipboard.writeText(m.body) },
+    { label: t("Citar"), icon: "quote", action: () => quoteMessage(c, m) },
+    c.type === "groupchat" && !m.out ? { label: t("Mencionar a {nick}", { nick: m.nick }), icon: "at-sign", action: () => insertMention(c, m.nick) } : null,
+    c.type === "groupchat" && !m.out ? { label: t("Mensaje privado"), icon: "message-square", action: () => openConv(c.accountId, `${c.conv}/${m.nick}`, "chat") } : null,
+    m.out && m.id ? { label: t("Corregir mensaje"), icon: "pencil", action: () => startEdit(c, m) } : null,
     "-",
-    { label: `Local: ${fmtDateTime(m.ts)}`, icon: "clock", disabled: true },
-    { label: `EVE: ${fmtEve(m.ts, true)} (UTC)`, icon: "globe", disabled: true },
+    { label: t("Local: {dateTime}", { dateTime: fmtDateTime(m.ts) }), icon: "clock", disabled: true },
+    { label: t("EVE: {eve} (UTC)", { eve: fmtEve(m.ts, true) }), icon: "globe", disabled: true },
   ];
 }
 
@@ -704,11 +705,11 @@ function insertAtCursor(ta, text) {
 }
 
 function renderTyping(c, p) {
-  const names = [...c.typing.entries()].filter(([, t]) => t.state === "composing").map(([n]) => n);
+  const names = [...c.typing.entries()].filter(([, st]) => st.state === "composing").map(([n]) => n);
   p.typing.innerHTML = "";
   if (!names.length) return p.typing.classList.remove("show");
   p.typing.classList.add("show");
-  const label = names.length === 1 ? `${names[0]} está escribiendo` : names.length <= 3 ? `${names.join(", ")} están escribiendo` : "Varias personas están escribiendo";
+  const label = names.length === 1 ? t("{x} está escribiendo", { x: names[0] }) : names.length <= 3 ? t("{join} están escribiendo", { join: names.join(", ") }) : t("Varias personas están escribiendo");
   p.typing.append(h("span", { class: "typing-dots" }, h("i"), h("i"), h("i")), h("span", {}, label));
 }
 
@@ -716,8 +717,8 @@ function buildComposer(c, p) {
   const ta = h("textarea", { class: "composer-input", rows: 1, placeholder: placeholderFor(c), spellcheck: S.settings.behavior.spellcheck ? "true" : "false" });
   const suggest = h("div", { class: "suggest hidden" });
   const editBar = h("div", { class: "edit-bar hidden" });
-  const emojiBtn = iconButton("smile-plus", "Emojis", () => openPicker(emojiBtn, (e) => insertAtCursor(ta, e)), "emoji-toggle");
-  const sendBtn = iconButton("send", "Enviar (Intro)", () => submit(), "send-btn");
+  const emojiBtn = iconButton("smile-plus", t("Emojis"), () => openPicker(emojiBtn, (e) => insertAtCursor(ta, e)), "emoji-toggle");
+  const sendBtn = iconButton("send", t("Enviar (Intro)"), () => submit(), "send-btn");
   const el = h("div", { class: "composer" }, editBar, suggest, h("div", { class: "composer-box" }, emojiBtn, ta, sendBtn));
 
   let editing = null;
@@ -741,7 +742,7 @@ function buildComposer(c, p) {
     if (m) {
       ta.value = m.body;
       editBar.classList.remove("hidden");
-      clear(editBar).append(icon("pencil"), h("span", {}, "Corrigiendo mensaje — Esc para cancelar"), iconButton("x", "Cancelar", () => setEditing(null)));
+      clear(editBar).append(icon("pencil"), h("span", {}, t("Corrigiendo mensaje — Esc para cancelar")), iconButton("x", t("Cancelar"), () => setEditing(null)));
     } else {
       editBar.classList.add("hidden");
       ta.value = "";
@@ -824,7 +825,7 @@ function buildComposer(c, p) {
       try {
         await api("msg:send", c.accountId, { to: c.conv, body: text, type: c.type === "groupchat" ? "groupchat" : "chat", replaces: m.id });
       } catch (e) {
-        toast(`No se pudo corregir: ${e.message}`, { kind: "error" });
+        toast(t("No se pudo corregir: {message}", { message: e.message }), { kind: "error" });
       }
       return;
     }
@@ -839,8 +840,8 @@ function buildComposer(c, p) {
       }
     }
     const body = text.startsWith("//") ? text.slice(1) : text;
-    if (conn(c.accountId).state !== "online") return toast("No hay conexión con el servidor.", { kind: "error" });
-    if (c.type === "groupchat" && !roomState(c.accountId, c.conv).joined) return toast("No estás dentro de la sala.", { kind: "warn" });
+    if (conn(c.accountId).state !== "online") return toast(t("No hay conexión con el servidor."), { kind: "error" });
+    if (c.type === "groupchat" && !roomState(c.accountId, c.conv).joined) return toast(t("No estás dentro de la sala."), { kind: "warn" });
     ta.value = "";
     c.draft = "";
     autosize();
@@ -853,7 +854,7 @@ function buildComposer(c, p) {
     } catch (e) {
       ta.value = body;
       autosize();
-      toast(`No se pudo enviar: ${e.message}`, { kind: "error" });
+      toast(t("No se pudo enviar: {message}", { message: e.message }), { kind: "error" });
     }
   }
 
@@ -922,7 +923,7 @@ function buildComposer(c, p) {
   ta.addEventListener("paste", (e) => {
     if ([...(e.clipboardData?.items || [])].some((i) => i.kind === "file")) {
       e.preventDefault();
-      toast("Enviar archivos aún no está disponible en este servidor.", { kind: "warn" });
+      toast(t("Enviar archivos aún no está disponible en este servidor."), { kind: "warn" });
     }
   });
 
@@ -931,27 +932,27 @@ function buildComposer(c, p) {
 }
 
 function placeholderFor(c) {
-  if (c.type === "groupchat") return `Mensaje en #${convTitle(c)} — / para comandos, Tab completa apodos`;
-  return `Mensaje para ${convTitle(c)}`;
+  if (c.type === "groupchat") return t("Mensaje en #{convTitle} — / para comandos, Tab completa apodos", { convTitle: convTitle(c) });
+  return t("Mensaje para {convTitle}", { convTitle: convTitle(c) });
 }
 
 // ---------- comandos ----------
 
 const HELP = [
-  ["/me <acción>", "Mensaje de acción"],
-  ["/nick <apodo>", "Cambiar tu apodo en la sala"],
-  ["/topic <tema>", "Cambiar el tema de la sala"],
-  ["/join <sala> [contraseña]", "Entrar en una sala (se completa @conference)"],
-  ["/part [motivo]", "Salir de la sala actual"],
-  ["/msg <apodo|jid> <texto>", "Mensaje privado"],
-  ["/query <apodo|jid>", "Abrir conversación privada"],
-  ["/invite <jid>", "Invitar a la sala"],
-  ["/kick <apodo> [motivo]", "Expulsar (moderadores)"],
-  ["/ban <apodo> [motivo]", "Vetar (administradores)"],
-  ["/status <online|away|dnd|xa> [mensaje]", "Cambiar estado"],
-  ["/away [mensaje]  ·  /back", "Ausente / disponible"],
-  ["/clear", "Limpiar la ventana (no borra el historial)"],
-  ["/help", "Esta ayuda"],
+  [t("/me <acción>"), t("Mensaje de acción")],
+  [t("/nick <apodo>"), t("Cambiar tu apodo en la sala")],
+  [t("/topic <tema>"), t("Cambiar el tema de la sala")],
+  [t("/join <sala> [contraseña]"), t("Entrar en una sala (se completa @conference)")],
+  [t("/part [motivo]"), t("Salir de la sala actual")],
+  [t("/msg <apodo|jid> <texto>"), t("Mensaje privado")],
+  [t("/query <apodo|jid>"), t("Abrir conversación privada")],
+  ["/invite <jid>", t("Invitar a la sala")],
+  [t("/kick <apodo> [motivo]"), t("Expulsar (moderadores)")],
+  [t("/ban <apodo> [motivo]"), t("Vetar (administradores)")],
+  [t("/status <online|away|dnd|xa> [mensaje]"), t("Cambiar estado")],
+  [t("/away [mensaje]  ·  /back"), t("Ausente / disponible")],
+  ["/clear", t("Limpiar la ventana (no borra el historial)")],
+  ["/help", t("Esta ayuda")],
 ];
 
 async function runCommand(c, text) {
@@ -974,20 +975,20 @@ async function runCommand(c, text) {
         renderAllMessages(c, panes.get(c.key));
         return true;
       case "nick":
-        need(isRoom && rest, "Uso: /nick <apodo> (dentro de una sala)");
+        need(isRoom && rest, t("Uso: /nick <apodo> (dentro de una sala)"));
         await api("room:nick", c.accountId, c.conv, rest);
         return true;
       case "topic":
       case "subject":
-        need(isRoom, "Solo en salas");
+        need(isRoom, t("Solo en salas"));
         if (!rest) {
-          systemMessage(c, `Tema: ${roomState(c.accountId, c.conv).subject || "(sin tema)"}`);
+          systemMessage(c, t("Tema: {x}", { x: roomState(c.accountId, c.conv).subject || t("(sin tema)") }));
           return true;
         }
         await api("room:subject", c.accountId, c.conv, rest);
         return true;
       case "join": {
-        need(rest, "Uso: /join <sala> [contraseña]");
+        need(rest, t("Uso: /join <sala> [contraseña]"));
         const [room, password] = rest.split(" ");
         const jid = room.includes("@") ? room.toLowerCase() : `${room.toLowerCase()}@${acc.conferenceServer}`;
         await openConv(c.accountId, jid, "groupchat", { password });
@@ -995,13 +996,13 @@ async function runCommand(c, text) {
       }
       case "part":
       case "leave":
-        need(isRoom, "Solo en salas");
+        need(isRoom, t("Solo en salas"));
         closeConv(c.key);
         return true;
       case "msg":
       case "query": {
         const [target, ...msgArr] = rest.split(" ");
-        need(target, `Uso: /${cmd} <apodo|jid> [texto]`);
+        need(target, t("Uso: /{cmd} <apodo|jid> [texto]", { cmd }));
         const jid = target.includes("@") ? target.toLowerCase() : isRoom ? `${c.conv}/${target}` : `${target.toLowerCase()}@${acc.jid.split("@")[1]}`;
         const conv = await openConv(c.accountId, jid, "chat");
         if (msgArr.length) await api("msg:send", c.accountId, { to: jid, body: msgArr.join(" "), type: "chat" });
@@ -1009,19 +1010,19 @@ async function runCommand(c, text) {
         return true;
       }
       case "invite":
-        need(isRoom && rest, "Uso: /invite <jid>");
+        need(isRoom && rest, t("Uso: /invite <jid>"));
         await api("room:invite", c.accountId, c.conv, rest, "");
-        systemMessage(c, `Invitación enviada a ${rest}`);
+        systemMessage(c, t("Invitación enviada a {rest}", { rest }));
         return true;
       case "kick":
       case "ban": {
-        need(isRoom, "Solo en salas");
+        need(isRoom, t("Solo en salas"));
         const [nick, ...reason] = rest.split(" ");
-        need(nick, `Uso: /${cmd} <apodo> [motivo]`);
+        need(nick, t("Uso: /{cmd} <apodo> [motivo]", { cmd }));
         if (cmd === "kick") await api("room:moderate", c.accountId, c.conv, { nick, role: "none", reason: reason.join(" ") });
         else {
           const occ = roomState(c.accountId, c.conv).occupants.get(nick);
-          need(occ?.jid, "No se conoce el JID real de ese usuario (sala semi-anónima).");
+          need(occ?.jid, t("No se conoce el JID real de ese usuario (sala semi-anónima)."));
           await api("room:moderate", c.accountId, c.conv, { jid: occ.jid, affiliation: "outcast", reason: reason.join(" ") });
         }
         return true;
@@ -1043,7 +1044,7 @@ async function runCommand(c, text) {
         return true;
       }
       default:
-        systemMessage(c, `Comando desconocido: /${cmd}. Escribe /help para ver la lista, o empieza con // para enviar el texto tal cual.`, { icon: "triangle-alert" });
+        systemMessage(c, t("Comando desconocido: /{cmd}. Escribe /help para ver la lista, o empieza con // para enviar el texto tal cual.", { cmd }), { icon: "triangle-alert" });
         return true;
     }
   } catch (e) {

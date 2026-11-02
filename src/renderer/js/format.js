@@ -3,6 +3,7 @@ import { esc } from "./dom.js";
 import { S } from "./state.js";
 import { emojifyHtml, replaceEmoticons, replaceShortcodes, customEmojiMap, isEmojiOnly } from "./emoji.js";
 
+import { t, locale } from "./i18n.js";
 const TOKEN_RE = /```([\s\S]*?)```|`([^`\n]+)`|\b((?:https?:\/\/|www\.)[^\s<>"']+[^\s<>"'.,;:!?)\]}*_~]|xmpp:[^\s<>"']+[^\s<>"'.,;:!?)\]}])/gi;
 const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif)(\?[^#]*)?(#.*)?$/i;
 const YT_RE = /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{11})/i;
@@ -89,7 +90,7 @@ export function previewHtml(p) {
 
 export function fmtTime(ts) {
   const s = S.settings;
-  return new Date(ts).toLocaleTimeString("es-ES", {
+  return new Date(ts).toLocaleTimeString(locale(), {
     hour: "2-digit",
     minute: "2-digit",
     ...(s.showSeconds ? { second: "2-digit" } : {}),
@@ -99,35 +100,35 @@ export function fmtTime(ts) {
 
 // Hora EVE = UTC, siempre en 24 h como dentro del juego.
 export function fmtEve(ts, seconds = S.settings.showSeconds) {
-  return new Date(ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hour12: false, timeZone: "UTC" });
+  return new Date(ts).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hour12: false, timeZone: "UTC" });
 }
 
 export function fmtEveDateTime(ts) {
-  return new Date(ts).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "medium", hour12: false, timeZone: "UTC" });
+  return new Date(ts).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "medium", hour12: false, timeZone: "UTC" });
 }
 
 // Texto para tooltips: las dos horas, claramente etiquetadas.
 export function fmtTimes(ts) {
-  return `Hora local: ${fmtDateTime(ts)}\nHora EVE: ${fmtEveDateTime(ts)}`;
+  return t("Hora local: {dateTime}\nHora EVE: {eveDateTime}", { dateTime: fmtDateTime(ts), eveDateTime: fmtEveDateTime(ts) });
 }
 
 export function fmtDay(ts) {
   const d = new Date(ts);
   const today = new Date();
   const y = new Date(Date.now() - 86400e3);
-  if (d.toDateString() === today.toDateString()) return "Hoy";
-  if (d.toDateString() === y.toDateString()) return "Ayer";
-  return d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined });
+  if (d.toDateString() === today.toDateString()) return t("Hoy");
+  if (d.toDateString() === y.toDateString()) return t("Ayer");
+  return d.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined });
 }
 
 export function fmtDateTime(ts) {
-  return new Date(ts).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short", hour12: S.settings.timeFormat === "12" });
+  return new Date(ts).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "short", hour12: S.settings.timeFormat === "12" });
 }
 
 export function timeAgo(ts) {
   const s = Math.round((Date.now() - ts) / 1000);
-  if (s < 60) return "ahora";
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
-  return `hace ${Math.floor(s / 86400)} d`;
+  if (s < 60) return t("ahora");
+  if (s < 3600) return t("hace {n} min", { n: Math.floor(s / 60) });
+  if (s < 86400) return t("hace {n} h", { n: Math.floor(s / 3600) });
+  return t("hace {n} d", { n: Math.floor(s / 86400) });
 }

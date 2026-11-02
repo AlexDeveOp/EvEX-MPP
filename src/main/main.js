@@ -12,6 +12,7 @@ import { scanPidgin, importLogs } from "./pidgin-import.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, closeAllPopups } from "./popups.js";
 
+import { t, tk, setLanguage, currentLang } from "./i18n.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const RENDERER = path.join(ROOT, "src", "renderer");
 const NODE_MODULES = path.join(ROOT, "node_modules");
@@ -61,6 +62,15 @@ function safeJoin(base, rel) {
   return target.startsWith(base + path.sep) || target === base ? target : null;
 }
 
+// Los archivos de la interfaz no se guardan en la caché de Chromium: tras actualizar la app (o al recargar
+// en desarrollo) siempre se usan los ficheros actuales, p. ej. las traducciones.
+async function fetchNoCache(file) {
+  const res = await net.fetch(pathToFileURL(file).toString());
+  const headers = new Headers(res.headers);
+  headers.set("cache-control", "no-store");
+  return new Response(res.body, { status: res.status, headers });
+}
+
 function registerProtocols() {
   protocol.handle("app", (req) => {
     const url = new URL(req.url);
@@ -74,7 +84,7 @@ function registerProtocols() {
       file = safeJoin(RENDERER, rel === "/" ? "index.html" : rel.slice(1));
     }
     if (!file) return new Response("forbidden", { status: 403 });
-    return net.fetch(pathToFileURL(file).toString());
+    return fetchNoCache(file);
   });
   protocol.handle("media", (req) => {
     const url = new URL(req.url);
@@ -180,7 +190,7 @@ function hideToTray() {
   if (!cfg.imported.__trayHintShown && tray) {
     cfg.imported.__trayHintShown = 1;
     store.save();
-    tray.displayBalloon({ title: "EvEX-MPP sigue abierto", content: "Está en la bandeja del sistema. Haz clic en el icono para volver; para salir usa «Salir» en su menú.", iconType: "info" });
+    tray.displayBalloon({ title: t("EvEX-MPP sigue abierto"), content: t("Está en la bandeja del sistema. Haz clic en el icono para volver; para salir usa «Salir» en su menú."), iconType: "info" });
   }
 }
 
@@ -202,27 +212,27 @@ function nativeContextMenu(params) {
   const items = [];
   if (params.misspelledWord) {
     for (const s of params.dictionarySuggestions.slice(0, 6)) items.push({ label: s, click: () => win.webContents.replaceMisspelling(s) });
-    if (!params.dictionarySuggestions.length) items.push({ label: "Sin sugerencias", enabled: false });
-    items.push({ label: "Añadir al diccionario", click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord) });
+    if (!params.dictionarySuggestions.length) items.push({ label: t("Sin sugerencias"), enabled: false });
+    items.push({ label: t("Añadir al diccionario"), click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord) });
     items.push({ type: "separator" });
   }
   if (params.linkURL) {
-    items.push({ label: "Abrir enlace", click: () => openExternal(params.linkURL) });
-    items.push({ label: "Copiar enlace", click: () => clipboard.writeText(params.linkURL) });
+    items.push({ label: t("Abrir enlace"), click: () => openExternal(params.linkURL) });
+    items.push({ label: t("Copiar enlace"), click: () => clipboard.writeText(params.linkURL) });
     items.push({ type: "separator" });
   }
   if (params.mediaType === "image" && params.srcURL) {
-    items.push({ label: "Copiar imagen", click: () => win.webContents.copyImageAt(params.x, params.y) });
-    if (/^https?:/.test(params.srcURL)) items.push({ label: "Abrir imagen en el navegador", click: () => openExternal(params.srcURL) });
+    items.push({ label: t("Copiar imagen"), click: () => win.webContents.copyImageAt(params.x, params.y) });
+    if (/^https?:/.test(params.srcURL)) items.push({ label: t("Abrir imagen en el navegador"), click: () => openExternal(params.srcURL) });
     items.push({ type: "separator" });
   }
   if (params.isEditable) {
-    items.push({ role: "undo", label: "Deshacer" }, { role: "redo", label: "Rehacer" }, { type: "separator" });
-    items.push({ role: "cut", label: "Cortar" }, { role: "copy", label: "Copiar" }, { role: "paste", label: "Pegar" }, { role: "selectAll", label: "Seleccionar todo" });
+    items.push({ role: "undo", label: t("Deshacer") }, { role: "redo", label: t("Rehacer") }, { type: "separator" });
+    items.push({ role: "cut", label: t("Cortar") }, { role: "copy", label: t("Copiar") }, { role: "paste", label: t("Pegar") }, { role: "selectAll", label: t("Seleccionar todo") });
   } else if (params.selectionText) {
-    items.push({ role: "copy", label: "Copiar" });
+    items.push({ role: "copy", label: t("Copiar") });
   }
-  if (DEV) items.push({ type: "separator" }, { label: "Inspeccionar", click: () => win.webContents.inspectElement(params.x, params.y) });
+  if (DEV) items.push({ type: "separator" }, { label: t("Inspeccionar"), click: () => win.webContents.inspectElement(params.x, params.y) });
   while (items.length && items[items.length - 1].type === "separator") items.pop();
   if (items.length) Menu.buildFromTemplate(items).popup({ window: win });
 }
@@ -241,28 +251,28 @@ function buildTrayMenu() {
     },
   });
   return Menu.buildFromTemplate([
-    { label: "Mostrar EvEX-MPP", click: showWindow },
+    { label: t("Mostrar EvEX-MPP"), click: showWindow },
     {
-      label: "Cambiar de cuenta…",
+      label: t("Cambiar de cuenta…"),
       click: () => {
         showWindow();
         send("switch-account");
       },
     },
     { type: "separator" },
-    setAll("", "Disponible"),
-    setAll("away", "Ausente"),
-    setAll("dnd", "No molestar"),
-    setAll("xa", "Ausente (extendido)"),
+    setAll("", t("Disponible")),
+    setAll("away", t("Ausente")),
+    setAll("dnd", t("No molestar")),
+    setAll("xa", t("Ausente (extendido)")),
     { type: "separator" },
     {
-      label: "Desconectar todo",
+      label: t("Desconectar todo"),
       click: () => {
         for (const a of accounts.values()) a.disconnect().catch(() => {});
       },
     },
     {
-      label: "Salir",
+      label: t("Salir"),
       click: () => {
         quitting = true;
         app.quit();
@@ -293,7 +303,7 @@ function refreshTray() {
   blinkTimer = null;
   if (pingAlert) {
     tray.setImage(alertImage());
-    tray.setToolTip(`¡${pingAlert} ping${pingAlert > 1 ? "s" : ""} de flota sin leer!`);
+    tray.setToolTip(t("¡{pingAlert} ping{x} de flota sin leer!", { pingAlert, x: pingAlert > 1 ? "s" : "" }));
     if (store.get().settings.notifications.trayBlink) {
       blinkOn = true;
       blinkTimer = setInterval(() => {
@@ -303,11 +313,11 @@ function refreshTray() {
     }
   } else {
     tray.setImage(trayImage());
-    tray.setToolTip(unread ? `EvEX-MPP — ${unread} sin leer` : "EvEX-MPP");
+    tray.setToolTip(unread ? t("EvEX-MPP — {unread} sin leer", { unread }) : "EvEX-MPP");
   }
   if (win && process.platform === "win32") {
     const overlay = pingAlert ? renderAlertIcon(32) : unread ? renderBadge() : null;
-    win.setOverlayIcon(overlay ? nativeImage.createFromBuffer(overlay) : null, pingAlert ? "Ping de flota" : unread ? `${unread} sin leer` : "");
+    win.setOverlayIcon(overlay ? nativeImage.createFromBuffer(overlay) : null, pingAlert ? t("Ping de flota") : unread ? t("{unread} sin leer", { unread }) : "");
   }
 }
 
@@ -355,7 +365,7 @@ function listAvatars() {
 function getConn(id) {
   let x = accounts.get(id);
   const acc = store.getAccount(id);
-  if (!acc) throw new Error("Cuenta no encontrada");
+  if (!acc) throw new Error(t("Cuenta no encontrada"));
   if (!x) {
     x = new XmppAccount(acc, { avatarDir: avatarDir() });
     x.historyOptions = (roomJid) => historyOptions(id, roomJid);
@@ -424,10 +434,13 @@ async function connectAccount(id, password) {
 
 // ---------- ficheros de usuario ----------
 
+// Los nombres se traducen al abrir el diálogo (el idioma puede cambiar en marcha).
+const fileFilters = (kind) => (FILTERS[kind] || []).map((f) => ({ ...f, name: t(f.name) }));
+
 const FILTERS = {
-  image: [{ name: "Imágenes", extensions: ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"] }],
-  sound: [{ name: "Sonidos", extensions: ["mp3", "wav", "ogg", "m4a", "flac"] }],
-  video: [{ name: "Vídeo", extensions: ["mp4", "webm"] }],
+  image: [{ name: tk("Imágenes"), extensions: ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"] }],
+  sound: [{ name: tk("Sonidos"), extensions: ["mp3", "wav", "ogg", "m4a", "flac"] }],
+  video: [{ name: tk("Vídeo"), extensions: ["mp4", "webm"] }],
 };
 
 function copyToMedia(src, sub = "files") {
@@ -492,8 +505,12 @@ function registerIpc() {
   });
 
   handle("settings:set", (settings) => {
+    const before = currentLang();
     const s = store.setSettings(settings);
+    setLanguage(s.language);
     applySystemSettings(s);
+    // El menú de la bandeja se construye con textos traducidos: rehacerlo si cambia el idioma.
+    if (tray && currentLang() !== before) tray.setContextMenu(buildTrayMenu());
     return s;
   });
 
@@ -618,13 +635,13 @@ function registerIpc() {
   });
 
   handle("file:pick", async (kind) => {
-    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: FILTERS[kind] || [] });
+    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: fileFilters(kind) });
     if (r.canceled || !r.filePaths[0]) return null;
     return copyToMedia(r.filePaths[0], kind === "sound" ? "sounds" : "files");
   });
 
   handle("emoji:import", async () => {
-    const r = await dialog.showOpenDialog(win, { title: "Elige imágenes (GIF, PNG, WebP…) — el nombre del fichero será el :código:", properties: ["openFile", "multiSelections"], filters: FILTERS.image });
+    const r = await dialog.showOpenDialog(win, { title: t("Elige imágenes (GIF, PNG, WebP…) — el nombre del fichero será el :código:"), properties: ["openFile", "multiSelections"], filters: fileFilters("image") });
     if (r.canceled) return [];
     return r.filePaths.map((f) => ({
       name: path.basename(f, path.extname(f)).toLowerCase().replace(/[^a-z0-9_+-]+/g, "_"),
@@ -633,22 +650,22 @@ function registerIpc() {
   });
 
   handle("theme:export", async (data) => {
-    const r = await dialog.showSaveDialog(win, { defaultPath: `${(data.name || "tema").replace(/[^\w-]+/g, "_")}.evex-theme.json`, filters: [{ name: "Tema EvEX", extensions: ["json"] }] });
+    const r = await dialog.showSaveDialog(win, { defaultPath: `${(data.name || "tema").replace(/[^\w-]+/g, "_")}.evex-theme.json`, filters: [{ name: t("Tema EvEX"), extensions: ["json"] }] });
     if (r.canceled || !r.filePath) return false;
     fs.writeFileSync(r.filePath, JSON.stringify(data, null, 2));
     return true;
   });
   handle("theme:import", async () => {
-    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: [{ name: "Tema EvEX", extensions: ["json"] }] });
+    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: [{ name: t("Tema EvEX"), extensions: ["json"] }] });
     if (r.canceled || !r.filePaths[0]) return null;
     return JSON.parse(fs.readFileSync(r.filePaths[0], "utf8"));
   });
 
   handle("avatar:set", async (id) => {
-    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: FILTERS.image });
+    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: fileFilters("image") });
     if (r.canceled || !r.filePaths[0]) return false;
     let img = nativeImage.createFromPath(r.filePaths[0]);
-    if (img.isEmpty()) throw new Error("No se pudo leer la imagen");
+    if (img.isEmpty()) throw new Error(t("No se pudo leer la imagen"));
     const { width, height } = img.getSize();
     const side = Math.min(width, height);
     img = img.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 2), width: side, height: side }).resize({ width: 128, height: 128, quality: "best" });
@@ -675,8 +692,8 @@ function registerIpc() {
   handle("notify:test", (kind, colors) => {
     showPopup(
       kind === "ping"
-        ? { kind: "ping", title: "Capital fleet up now!!", fields: [{ key: "FC Name", value: "Ejemplo FC" }, { key: "Formup Location", value: "1DQ1-A" }, { key: "Doctrine", value: "Typhoons" }], footer: "Prueba de EvEX-MPP", time: testTimes(), colors }
-        : { kind: "msg", title: "Alice en general", text: "Esto es una notificación de prueba 👋", time: testTimes(), colors },
+        ? { kind: "ping", title: "Capital fleet up now!!", fields: [{ key: "FC Name", value: "Ejemplo FC" }, { key: "Formup Location", value: "1DQ1-A" }, { key: "Doctrine", value: "Typhoons" }], footer: t("Prueba de EvEX-MPP"), time: testTimes(), colors }
+        : { kind: "msg", title: t("Alice en general"), text: t("Esto es una notificación de prueba 👋"), time: testTimes(), colors },
     );
   });
 
@@ -697,8 +714,8 @@ function testTimes() {
   const d = new Date();
   const s = store.get().settings;
   return {
-    local: s.showLocalTime !== false ? d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : null,
-    eve: s.showEveTime !== false ? d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" }) : null,
+    local: s.showLocalTime !== false ? d.toLocaleTimeString(currentLang() === "es" ? "es-ES" : "en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : null,
+    eve: s.showEveTime !== false ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" }) : null,
   };
 }
 
@@ -733,7 +750,7 @@ function startIdleWatcher() {
       if (!x.online) continue;
       if (idle >= mins * 60 && !autoAway.has(id) && (x.presence.show === "" || x.presence.show === "chat")) {
         autoAway.set(id, { ...x.presence });
-        x.setPresence("away", x.presence.status || "Ausente (inactivo)").catch(() => {});
+        x.setPresence("away", x.presence.status || t("Ausente (inactivo)")).catch(() => {});
       } else if (idle < 30 && autoAway.has(id)) {
         const prev = autoAway.get(id);
         autoAway.delete(id);
@@ -749,6 +766,7 @@ app.on("second-instance", showWindow);
 
 app.whenReady().then(async () => {
   store.load();
+  setLanguage(store.get().settings.language);
   logs = new Logs(path.join(userData(), "logs"));
   registerProtocols();
   registerIpc();

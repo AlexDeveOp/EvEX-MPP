@@ -11,8 +11,14 @@ import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } 
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openSearch } from "./search.js";
 
+import { t, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
   const init = await api("init");
+  // Si el idioma elegido no es el que se está mostrando (p. ej. primera vez tras cambiarlo), recargar una vez.
+  if (setLanguagePreference(init.settings.language)) return location.reload();
+  translateStatic();
+  // Textos que pone el CSS (content:) también se traducen.
+  document.documentElement.style.setProperty("--history-label", JSON.stringify(` · ${t("historial")}`));
   S.accounts = init.accounts;
   S.settings = init.settings;
   S.version = init.version;
@@ -77,12 +83,12 @@ async function restoreTabs() {
   const s = S.settings;
   if (!s.behavior.restoreOpenTabs) return;
   const lastActive = localStorage.getItem("evex.activeTab");
-  for (const t of s.openTabs || []) {
-    if (t.type === "pings") await openConv(null, "*", "pings", { focus: false });
-    else if (account(t.accountId)) {
+  for (const tab of s.openTabs || []) {
+    if (tab.type === "pings") await openConv(null, "*", "pings", { focus: false });
+    else if (account(tab.accountId)) {
       // Una sala sin ⚡ no se vuelve a abrir al iniciar, aunque su pestaña quedara abierta.
-      if (t.type === "groupchat" && !account(t.accountId).rooms.some((r) => r.jid === t.conv && r.autojoin)) continue;
-      await openConv(t.accountId, t.conv, t.type, { focus: false, join: false });
+      if (tab.type === "groupchat" && !account(tab.accountId).rooms.some((r) => r.jid === tab.conv && r.autojoin)) continue;
+      await openConv(tab.accountId, tab.conv, tab.type, { focus: false, join: false });
     }
   }
   if (lastActive && S.tabs.includes(lastActive)) activate(lastActive);
@@ -120,7 +126,7 @@ const HANDLERS = {
       }
       emit("presence", { accountId: id });
     }
-    if (ev.state === "error" && was !== "error") toast(`${account(id)?.alias}: ${ev.error}`, { kind: "error", timeout: 10000, actions: [{ label: "Configurar", action: () => openAccounts(id) }] });
+    if (ev.state === "error" && was !== "error") toast(`${account(id)?.alias}: ${ev.error}`, { kind: "error", timeout: 10000, actions: [{ label: t("Configurar"), action: () => openAccounts(id) }] });
     if (ev.state === "online" && was !== "online") {
       // Al conectar, las salas con pestaña abierta se marcan como "entrando" (el proceso principal se encarga de unirse).
       for (const key of S.tabs) {
@@ -161,25 +167,25 @@ const HANDLERS = {
     emit("presence", { accountId: id, jid: ev.jid });
   },
   "subscribe-request"(id, ev) {
-    toast(`${ev.nick || ev.jid} quiere añadirte a sus contactos`, {
+    toast(t("{x} quiere añadirte a sus contactos", { x: ev.nick || ev.jid }), {
       kind: "info",
       timeout: 0,
       icon: "user-plus",
       actions: [
-        { label: "Aceptar", primary: true, action: () => api("roster:answer", id, ev.jid, true) },
-        { label: "Rechazar", action: () => api("roster:answer", id, ev.jid, false) },
+        { label: t("Aceptar"), primary: true, action: () => api("roster:answer", id, ev.jid, true) },
+        { label: t("Rechazar"), action: () => api("roster:answer", id, ev.jid, false) },
       ],
     });
   },
   subscription(id, ev) {
-    if (ev.type === "subscribed") toast(`${ev.jid} aceptó tu solicitud`, { kind: "ok" });
+    if (ev.type === "subscribed") toast(t("{jid} aceptó tu solicitud", { jid: ev.jid }), { kind: "ok" });
   },
   message(id, ev) {
     ingestMessage({ ...ev, accountId: id });
   },
   "message-error"(id, ev) {
     const c = S.convs.get(convKey(id, ev.conv));
-    if (c) systemMessage(c, `No se pudo entregar un mensaje: ${ev.message}`, { icon: "triangle-alert" });
+    if (c) systemMessage(c, t("No se pudo entregar un mensaje: {message}", { message: ev.message }), { icon: "triangle-alert" });
   },
   chatstate(id, ev) {
     const c = S.convs.get(convKey(id, ev.conv));
@@ -196,7 +202,7 @@ const HANDLERS = {
     r.occupants = new Map(ev.occupants.map((o) => [o.nick, o]));
     const c = getConv(id, ev.room, "groupchat");
     if (!S.tabs.includes(c.key)) openConv(id, ev.room, "groupchat", { focus: !S.active, join: false });
-    if (ev.created) systemMessage(c, "Sala creada. Eres el propietario.", { icon: "crown" });
+    if (ev.created) systemMessage(c, t("Sala creada. Eres el propietario."), { icon: "crown" });
     emit("room", { accountId: id, room: ev.room });
     emit("occupants");
   },
@@ -207,7 +213,7 @@ const HANDLERS = {
     r.occupants.clear();
     const c = S.convs.get(convKey(id, ev.room));
     if (c && (ev.kicked || ev.banned || ev.shutdown)) {
-      const what = ev.banned ? "Has sido vetado de la sala" : ev.kicked ? "Has sido expulsado de la sala" : "La sala se ha cerrado";
+      const what = ev.banned ? t("Has sido vetado de la sala") : ev.kicked ? t("Has sido expulsado de la sala") : t("La sala se ha cerrado");
       systemMessage(c, `${what}${ev.actor ? ` por ${ev.actor}` : ""}${ev.reason ? `: ${ev.reason}` : ""}`, { icon: "user-x" });
       toast(`${what} ${displayName(id, ev.room)}`, { kind: "warn" });
     }
@@ -219,19 +225,19 @@ const HANDLERS = {
     r.joining = false;
     r.error = ev.message;
     const c = S.convs.get(convKey(id, ev.room));
-    if (c) systemMessage(c, `No se pudo entrar: ${ev.message}`, { icon: "triangle-alert" });
+    if (c) systemMessage(c, t("No se pudo entrar: {message}", { message: ev.message }), { icon: "triangle-alert" });
     const actions = [];
     if (ev.condition === "conflict") {
       actions.push({
-        label: "Otro apodo",
+        label: t("Otro apodo"),
         primary: true,
         action: async () => {
-          const nick = await prompt({ title: "Apodo en uso", label: `Elige otro apodo para ${displayName(id, ev.room)}`, value: `${r.nick || account(id).nick}_`, icon: "user" });
+          const nick = await prompt({ title: t("Apodo en uso"), label: t("Elige otro apodo para {displayName}", { displayName: displayName(id, ev.room) }), value: `${r.nick || account(id).nick}_`, icon: "user" });
           if (nick) api("room:join", id, ev.room, nick).catch(() => {});
         },
       });
     }
-    if (ev.condition === "not-authorized") actions.push({ label: "Contraseña", primary: true, action: () => openJoinRoom(id, { room: ev.room }) });
+    if (ev.condition === "not-authorized") actions.push({ label: t("Contraseña"), primary: true, action: () => openJoinRoom(id, { room: ev.room }) });
     toast(`${displayName(id, ev.room)}: ${ev.message}`, { kind: "error", timeout: actions.length ? 0 : 8000, actions });
     emit("room", { accountId: id, room: ev.room });
   },
@@ -258,7 +264,7 @@ const HANDLERS = {
     if (o) r.occupants.set(ev.nick, { ...o, nick: ev.nick });
     if (ev.self) r.nick = ev.nick;
     const c = S.convs.get(convKey(id, ev.room));
-    if (c) systemMessage(c, ev.self ? `Ahora eres ${ev.nick}` : `${ev.old} ahora es ${ev.nick}`, { icon: "pencil" });
+    if (c) systemMessage(c, ev.self ? t("Ahora eres {nick}", { nick: ev.nick }) : t("{old} ahora es {nick}", { old: ev.old, nick: ev.nick }), { icon: "pencil" });
     emitRoomSoon(id, ev.room);
   },
   subject(id, ev) {
@@ -266,14 +272,14 @@ const HANDLERS = {
     const changed = r.joined && r.subject !== ev.subject && !ev.ts;
     r.subject = ev.subject;
     const c = S.convs.get(convKey(id, ev.room));
-    if (c && changed && ev.by) systemMessage(c, `${ev.by} cambió el tema: ${ev.subject}`, { icon: "quote" });
+    if (c && changed && ev.by) systemMessage(c, t("{by} cambió el tema: {subject}", { by: ev.by, subject: ev.subject }), { icon: "quote" });
     emit("room", { accountId: id, room: ev.room });
   },
   invite(id, ev) {
     toast(`${ev.from} te invita a ${ev.room}${ev.reason ? `: «${ev.reason}»` : ""}`, {
       timeout: 0,
       icon: "door-open",
-      actions: [{ label: "Unirse", primary: true, action: () => (ev.password ? openJoinRoom(id, { room: ev.room, password: ev.password }) : openConv(id, ev.room, "groupchat")) }],
+      actions: [{ label: t("Unirse"), primary: true, action: () => (ev.password ? openJoinRoom(id, { room: ev.room, password: ev.password }) : openConv(id, ev.room, "groupchat")) }],
     });
   },
   avatar(_id, ev) {
@@ -289,7 +295,7 @@ const HANDLERS = {
   "bookmarks-readonly"(id) {
     if (conn(id).bookmarksNoticeShown) return;
     conn(id).bookmarksNoticeShown = true;
-    toast("El servidor no permite guardar la lista de salas, así que tus favoritas se guardan solo en este PC. Las que quites no volverán a aparecer.", { kind: "info", timeout: 9000 });
+    toast(t("El servidor no permite guardar la lista de salas, así que tus favoritas se guardan solo en este PC. Las que quites no volverán a aparecer."), { kind: "info", timeout: 9000 });
   },
   receipt(id, ev) {
     markReceipt(id, ev.conv, ev.id);
@@ -354,28 +360,28 @@ function renderWelcome() {
   w.append(
     h("div", { class: "welcome-logo" }, h("img", { src: "assets/logo.svg", alt: "" })),
     h("h1", {}, "EvEX-MPP"),
-    h("p", { class: "muted" }, hasAccounts ? "Elige una sala o un contacto a la izquierda, o:" : "Cliente XMPP moderno para comunidades de EVE Online. Para empezar:"),
+    h("p", { class: "muted" }, hasAccounts ? t("Elige una sala o un contacto a la izquierda, o:") : t("Cliente XMPP moderno para comunidades de EVE Online. Para empezar:")),
     h(
       "div",
       { class: "welcome-actions" },
-      !hasAccounts ? h("button", { class: "btn primary big", onclick: openPidginImport }, icon("import"), "Importar desde Pidgin") : null,
-      !hasAccounts ? h("button", { class: "btn big", onclick: openSwitchAccount }, icon("user-plus"), "Añadir cuenta manualmente") : null,
-      hasAccounts ? h("button", { class: "btn big", onclick: () => openRoomBrowser(S.accounts[0].id) }, icon("compass"), "Explorar salas") : null,
-      hasAccounts ? h("button", { class: "btn big", onclick: () => openConv(null, "*", "pings") }, icon("siren"), "Pings de flota") : null,
-      hasAccounts ? h("button", { class: "btn big", onclick: () => openSettings() }, icon("palette"), "Personalizar") : null,
+      !hasAccounts ? h("button", { class: "btn primary big", onclick: openPidginImport }, icon("import"), t("Importar desde Pidgin")) : null,
+      !hasAccounts ? h("button", { class: "btn big", onclick: openSwitchAccount }, icon("user-plus"), t("Añadir cuenta manualmente")) : null,
+      hasAccounts ? h("button", { class: "btn big", onclick: () => openRoomBrowser(S.accounts[0].id) }, icon("compass"), t("Explorar salas")) : null,
+      hasAccounts ? h("button", { class: "btn big", onclick: () => openConv(null, "*", "pings") }, icon("siren"), t("Pings de flota")) : null,
+      hasAccounts ? h("button", { class: "btn big", onclick: () => openSettings() }, icon("palette"), t("Personalizar")) : null,
     ),
     h(
       "div",
       { class: "shortcuts" },
       [
-        ["Ctrl+K", "Saltar a sala o contacto"],
-        ["Ctrl+Tab", "Siguiente pestaña"],
-        ["Ctrl+W", "Cerrar pestaña"],
-        ["Ctrl+J", "Unirse a sala"],
-        ["Ctrl+B", "Explorar salas"],
-        ["Ctrl+F", "Buscar en el historial"],
-        ["Ctrl+,", "Preferencias"],
-        ["↑", "Corregir último mensaje"],
+        ["Ctrl+K", t("Saltar a sala o contacto")],
+        ["Ctrl+Tab", t("Siguiente pestaña")],
+        ["Ctrl+W", t("Cerrar pestaña")],
+        ["Ctrl+J", t("Unirse a sala")],
+        ["Ctrl+B", t("Explorar salas")],
+        ["Ctrl+F", t("Buscar en el historial")],
+        ["Ctrl+,", t("Preferencias")],
+        ["↑", t("Corregir último mensaje")],
       ].map(([k, d]) => h("div", { class: "shortcut" }, h("kbd", {}, k), h("span", {}, d))),
     ),
   );
@@ -427,12 +433,12 @@ function currentAccount() {
 }
 
 function openSwitcher() {
-  const input = h("input", { class: "input big", placeholder: "Sala, contacto o pestaña…", autofocus: true });
+  const input = h("input", { class: "input big", placeholder: t("Sala, contacto o pestaña…"), autofocus: true });
   const list = h("div", { class: "switcher-list" });
   let items = [];
   let sel = 0;
   const all = () => {
-    const out = [{ label: "Pings de flota", sub: "broadcasts", icon: "siren", run: () => openConv(null, "*", "pings") }];
+    const out = [{ label: t("Pings de flota"), sub: "broadcasts", icon: "siren", run: () => openConv(null, "*", "pings") }];
     for (const acc of S.accounts) {
       for (const r of acc.rooms) out.push({ label: r.name, sub: r.jid, icon: "hash", run: () => openConv(acc.id, r.jid, "groupchat") });
       for (const c of rosterOf(acc.id).values()) if (c.inRoster) out.push({ label: c.name || c.jid.split("@")[0], sub: c.jid, icon: "user", run: () => openConv(acc.id, c.jid, "chat") });
@@ -459,7 +465,7 @@ function openSwitcher() {
     if (q && q.length > 1 && !items.length && S.accounts[0]) {
       const acc = account(currentAccount());
       const jid = q.includes("@") ? q : `${q}@${acc.conferenceServer}`;
-      items.push({ label: `Unirse a ${jid}`, sub: "sala nueva", icon: "log-in", run: () => openConv(acc.id, jid, "groupchat") });
+      items.push({ label: t("Unirse a {jid}", { jid }), sub: "sala nueva", icon: "log-in", run: () => openConv(acc.id, jid, "groupchat") });
     }
     sel = Math.min(sel, Math.max(0, items.length - 1));
     clear(list);
@@ -481,13 +487,13 @@ function openSwitcher() {
       items[sel].run();
     }
   });
-  const m = modal({ title: "Ir a…", icon: "search", className: "switcher", body: h("div", {}, input, list) });
+  const m = modal({ title: t("Ir a…"), icon: "search", className: "switcher", body: h("div", {}, input, list) });
   render();
 }
 
 boot().catch((e) => {
   console.error(e);
-  document.body.append(h("pre", { class: "fatal" }, `Error al iniciar: ${e.stack || e.message}`));
+  document.body.append(h("pre", { class: "fatal" }, t("Error al iniciar: {x}", { x: e.stack || e.message })));
 });
 
 export { PINGS_KEY, updateBadge, connectWithPrompt };

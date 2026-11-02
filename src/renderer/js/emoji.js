@@ -3,6 +3,11 @@ import { EMOJI, EMOJI_GROUPS } from "./data/emoji.js";
 import { S, updateSettings } from "./state.js";
 import { h, icon, esc } from "./dom.js";
 
+import { t, currentLang } from "./i18n.js";
+
+// Nombre del emoji y de su grupo en el idioma de la interfaz.
+const label = (e) => (currentLang() === "es" ? e[1] : e[7]);
+const groupName = (g) => (currentLang() === "es" ? g.name : g.nameEn);
 export const EMOJI_RE = /(\p{RI}\p{RI}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{EMod})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{EMod})?)*)/gu;
 
 export const SHORTCODES = new Map();
@@ -51,7 +56,8 @@ export function emojifyHtml(escaped, style = S.settings.emojiStyle) {
   return escaped.replace(EMOJI_RE, (e) => {
     if (TEXT_SYMBOLS.has(e)) return e;
     const url = emojiImageUrl(e, style);
-    const name = BY_EMOJI.get(e)?.[1] || "";
+    const entry = BY_EMOJI.get(e);
+    const name = entry ? label(entry) : "";
     return `<img class="emoji" src="${url}" alt="${e}" title="${esc(name)}" draggable="false" data-style="${style}" loading="lazy">`;
   });
 }
@@ -110,15 +116,15 @@ export function openPicker(anchor, onPick) {
   if (pickerEl) return closePicker();
   const skin = Number(localStorage.getItem("evex.skin") || 0);
   const style = S.settings.emojiStyle;
-  const search = h("input", { class: "input", placeholder: "Buscar emoji (español o :código:)…", autofocus: true });
+  const search = h("input", { class: "input", placeholder: t("Buscar emoji (nombre o :código:)…"), autofocus: true });
   const grid = h("div", { class: "emoji-grid" });
-  const preview = h("div", { class: "emoji-preview" }, "Pasa el ratón sobre un emoji");
+  const preview = h("div", { class: "emoji-preview" }, t("Pasa el ratón sobre un emoji"));
   const tabs = h("div", { class: "emoji-tabs" });
 
   const sections = [
     { id: "recent", name: "Recientes", icon: "clock" },
     ...(S.settings.customEmoji?.length ? [{ id: "custom", name: "Personalizados", icon: "sticker" }] : []),
-    ...EMOJI_GROUPS.map((g) => ({ id: g.id, name: g.name, icon: ["smile", "user", null, "sparkles", "zap", "globe", "swords", "lock", "hash", "flag"][g.id] || "circle" })),
+    ...EMOJI_GROUPS.map((g) => ({ id: g.id, name: groupName(g), icon: ["smile", "user", null, "sparkles", "zap", "globe", "swords", "lock", "hash", "flag"][g.id] || "circle" })),
   ];
 
   const cell = (e) => {
@@ -129,13 +135,13 @@ export function openPicker(anchor, onPick) {
       {
         class: "emoji-cell",
         type: "button",
-        title: e[1],
+        title: label(e),
         onclick: (ev) => {
           pushRecent(e[0]);
           onPick(u);
           if (!ev.shiftKey) closePicker();
         },
-        onmouseenter: () => (preview.innerHTML = `${emojifyHtml(u)} <b>${esc(e[1])}</b> <span class="muted">${e[2].map((s) => `:${esc(s)}:`).join(" ")}</span>`),
+        onmouseenter: () => (preview.innerHTML = `${emojifyHtml(u)} <b>${esc(label(e))}</b> <span class="muted">${e[2].map((s) => `:${esc(s)}:`).join(" ")}</span>`),
       },
       inner,
     );
@@ -161,8 +167,8 @@ export function openPicker(anchor, onPick) {
     const q = search.value.trim().toLowerCase().replace(/^:|:$/g, "");
     if (q) {
       const custom = (S.settings.customEmoji || []).filter((c) => c.name.includes(q));
-      const found = EMOJI.filter((e) => e[1].toLowerCase().includes(q) || e[4].includes(q) || e[2].some((s) => s.includes(q))).slice(0, 240);
-      grid.append(h("div", { class: "emoji-section-title" }, `Resultados (${found.length + custom.length})`), h("div", { class: "emoji-cells" }, custom.map(customCell), found.map(cell)));
+      const found = EMOJI.filter((e) => e[1].toLowerCase().includes(q) || e[7].toLowerCase().includes(q) || e[4].includes(q) || e[8].includes(q) || e[2].some((s) => s.includes(q))).slice(0, 240);
+      grid.append(h("div", { class: "emoji-section-title" }, t("Resultados ({x})", { x: found.length + custom.length })), h("div", { class: "emoji-cells" }, custom.map(customCell), found.map(cell)));
       return;
     }
     for (const sec of sections) {
@@ -181,7 +187,7 @@ export function openPicker(anchor, onPick) {
     tabs.append(h("button", { class: "icon-btn", title: sec.name, type: "button", onclick: () => grid.querySelector(`#emo-sec-${sec.id}`)?.scrollIntoView({ block: "start" }) }, icon(sec.icon)));
   }
   const skins = ["✋", "✋🏻", "✋🏼", "✋🏽", "✋🏾", "✋🏿"];
-  const skinBtn = h("button", { class: "icon-btn skin-btn", title: "Tono de piel", type: "button" }, skins[skin]);
+  const skinBtn = h("button", { class: "icon-btn skin-btn", title: t("Tono de piel"), type: "button" }, skins[skin]);
   skinBtn.onclick = () => {
     const next = (Number(localStorage.getItem("evex.skin") || 0) + 1) % 6;
     localStorage.setItem("evex.skin", next);

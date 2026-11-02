@@ -8,6 +8,7 @@ import { PRESETS as SOUNDS, SOUND_KINDS, previewSound } from "./sounds.js";
 import { addCustomEmoji, emojifyHtml } from "./emoji.js";
 import { openAccounts, openPidginImport } from "./accounts.js";
 
+import { t, LANGUAGES, setLanguagePreference } from "./i18n.js";
 // Cambios solo visuales: se aplican al momento sin repintar mensajes.
 function look(fn) {
   fn(S.settings);
@@ -25,15 +26,15 @@ function full(fn) {
 let systemFonts = null;
 
 const TABS = [
-  ["appearance", "Apariencia", "palette"],
-  ["colors", "Colores", "brush"],
-  ["messages", "Mensajes", "message-square"],
-  ["backgrounds", "Fondos", "image"],
-  ["emoji", "Emojis", "smile"],
-  ["notifications", "Notificaciones", "bell"],
-  ["pings", "Pings de flota", "siren"],
-  ["behavior", "Comportamiento", "sliders-horizontal"],
-  ["data", "Cuentas y datos", "database"],
+  ["appearance", t("Apariencia"), "palette"],
+  ["colors", t("Colores"), "brush"],
+  ["messages", t("Mensajes"), "message-square"],
+  ["backgrounds", t("Fondos"), "image"],
+  ["emoji", t("Emojis"), "smile"],
+  ["notifications", t("Notificaciones"), "bell"],
+  ["pings", t("Pings de flota"), "siren"],
+  ["behavior", t("Comportamiento"), "sliders-horizontal"],
+  ["data", t("Cuentas y datos"), "database"],
 ];
 
 export function openSettings(tab = "appearance") {
@@ -48,7 +49,7 @@ export function openSettings(tab = "appearance") {
     content.scrollTop = 0;
   };
   for (const [id, label, ic] of TABS) nav.append(h("button", { class: "settings-tab", dataset: { tab: id }, onclick: () => show(id) }, icon(ic), label));
-  modal({ title: "Preferencias", icon: "settings", wide: true, className: "settings-modal", body: h("div", { class: "settings-layout" }, nav, content) });
+  modal({ title: t("Preferencias"), icon: "settings", wide: true, className: "settings-modal", body: h("div", { class: "settings-layout" }, nav, content) });
   show(tab);
 }
 
@@ -58,13 +59,13 @@ const RENDER = {
   appearance() {
     const s = S.settings;
     const themeGrid = h("div", { class: "theme-grid" });
-    for (const [id, t] of Object.entries(PRESETS)) {
+    for (const [id, preset] of Object.entries(PRESETS)) {
       themeGrid.append(
         h(
           "button",
           {
             class: `theme-card ${resolveThemeId(s.theme) === id ? "active" : ""}`,
-            style: { "--t-bg": t.bg, "--t-bg2": t.bg2, "--t-accent": t.accent, "--t-text": t.text, "--t-surface": t.surface, "--t-accent2": t.accent2 },
+            style: { "--t-bg": preset.bg, "--t-bg2": preset.bg2, "--t-accent": preset.accent, "--t-text": preset.text, "--t-surface": preset.surface, "--t-accent2": preset.accent2 },
             onclick: (e) => {
               look((x) => {
                 x.theme = id;
@@ -75,7 +76,7 @@ const RENDER = {
             },
           },
           h("span", { class: "tc-preview" }, h("i", { class: "tc-side" }), h("i", { class: "tc-msg a" }), h("i", { class: "tc-msg b" }), h("i", { class: "tc-dot" })),
-          h("span", { class: "tc-name" }, t.name),
+          h("span", { class: "tc-name" }, t(preset.name)),
         ),
       );
     }
@@ -94,20 +95,32 @@ const RENDER = {
     return h(
       "div",
       {},
-      group("Tema", themeGrid, h("p", { class: "muted small" }, "Personaliza cada color en la pestaña «Colores». Puedes exportar e importar temas.")),
       group(
-        "Tipografía",
-        field("Fuente de la interfaz", fontSel, "Incluye Inter, Nunito, Rajdhani, Orbitron y todas las fuentes instaladas en Windows"),
-        field("Fuente monoespaciada (código)", monoSel),
-        field("Tamaño de letra", range(11, 22, 1, s.fontSize, (v) => look((x) => (x.fontSize = v)), (v) => `${v}px`)),
-        field("Escala de la interfaz", range(0.8, 1.5, 0.05, s.uiScale, (v) => look((x) => (x.uiScale = v)), (v) => `${Math.round(v * 100)}%`)),
+        t("Idioma"),
+        field(
+          t("Idioma de la interfaz"),
+          select(
+            LANGUAGES.map(([v, label]) => [v, label ?? t("Automático (idioma de Windows)")]),
+            s.language || "auto",
+            (v) => changeLanguage(v),
+          ),
+          t("Al cambiarlo, la ventana se recarga con el nuevo idioma"),
+        ),
+      ),
+      group(t("Tema"), themeGrid, h("p", { class: "muted small" }, t("Personaliza cada color en la pestaña «Colores». Puedes exportar e importar temas."))),
+      group(
+        t("Tipografía"),
+        field(t("Fuente de la interfaz"), fontSel, t("Incluye Inter, Nunito, Rajdhani, Orbitron y todas las fuentes instaladas en Windows")),
+        field(t("Fuente monoespaciada (código)"), monoSel),
+        field(t("Tamaño de letra"), range(11, 22, 1, s.fontSize, (v) => look((x) => (x.fontSize = v)), (v) => `${v}px`)),
+        field(t("Escala de la interfaz"), range(0.8, 1.5, 0.05, s.uiScale, (v) => look((x) => (x.uiScale = v)), (v) => `${Math.round(v * 100)}%`)),
       ),
       group(
-        "Disposición",
-        field("Densidad", select([["compact", "Compacta"], ["cozy", "Cómoda"], ["spacious", "Espaciosa"]], s.density, (v) => look((x) => (x.density = v)))),
-        toggle(s.layout.compactSidebar, (v) => look((x) => (x.layout.compactSidebar = v)), "Barra lateral compacta", "Oculta estados y reduce el tamaño de los elementos"),
-        toggle(s.layout.showOccupants, (v) => look((x) => (x.layout.showOccupants = v)), "Mostrar lista de participantes en salas"),
-        toggle(s.animations !== false, (v) => look((x) => (x.animations = v)), "Animaciones", "Transiciones y entrada suave de mensajes"),
+        t("Disposición"),
+        field(t("Densidad"), select([["compact", t("Compacta")], ["cozy", t("Cómoda")], ["spacious", t("Espaciosa")]], s.density, (v) => look((x) => (x.density = v)))),
+        toggle(s.layout.compactSidebar, (v) => look((x) => (x.layout.compactSidebar = v)), t("Barra lateral compacta"), t("Oculta estados y reduce el tamaño de los elementos")),
+        toggle(s.layout.showOccupants, (v) => look((x) => (x.layout.showOccupants = v)), t("Mostrar lista de participantes en salas")),
+        toggle(s.animations !== false, (v) => look((x) => (x.animations = v)), t("Animaciones"), t("Transiciones y entrada suave de mensajes")),
       ),
     );
   },
@@ -132,7 +145,7 @@ const RENDER = {
           input,
           h("span", {}, label),
           s.colors[key]
-            ? iconButton("refresh-cw", "Restaurar color del tema", (e) => {
+            ? iconButton("refresh-cw", t("Restaurar color del tema"), (e) => {
                 e.preventDefault();
                 look((x) => {
                   const { [key]: _, ...rest } = x.colors;
@@ -148,22 +161,22 @@ const RENDER = {
       "div",
       {},
       group(
-        `Colores del tema «${PRESETS[resolveThemeId(s.theme)].name}»`,
-        h("p", { class: "muted small" }, "Los cambios se aplican al instante. Los colores modificados se marcan y se pueden restaurar uno a uno."),
+        t("Colores del tema «{name}»", { name: t(PRESETS[resolveThemeId(s.theme)].name) }),
+        h("p", { class: "muted small" }, t("Los cambios se aplican al instante. Los colores modificados se marcan y se pueden restaurar uno a uno.")),
         grid,
         h(
           "div",
           { class: "row" },
-          h("button", { class: "btn", onclick: () => (look((x) => (x.colors = {})), rerenderTab()) }, icon("refresh-cw"), "Restaurar todos"),
-          h("button", { class: "btn", onclick: exportTheme }, icon("download"), "Exportar tema"),
-          h("button", { class: "btn", onclick: importTheme }, icon("upload"), "Importar tema"),
+          h("button", { class: "btn", onclick: () => (look((x) => (x.colors = {})), rerenderTab()) }, icon("refresh-cw"), t("Restaurar todos")),
+          h("button", { class: "btn", onclick: exportTheme }, icon("download"), t("Exportar tema")),
+          h("button", { class: "btn", onclick: importTheme }, icon("upload"), t("Importar tema")),
         ),
       ),
       group(
-        "Colores de apodos",
-        toggle(s.nickColors, (v) => full((x) => (x.nickColors = v)), "Colorear cada apodo", "Color estable generado a partir del nombre"),
-        field("Saturación", range(20, 100, 5, parseInt(c.nickS), (v) => look((x) => (x.colors = { ...x.colors, nickS: `${v}%` })), (v) => `${v}%`)),
-        field("Luminosidad", range(25, 85, 1, parseInt(c.nickL), (v) => look((x) => (x.colors = { ...x.colors, nickL: `${v}%` })), (v) => `${v}%`)),
+        t("Colores de apodos"),
+        toggle(s.nickColors, (v) => full((x) => (x.nickColors = v)), t("Colorear cada apodo"), t("Color estable generado a partir del nombre")),
+        field(t("Saturación"), range(20, 100, 5, parseInt(c.nickS), (v) => look((x) => (x.colors = { ...x.colors, nickS: `${v}%` })), (v) => `${v}%`)),
+        field(t("Luminosidad"), range(25, 85, 1, parseInt(c.nickL), (v) => look((x) => (x.colors = { ...x.colors, nickL: `${v}%` })), (v) => `${v}%`)),
       ),
     );
     function rerenderTab() {
@@ -175,16 +188,16 @@ const RENDER = {
   messages() {
     const s = S.settings;
     const styles = [
-      ["modern", "Moderno", "Avatar y nombre, mensajes agrupados"],
-      ["bubbles", "Burbujas", "Estilo móvil: los tuyos a la derecha"],
-      ["irc", "Clásico / IRC", "Una línea por mensaje: [hora] <apodo> texto"],
-      ["pidgin", "Pidgin", "Como Pidgin: (hora) apodo: texto, en color"],
+      ["modern", t("Moderno"), t("Avatar y nombre, mensajes agrupados")],
+      ["bubbles", t("Burbujas"), t("Estilo móvil: los tuyos a la derecha")],
+      ["irc", t("Clásico / IRC"), t("Una línea por mensaje: [hora] <apodo> texto")],
+      ["pidgin", t("Pidgin"), t("Como Pidgin: (hora) apodo: texto, en color")],
     ];
     return h(
       "div",
       {},
       group(
-        "Estilo de mensajes",
+        t("Estilo de mensajes"),
         h(
           "div",
           { class: "style-grid" },
@@ -204,23 +217,23 @@ const RENDER = {
             ),
           ),
         ),
-        field("Redondeo de burbujas", range(0, 24, 1, s.bubbleRadius, (v) => look((x) => (x.bubbleRadius = v)), (v) => `${v}px`)),
-        toggle(s.showAvatars, (v) => look((x) => (x.showAvatars = v)), "Mostrar avatares"),
-        field("Agrupar mensajes seguidos del mismo autor durante", range(0, 30, 1, s.behavior.groupMessagesMinutes, (v) => full((x) => (x.behavior.groupMessagesMinutes = v)), (v) => (v ? `${v} min` : "no agrupar"))),
+        field(t("Redondeo de burbujas"), range(0, 24, 1, s.bubbleRadius, (v) => look((x) => (x.bubbleRadius = v)), (v) => `${v}px`)),
+        toggle(s.showAvatars, (v) => look((x) => (x.showAvatars = v)), t("Mostrar avatares")),
+        field(t("Agrupar mensajes seguidos del mismo autor durante"), range(0, 30, 1, s.behavior.groupMessagesMinutes, (v) => full((x) => (x.behavior.groupMessagesMinutes = v)), (v) => (v ? `${v} min` : "no agrupar"))),
       ),
       group(
-        "Hora",
-        field("Formato", select([["24", "24 horas"], ["12", "12 horas (a. m./p. m.)"]], s.timeFormat, (v) => full((x) => (x.timeFormat = v)))),
-        toggle(s.showSeconds, (v) => full((x) => (x.showSeconds = v)), "Mostrar segundos"),
-        toggle(s.showLocalTime !== false, (v) => full((x) => (x.showLocalTime = v)), "Mostrar la hora local", "En los mensajes, las tarjetas de ping y las notificaciones (en gris)"),
-        toggle(s.showEveTime !== false, (v) => full((x) => (x.showEveTime = v)), "Mostrar la hora EVE (UTC)", "En los mensajes, las tarjetas de ping y las notificaciones (en ámbar)"),
-        toggle(s.showEveClock !== false, (v) => look((x) => (x.showEveClock = v)), "Reloj EVE en la barra de título"),
+        t("Hora"),
+        field(t("Formato"), select([["24", t("24 horas")], ["12", t("12 horas (a. m./p. m.)")]], s.timeFormat, (v) => full((x) => (x.timeFormat = v)))),
+        toggle(s.showSeconds, (v) => full((x) => (x.showSeconds = v)), t("Mostrar segundos")),
+        toggle(s.showLocalTime !== false, (v) => full((x) => (x.showLocalTime = v)), t("Mostrar la hora local"), t("En los mensajes, las tarjetas de ping y las notificaciones (en gris)")),
+        toggle(s.showEveTime !== false, (v) => full((x) => (x.showEveTime = v)), t("Mostrar la hora EVE (UTC)"), t("En los mensajes, las tarjetas de ping y las notificaciones (en ámbar)")),
+        toggle(s.showEveClock !== false, (v) => look((x) => (x.showEveClock = v)), t("Reloj EVE en la barra de título")),
       ),
       group(
-        "Contenido",
-        toggle(s.behavior.linkPreviews, (v) => full((x) => (x.behavior.linkPreviews = v)), "Vista previa de imágenes y vídeos de YouTube", "Carga la imagen directamente desde el enlace"),
-        toggle(s.behavior.showJoinLeave, (v) => full((x) => (x.behavior.showJoinLeave = v)), "Mostrar entradas y salidas en las salas"),
-        field("Mensajes de historial al entrar en una sala", range(0, 200, 10, s.behavior.mucHistory, (v) => look((x) => (x.behavior.mucHistory = v)), (v) => `${v}`), "Solo se piden los posteriores al último mensaje guardado"),
+        t("Contenido"),
+        toggle(s.behavior.linkPreviews, (v) => full((x) => (x.behavior.linkPreviews = v)), t("Vista previa de imágenes y vídeos de YouTube"), t("Carga la imagen directamente desde el enlace")),
+        toggle(s.behavior.showJoinLeave, (v) => full((x) => (x.behavior.showJoinLeave = v)), t("Mostrar entradas y salidas en las salas")),
+        field(t("Mensajes de historial al entrar en una sala"), range(0, 200, 10, s.behavior.mucHistory, (v) => look((x) => (x.behavior.mucHistory = v)), (v) => `${v}`), t("Solo se piden los posteriores al último mensaje guardado")),
       ),
     );
   },
@@ -229,11 +242,11 @@ const RENDER = {
     return h(
       "div",
       {},
-      group("Fondo de la ventana", backgroundEditor(S.settings.background, (fn) => look((x) => fn(x.background)))),
-      group("Fondo de la barra lateral", backgroundEditor(S.settings.sidebarBackground, (fn) => look((x) => fn(x.sidebarBackground)), { noDim: true })),
+      group(t("Fondo de la ventana"), backgroundEditor(S.settings.background, (fn) => look((x) => fn(x.background)))),
+      group(t("Fondo de la barra lateral"), backgroundEditor(S.settings.sidebarBackground, (fn) => look((x) => fn(x.sidebarBackground)), { noDim: true })),
       group(
-        "Fondos por conversación",
-        h("p", { class: "muted small" }, "Clic derecho en una sala o contacto → «Fondo personalizado…»."),
+        t("Fondos por conversación"),
+        h("p", { class: "muted small" }, t("Clic derecho en una sala o contacto → «Fondo personalizado…».")),
         Object.keys(S.settings.conversationBackgrounds || {}).length
           ? h(
               "div",
@@ -245,12 +258,12 @@ const RENDER = {
                   h("span", { class: "bg-swatch", style: { background: backgroundCss(bg) } }),
                   h("span", {}, key.split("|")[1]),
                   h("span", { class: "spacer" }),
-                  h("button", { class: "btn small", onclick: () => openBackgroundEditor(key) }, "Editar"),
-                  h("button", { class: "btn small danger ghost", onclick: (e) => (full((x) => delete x.conversationBackgrounds[key]), e.currentTarget.closest(".list-row").remove()) }, "Quitar"),
+                  h("button", { class: "btn small", onclick: () => openBackgroundEditor(key) }, t("Editar")),
+                  h("button", { class: "btn small danger ghost", onclick: (e) => (full((x) => delete x.conversationBackgrounds[key]), e.currentTarget.closest(".list-row").remove()) }, t("Quitar")),
                 ),
               ),
             )
-          : h("p", { class: "muted" }, "Ninguno todavía."),
+          : h("p", { class: "muted" }, t("Ninguno todavía.")),
       ),
     );
   },
@@ -273,26 +286,26 @@ const RENDER = {
               value: c.name,
               onchange: (e) => full((x) => (x.customEmoji.find((y) => y.url === c.url).name = e.target.value.toLowerCase().replace(/[^a-z0-9_+-]+/g, "_"))),
             }),
-            iconButton("trash-2", "Quitar", () => (full((x) => (x.customEmoji = x.customEmoji.filter((y) => y.url !== c.url))), renderCustom())),
+            iconButton("trash-2", t("Quitar"), () => (full((x) => (x.customEmoji = x.customEmoji.filter((y) => y.url !== c.url))), renderCustom())),
           ),
         );
       }
-      if (!S.settings.customEmoji.length) list.append(h("p", { class: "muted" }, "Añade GIF, PNG o WebP (animados también). Se usan escribiendo :nombre:"));
+      if (!S.settings.customEmoji.length) list.append(h("p", { class: "muted" }, t("Añade GIF, PNG o WebP (animados también). Se usan escribiendo :nombre:")));
     };
     renderCustom();
     return h(
       "div",
       {},
       group(
-        "Estilo",
+        t("Estilo"),
         field(
-          "Dibujo de los emojis",
+          t("Dibujo de los emojis"),
           select(
             [
-              ["noto-animated", "Noto animados (Google) — con movimiento"],
-              ["noto", "Noto estáticos (Google)"],
-              ["twemoji", "Twemoji (estilo Twitter/Discord)"],
-              ["native", "Nativos de Windows (sin conexión)"],
+              ["noto-animated", t("Noto animados (Google) — con movimiento")],
+              ["noto", t("Noto estáticos (Google)")],
+              ["twemoji", t("Twemoji (estilo Twitter/Discord)")],
+              ["native", t("Nativos de Windows (sin conexión)")],
             ],
             s.emojiStyle,
             (v) => {
@@ -300,15 +313,15 @@ const RENDER = {
               preview.innerHTML = emojifyHtml(sample, v);
             },
           ),
-          "Los animados y Noto/Twemoji se descargan de Internet la primera vez",
+          t("Los animados y Noto/Twemoji se descargan de Internet la primera vez"),
         ),
         preview,
-        field("Tamaño en el texto", range(1, 2, 0.05, s.emojiSize, (v) => look((x) => (x.emojiSize = v)), (v) => `${Math.round(v * 100)}%`)),
-        toggle(s.jumboEmoji, (v) => full((x) => (x.jumboEmoji = v)), "Emojis grandes cuando el mensaje solo tiene emojis"),
-        toggle(s.emoticonToEmoji, (v) => full((x) => (x.emoticonToEmoji = v)), "Convertir emoticonos de texto", "Por ejemplo :) → 🙂, <3 → ❤️, \\o/ → 🙌"),
+        field(t("Tamaño en el texto"), range(1, 2, 0.05, s.emojiSize, (v) => look((x) => (x.emojiSize = v)), (v) => `${Math.round(v * 100)}%`)),
+        toggle(s.jumboEmoji, (v) => full((x) => (x.jumboEmoji = v)), t("Emojis grandes cuando el mensaje solo tiene emojis")),
+        toggle(s.emoticonToEmoji, (v) => full((x) => (x.emoticonToEmoji = v)), t("Convertir emoticonos de texto"), t("Por ejemplo :) → 🙂, <3 → ❤️, \\o/ → 🙌")),
       ),
       group(
-        "Emojis personalizados",
+        t("Emojis personalizados"),
         list,
         h(
           "button",
@@ -319,12 +332,12 @@ const RENDER = {
               if (added?.length) {
                 addCustomEmoji(added);
                 renderCustom();
-                toast(`${added.length} emoji(s) añadidos`, { kind: "ok" });
+                toast(t("{length} emoji(s) añadidos", { length: added.length }), { kind: "ok" });
               }
             },
           },
           icon("plus"),
-          "Añadir imágenes…",
+          t("Añadir imágenes…"),
         ),
       ),
     );
@@ -333,116 +346,116 @@ const RENDER = {
   notifications() {
     const n = S.settings.notifications;
     const set = (fn) => look((x) => fn(x.notifications));
-    const kw = h("textarea", { class: "input", rows: 2, placeholder: "Una palabra o frase por línea (p. ej. «cyno», «titan», tu nombre de personaje)", value: (n.keywords || []).join("\n") });
+    const kw = h("textarea", { class: "input", rows: 2, placeholder: t("Una palabra o frase por línea (p. ej. «cyno», «titan», tu nombre de personaje)"), value: (n.keywords || []).join("\n") });
     kw.value = (n.keywords || []).join("\n");
     kw.addEventListener("change", () => full((x) => (x.notifications.keywords = kw.value.split("\n").map((s) => s.trim()).filter(Boolean))));
     // Una fila por tipo de aviso: lista de sonidos (o archivo propio) y botón de prueba.
     const soundRow = (kind, label) => {
       const cur = () => S.settings.notifications.sounds[kind];
-      const fileLabel = h("span", { class: "muted small ellipsis" }, cur().file ? "Archivo propio" : "");
-      const sel = select([...Object.entries(SOUNDS).map(([k, v]) => [k, v.name]), ["custom", "Archivo propio…"]], cur().preset, async (v) => {
+      const fileLabel = h("span", { class: "muted small ellipsis" }, cur().file ? t("Archivo propio") : "");
+      const sel = select([...Object.entries(SOUNDS).map(([k, v]) => [k, t(v.name)]), ["custom", t("Archivo propio…")]], cur().preset, async (v) => {
         if (v === "custom" && !cur().file) {
           const url = await api("file:pick", "sound");
           if (!url) return (sel.value = cur().preset);
           set((x) => (x.sounds[kind] = { preset: "custom", file: url }));
-          fileLabel.textContent = "Archivo propio";
+          fileLabel.textContent = t("Archivo propio");
         } else set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: v }));
         previewSound(cur());
       });
-      const pick = iconButton("folder-open", "Elegir otro archivo de sonido", async () => {
+      const pick = iconButton("folder-open", t("Elegir otro archivo de sonido"), async () => {
         const url = await api("file:pick", "sound");
         if (!url) return;
         set((x) => (x.sounds[kind] = { preset: "custom", file: url }));
         sel.value = "custom";
-        fileLabel.textContent = "Archivo propio";
+        fileLabel.textContent = t("Archivo propio");
         previewSound(cur());
       });
-      return field(label, h("div", { class: "row" }, sel, iconButton("volume-2", "Probar", () => previewSound(cur())), pick, fileLabel));
+      return field(label, h("div", { class: "row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cur())), pick, fileLabel));
     };
     return h(
       "div",
       {},
       group(
-        "General",
-        toggle(n.enabled, (v) => set((x) => (x.enabled = v)), "Notificaciones de escritorio"),
-        toggle(n.dnd, (v) => set((x) => (x.dnd = v)), "No molestar", "Silencia todo excepto los pings de flota"),
-        toggle(n.showPreview, (v) => set((x) => (x.showPreview = v)), "Mostrar el texto del mensaje en la notificación"),
-        toggle(n.flashTaskbar, (v) => set((x) => (x.flashTaskbar = v)), "Hacer parpadear la barra de tareas"),
+        t("General"),
+        toggle(n.enabled, (v) => set((x) => (x.enabled = v)), t("Notificaciones de escritorio")),
+        toggle(n.dnd, (v) => set((x) => (x.dnd = v)), t("No molestar"), t("Silencia todo excepto los pings de flota")),
+        toggle(n.showPreview, (v) => set((x) => (x.showPreview = v)), t("Mostrar el texto del mensaje en la notificación")),
+        toggle(n.flashTaskbar, (v) => set((x) => (x.flashTaskbar = v)), t("Hacer parpadear la barra de tareas")),
       ),
       group(
-        "Aspecto del aviso",
+        t("Aspecto del aviso"),
         field(
-          "Tipo de notificación",
+          t("Tipo de notificación"),
           select(
             [
-              ["custom", "Burbuja de EvEX-MPP (sube desde la barra de tareas, siempre encima)"],
-              ["windows", "Notificación de Windows (centro de notificaciones)"],
-              ["both", "Ambas"],
+              ["custom", t("Burbuja de EvEX-MPP (sube desde la barra de tareas, siempre encima)")],
+              ["windows", t("Notificación de Windows (centro de notificaciones)")],
+              ["both", t("Ambas")],
             ],
             n.popupStyle,
             (v) => set((x) => (x.popupStyle = v)),
           ),
-          "La burbuja propia también se ve sobre EVE en modo ventana sin bordes",
+          t("La burbuja propia también se ve sobre EVE en modo ventana sin bordes"),
         ),
         field(
-          "Esquina de la pantalla",
+          t("Esquina de la pantalla"),
           select(
             [
-              ["bottom-left", "Abajo a la izquierda"],
-              ["bottom-right", "Abajo a la derecha"],
-              ["top-left", "Arriba a la izquierda"],
-              ["top-right", "Arriba a la derecha"],
+              ["bottom-left", t("Abajo a la izquierda")],
+              ["bottom-right", t("Abajo a la derecha")],
+              ["top-left", t("Arriba a la izquierda")],
+              ["top-right", t("Arriba a la derecha")],
             ],
             n.popupCorner,
             (v) => set((x) => (x.popupCorner = v)),
           ),
         ),
-        field("Duración de los avisos de mensajes", range(3, 30, 1, n.popupDuration, (v) => set((x) => (x.popupDuration = v)), (v) => `${v} s`)),
-        toggle(n.pingSticky, (v) => set((x) => (x.pingSticky = v)), "Los pings se quedan en pantalla hasta cerrarlos", "Si no, desaparecen como los mensajes"),
-        toggle(n.trayBlink, (v) => set((x) => (x.trayBlink = v)), "Parpadear el «!» de la bandeja con pings sin leer"),
+        field(t("Duración de los avisos de mensajes"), range(3, 30, 1, n.popupDuration, (v) => set((x) => (x.popupDuration = v)), (v) => `${v} s`)),
+        toggle(n.pingSticky, (v) => set((x) => (x.pingSticky = v)), t("Los pings se quedan en pantalla hasta cerrarlos"), t("Si no, desaparecen como los mensajes")),
+        toggle(n.trayBlink, (v) => set((x) => (x.trayBlink = v)), t("Parpadear el «!» de la bandeja con pings sin leer")),
         h(
           "div",
           { class: "row" },
-          h("button", { class: "btn", onclick: () => (api("notify:test", "msg", popupTestColors()), previewSound(S.settings.notifications.sounds.private)) }, icon("message-square"), "Probar aviso de mensaje"),
-          h("button", { class: "btn", onclick: () => (api("notify:test", "ping", popupTestColors()), previewSound(S.settings.notifications.sounds.ping)) }, icon("siren"), "Probar aviso de ping"),
+          h("button", { class: "btn", onclick: () => (api("notify:test", "msg", popupTestColors()), previewSound(S.settings.notifications.sounds.private)) }, icon("message-square"), t("Probar aviso de mensaje")),
+          h("button", { class: "btn", onclick: () => (api("notify:test", "ping", popupTestColors()), previewSound(S.settings.notifications.sounds.ping)) }, icon("siren"), t("Probar aviso de ping")),
         ),
       ),
       group(
-        "Cuándo avisar",
-        toggle(n.privateMessages, (v) => set((x) => (x.privateMessages = v)), "Mensajes privados"),
-        toggle(n.mentions, (v) => set((x) => (x.mentions = v)), "Cuando te mencionan en una sala"),
-        toggle(n.allRoomMessages, (v) => set((x) => (x.allRoomMessages = v)), "Todos los mensajes de todas las salas", "Se puede ajustar por sala con clic derecho"),
-        toggle(n.pings, (v) => set((x) => (x.pings = v)), "Pings de flota (remitentes configurados en «Pings de flota»)"),
-        field("Palabras clave que cuentan como mención", kw),
+        t("Cuándo avisar"),
+        toggle(n.privateMessages, (v) => set((x) => (x.privateMessages = v)), t("Mensajes privados")),
+        toggle(n.mentions, (v) => set((x) => (x.mentions = v)), t("Cuando te mencionan en una sala")),
+        toggle(n.allRoomMessages, (v) => set((x) => (x.allRoomMessages = v)), t("Todos los mensajes de todas las salas"), t("Se puede ajustar por sala con clic derecho")),
+        toggle(n.pings, (v) => set((x) => (x.pings = v)), t("Pings de flota (remitentes configurados en «Pings de flota»)")),
+        field(t("Palabras clave que cuentan como mención"), kw),
       ),
       group(
-        "Sonidos",
-        toggle(n.sound, (v) => set((x) => (x.sound = v)), "Reproducir sonidos"),
+        t("Sonidos"),
+        toggle(n.sound, (v) => set((x) => (x.sound = v)), t("Reproducir sonidos")),
         SOUND_KINDS.map(([kind, label]) => soundRow(kind, label)),
-        field("Volumen", range(0, 1, 0.05, n.volume, (v) => set((x) => (x.volume = v)), (v) => `${Math.round(v * 100)}%`)),
+        field(t("Volumen"), range(0, 1, 0.05, n.volume, (v) => set((x) => (x.volume = v)), (v) => `${Math.round(v * 100)}%`)),
       ),
     );
   },
 
   pings() {
     const s = S.settings;
-    const senders = h("textarea", { class: "input", rows: 3, placeholder: "p. ej. pingbot@ejemplo.com, o solo «pingbot» para cualquier servidor" });
+    const senders = h("textarea", { class: "input", rows: 3, placeholder: t("p. ej. pingbot@ejemplo.com, o solo «pingbot» para cualquier servidor") });
     senders.value = s.pingSenders.join("\n");
     senders.addEventListener("change", () => full((x) => (x.pingSenders = senders.value.split("\n").map((v) => v.trim().toLowerCase()).filter(Boolean))));
     return h(
       "div",
       {},
       group(
-        "Remitentes de pings",
-        h("p", { class: "muted small" }, "Los mensajes de estas direcciones aparecen como tarjetas en «Pings de flota», con alarma propia y notificación prioritaria."),
-        field("Direcciones (una por línea)", senders),
+        t("Remitentes de pings"),
+        h("p", { class: "muted small" }, t("Los mensajes de estas direcciones aparecen como tarjetas en «Pings de flota», con alarma propia y notificación prioritaria.")),
+        field(t("Direcciones (una por línea)"), senders),
       ),
       group(
-        "Importante si usas Pidgin a la vez",
+        t("Importante si usas Pidgin a la vez"),
         h(
           "p",
           { class: "muted" },
-          "Los pings se envían a tu cuenta, no a una sala. Si tienes Pidgin y EvEX-MPP conectados a la vez, el servidor los entrega al cliente con mayor prioridad. Sube la prioridad de esta cuenta (Cuentas → Conexión avanzada) para recibirlos aquí.",
+          t("Los pings se envían a tu cuenta, no a una sala. Si tienes Pidgin y EvEX-MPP conectados a la vez, el servidor los entrega al cliente con mayor prioridad. Sube la prioridad de esta cuenta (Cuentas → Conexión avanzada) para recibirlos aquí."),
         ),
       ),
     );
@@ -455,24 +468,24 @@ const RENDER = {
       "div",
       {},
       group(
-        "Escritura",
-        toggle(b.enterToSend, (v) => set((x) => (x.enterToSend = v)), "Intro envía el mensaje", "Desactivado: Ctrl+Intro envía e Intro hace salto de línea"),
-        toggle(b.sendTyping, (v) => set((x) => (x.sendTyping = v)), "Avisar de que estoy escribiendo (chats privados)"),
-        toggle(b.spellcheck, (v) => set((x) => (x.spellcheck = v)), "Corrector ortográfico"),
+        t("Escritura"),
+        toggle(b.enterToSend, (v) => set((x) => (x.enterToSend = v)), t("Intro envía el mensaje"), t("Desactivado: Ctrl+Intro envía e Intro hace salto de línea")),
+        toggle(b.sendTyping, (v) => set((x) => (x.sendTyping = v)), t("Avisar de que estoy escribiendo (chats privados)")),
+        toggle(b.spellcheck, (v) => set((x) => (x.spellcheck = v)), t("Corrector ortográfico")),
         field(
-          "Idiomas del corrector",
-          select([["es-ES,en-US", "Español + inglés"], ["es-ES", "Español"], ["en-US", "Inglés"], ["en-GB", "Inglés (Reino Unido)"]], b.spellLanguages.join(","), (v) => set((x) => (x.spellLanguages = v.split(",")))),
+          t("Idiomas del corrector"),
+          select([["es-ES,en-US", t("Español + inglés")], ["es-ES", t("Español")], ["en-US", t("Inglés")], ["en-GB", t("Inglés (Reino Unido)")]], b.spellLanguages.join(","), (v) => set((x) => (x.spellLanguages = v.split(",")))),
         ),
       ),
       group(
-        "Ventana",
-        toggle(b.closeToTray, (v) => set((x) => (x.closeToTray = v)), "Cerrar a la bandeja del sistema", "La X oculta la ventana; sales desde el icono de la bandeja"),
-        toggle(b.minimizeToTray, (v) => set((x) => (x.minimizeToTray = v)), "Minimizar a la bandeja del sistema", "El botón «_» esconde la ventana junto al reloj en vez de dejarla en la barra de tareas"),
-        toggle(b.startMinimized, (v) => set((x) => (x.startMinimized = v)), "Iniciar minimizado en la bandeja"),
-        toggle(b.startWithWindows, (v) => set((x) => (x.startWithWindows = v)), "Iniciar con Windows"),
-        toggle(b.restoreOpenTabs, (v) => set((x) => (x.restoreOpenTabs = v)), "Restaurar las pestañas abiertas al iniciar"),
+        t("Ventana"),
+        toggle(b.closeToTray, (v) => set((x) => (x.closeToTray = v)), t("Cerrar a la bandeja del sistema"), t("La X oculta la ventana; sales desde el icono de la bandeja")),
+        toggle(b.minimizeToTray, (v) => set((x) => (x.minimizeToTray = v)), t("Minimizar a la bandeja del sistema"), t("El botón «_» esconde la ventana junto al reloj en vez de dejarla en la barra de tareas")),
+        toggle(b.startMinimized, (v) => set((x) => (x.startMinimized = v)), t("Iniciar minimizado en la bandeja")),
+        toggle(b.startWithWindows, (v) => set((x) => (x.startWithWindows = v)), t("Iniciar con Windows")),
+        toggle(b.restoreOpenTabs, (v) => set((x) => (x.restoreOpenTabs = v)), t("Restaurar las pestañas abiertas al iniciar")),
       ),
-      group("Presencia", field("Ponerme «Ausente» tras inactividad", range(0, 60, 1, b.autoAwayMinutes, (v) => set((x) => (x.autoAwayMinutes = v)), (v) => (v ? `${v} min` : "nunca")))),
+      group(t("Presencia"), field(t("Ponerme «Ausente» tras inactividad"), range(0, 60, 1, b.autoAwayMinutes, (v) => set((x) => (x.autoAwayMinutes = v)), (v) => (v ? `${v} min` : "nunca")))),
     );
   },
 
@@ -481,17 +494,17 @@ const RENDER = {
       "div",
       {},
       group(
-        "Cuentas",
-        h("div", { class: "row" }, h("button", { class: "btn", onclick: () => openAccounts() }, icon("user-cog"), "Gestionar cuentas"), h("button", { class: "btn", onclick: () => openPidginImport() }, icon("import"), "Importar de Pidgin")),
+        t("Cuentas"),
+        h("div", { class: "row" }, h("button", { class: "btn", onclick: () => openAccounts() }, icon("user-cog"), t("Gestionar cuentas")), h("button", { class: "btn", onclick: () => openPidginImport() }, icon("import"), t("Importar de Pidgin"))),
       ),
       group(
-        "Temas",
-        h("div", { class: "row" }, h("button", { class: "btn", onclick: exportTheme }, icon("download"), "Exportar mi tema"), h("button", { class: "btn", onclick: importTheme }, icon("upload"), "Importar tema")),
+        t("Temas"),
+        h("div", { class: "row" }, h("button", { class: "btn", onclick: exportTheme }, icon("download"), t("Exportar mi tema")), h("button", { class: "btn", onclick: importTheme }, icon("upload"), t("Importar tema"))),
       ),
       group(
-        "Datos locales",
-        h("p", { class: "muted small" }, "Configuración, historial (JSONL), avatares y archivos personalizados se guardan en la carpeta de datos de la aplicación. Las contraseñas se cifran con DPAPI de Windows."),
-        h("button", { class: "btn", onclick: () => api("shell:openUserData") }, icon("folder-open"), "Abrir carpeta de datos"),
+        t("Datos locales"),
+        h("p", { class: "muted small" }, t("Configuración, historial (JSONL), avatares y archivos personalizados se guardan en la carpeta de datos de la aplicación. Las contraseñas se cifran con DPAPI de Windows.")),
+        h("button", { class: "btn", onclick: () => api("shell:openUserData") }, icon("folder-open"), t("Abrir carpeta de datos")),
         h("p", { class: "muted small" }, `EvEX-MPP ${S.version}`),
       ),
     );
@@ -499,15 +512,22 @@ const RENDER = {
 };
 
 function popupTestColors() {
-  const t = themeColors();
-  return { surface: t.surface, text: t.text, border: t.border, warn: t.warn, "theme-accent": t.accent };
+  const c = themeColors();
+  return { surface: c.surface, text: c.text, border: c.border, warn: c.warn, "theme-accent": c.accent };
+}
+
+// Guarda el idioma ya (sin esperar al guardado diferido) y recarga la interfaz si cambia.
+async function changeLanguage(lang) {
+  S.settings.language = lang;
+  await api("settings:set", S.settings);
+  if (setLanguagePreference(lang)) location.reload();
 }
 
 async function exportTheme() {
   const s = S.settings;
   const data = {
     format: "evex-theme/1",
-    name: PRESETS[resolveThemeId(s.theme)].name,
+    name: t(PRESETS[resolveThemeId(s.theme)].name),
     base: resolveThemeId(s.theme),
     colors: s.colors,
     fontFamily: s.fontFamily,
@@ -518,21 +538,21 @@ async function exportTheme() {
     density: s.density,
     background: s.background.type === "gradient" || s.background.type === "color" ? s.background : undefined,
   };
-  if (await api("theme:export", data)) toast("Tema exportado", { kind: "ok" });
+  if (await api("theme:export", data)) toast(t("Tema exportado"), { kind: "ok" });
 }
 
 async function importTheme() {
   try {
-    const t = await api("theme:import");
-    if (!t) return;
-    if (t.format !== "evex-theme/1") throw new Error("No es un tema de EvEX-MPP");
+    const theme = await api("theme:import");
+    if (!theme) return;
+    if (theme.format !== "evex-theme/1") throw new Error(t("No es un tema de EvEX-MPP"));
     full((x) => {
-      if (PRESETS[t.base]) x.theme = t.base;
-      x.colors = t.colors || {};
-      for (const k of ["fontFamily", "monoFamily", "fontSize", "messageStyle", "bubbleRadius", "density"]) if (t[k] != null) x[k] = t[k];
-      if (t.background) x.background = t.background;
+      if (PRESETS[theme.base]) x.theme = theme.base;
+      x.colors = theme.colors || {};
+      for (const k of ["fontFamily", "monoFamily", "fontSize", "messageStyle", "bubbleRadius", "density"]) if (theme[k] != null) x[k] = theme[k];
+      if (theme.background) x.background = theme.background;
     });
-    toast(`Tema «${t.name}» aplicado`, { kind: "ok" });
+    toast(t("Tema «{name}» aplicado", { name: theme.name }), { kind: "ok" });
   } catch (e) {
     toast(e.message, { kind: "error" });
   }
@@ -547,10 +567,10 @@ function backgroundEditor(bg, change, { noDim } = {}) {
     const swatch = h("div", { class: "bg-preview", style: { background: backgroundCss(bg) || "var(--bg)" } });
     const types = select(
       [
-        ["none", "Sin fondo"],
-        ["gradient", "Degradado"],
-        ["image", "Imagen"],
-        ["color", "Color sólido"],
+        ["none", t("Sin fondo")],
+        ["gradient", t("Degradado")],
+        ["image", t("Imagen")],
+        ["color", t("Color sólido")],
       ],
       bg.type,
       (v) => {
@@ -563,7 +583,7 @@ function backgroundEditor(bg, change, { noDim } = {}) {
         render();
       },
     );
-    wrap.append(swatch, field("Tipo", types));
+    wrap.append(swatch, field(t("Tipo"), types));
     if (bg.type === "gradient") {
       wrap.append(
         h(
@@ -602,21 +622,21 @@ function backgroundEditor(bg, change, { noDim } = {}) {
               },
             },
             icon("folder-open"),
-            "Elegir imagen…",
+            t("Elegir imagen…"),
           ),
-          h("span", { class: "muted small" }, "JPG, PNG, GIF animado o WebP"),
+          h("span", { class: "muted small" }, t("JPG, PNG, GIF animado o WebP")),
         ),
       );
     }
     if (bg.type === "color") {
-      wrap.append(field("Color", h("input", { type: "color", value: bg.value, oninput: (e) => (change((b) => (b.value = e.target.value)), (swatch.style.background = e.target.value)) })));
+      wrap.append(field(t("Color"), h("input", { type: "color", value: bg.value, oninput: (e) => (change((b) => (b.value = e.target.value)), (swatch.style.background = e.target.value)) })));
     }
     if (bg.type !== "none") {
       append(
         wrap,
-        field("Intensidad", range(0.05, 1, 0.05, bg.opacity, (v) => change((b) => (b.opacity = v)), (v) => `${Math.round(v * 100)}%`)),
-        field("Desenfoque", range(0, 30, 1, bg.blur || 0, (v) => change((b) => (b.blur = v)), (v) => `${v}px`)),
-        noDim ? null : field("Transparencia de los paneles", range(0, 1, 0.05, bg.dim ?? 0.4, (v) => change((b) => (b.dim = v)), (v) => `${Math.round(v * 100)}%`)),
+        field(t("Intensidad"), range(0.05, 1, 0.05, bg.opacity, (v) => change((b) => (b.opacity = v)), (v) => `${Math.round(v * 100)}%`)),
+        field(t("Desenfoque"), range(0, 30, 1, bg.blur || 0, (v) => change((b) => (b.blur = v)), (v) => `${v}px`)),
+        noDim ? null : field(t("Transparencia de los paneles"), range(0, 1, 0.05, bg.dim ?? 0.4, (v) => change((b) => (b.dim = v)), (v) => `${Math.round(v * 100)}%`)),
       );
     }
   };
@@ -633,7 +653,7 @@ export function openBackgroundEditor(key) {
     emit("conv-bg", key);
   };
   modal({
-    title: `Fondo de ${key.split("|")[1]}`,
+    title: t("Fondo de {x}", { x: key.split("|")[1] }),
     icon: "image",
     body: backgroundEditor(bg, (fn) => {
       fn(bg);
@@ -641,7 +661,7 @@ export function openBackgroundEditor(key) {
     }),
     actions: [
       {
-        label: "Quitar fondo",
+        label: t("Quitar fondo"),
         danger: true,
         action: (c) => {
           delete S.settings.conversationBackgrounds[key];
@@ -651,7 +671,7 @@ export function openBackgroundEditor(key) {
         },
       },
       "spacer",
-      { label: "Listo", primary: true, action: (c) => (apply(), c()) },
+      { label: t("Listo"), primary: true, action: (c) => (apply(), c()) },
     ],
   });
 }

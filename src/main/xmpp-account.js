@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { t, tk } from "./i18n.js";
 const NS = {
   ROSTER: "jabber:iq:roster",
   DISCO_INFO: "http://jabber.org/protocol/disco#info",
@@ -35,14 +36,14 @@ const NS = {
 const FEATURES = [NS.DISCO_INFO, NS.MUC, NS.CHATSTATES, NS.RECEIPTS, NS.CORRECT, NS.VERSION, NS.PING, NS.CONFERENCE, NS.OOB, `${NS.VCARD_UPDATE}`];
 
 const MUC_ERRORS = {
-  conflict: "Ese apodo ya está en uso en la sala.",
-  "not-authorized": "La sala requiere contraseña o la contraseña es incorrecta.",
-  forbidden: "Estás vetado en esta sala.",
-  "registration-required": "La sala es solo para miembros.",
-  "item-not-found": "La sala no existe.",
-  "not-allowed": "No tienes permiso para crear o entrar en esta sala.",
-  "service-unavailable": "La sala está llena o no disponible.",
-  "jid-malformed": "Apodo no válido.",
+  conflict: tk("Ese apodo ya está en uso en la sala."),
+  "not-authorized": tk("La sala requiere contraseña o la contraseña es incorrecta."),
+  forbidden: tk("Estás vetado en esta sala."),
+  "registration-required": tk("La sala es solo para miembros."),
+  "item-not-found": tk("La sala no existe."),
+  "not-allowed": tk("No tienes permiso para crear o entrar en esta sala."),
+  "service-unavailable": tk("La sala está llena o no disponible."),
+  "jid-malformed": tk("Apodo no válido."),
 };
 
 const bare = (j) => String(j || "").split("/")[0].toLowerCase();
@@ -65,7 +66,7 @@ function parseStamp(el) {
 
 function stanzaErrorText(el) {
   const err = el.getChild("error");
-  if (!err) return "Error desconocido";
+  if (!err) return t("Error desconocido");
   const text = err.getChildText("text", NS.STANZAS);
   const cond = err.children.find((c) => typeof c !== "string" && c.attrs?.xmlns === NS.STANZAS && c.name !== "text");
   return { condition: cond?.name || "undefined-condition", text: text || "" };
@@ -106,7 +107,7 @@ export class XmppAccount extends EventEmitter {
   async connect(password) {
     if (this.xmpp) await this.disconnect(true);
     const [local, domain] = this.acc.jid.split("@");
-    if (!local || !domain) throw new Error("JID no válido (usuario@servidor)");
+    if (!local || !domain) throw new Error(t("JID no válido (usuario@servidor)"));
     const host = this.acc.host || domain;
     const scheme = this.acc.security === "direct" ? "xmpps" : "xmpp";
     this.wantOnline = true;
@@ -118,10 +119,10 @@ export class XmppAccount extends EventEmitter {
       timeout: 20000,
       credentials: async (authenticate, mechanisms, _fast, entity) => {
         if (this.acc.security !== "opportunistic" && !entity.isSecure()) {
-          throw new Error("El servidor no ofreció TLS y la cuenta lo exige.");
+          throw Object.assign(new Error(t("El servidor no ofreció TLS y la cuenta lo exige.")), { fatal: true });
         }
         const mech = ["SCRAM-SHA-1", "PLAIN"].find((m) => mechanisms.includes(m) && (m !== "PLAIN" || entity.isSecure() || this.acc.security === "opportunistic"));
-        if (!mech) throw new Error(`Sin mecanismo de autenticación compatible (${mechanisms.join(", ")})`);
+        if (!mech) throw Object.assign(new Error(t("Sin mecanismo de autenticación compatible ({join})", { join: mechanisms.join(", ") })), { fatal: true });
         await authenticate({ username: local, password }, mech);
       },
     });
@@ -159,7 +160,8 @@ export class XmppAccount extends EventEmitter {
     startFailed.catch(() => {});
     xmpp.on("error", (err) => {
       const msg = this.describeError(err);
-      if (err?.condition === "not-authorized" || /TLS|mecanismo/.test(err?.message || "")) {
+      // Errores que no se arreglan reintentando: contraseña, falta de TLS o de mecanismo de autenticación.
+      if (err?.condition === "not-authorized" || err?.fatal) {
         failStart(err);
         this.wantOnline = false;
         xmpp.reconnect.stop();
@@ -178,7 +180,7 @@ export class XmppAccount extends EventEmitter {
       try {
         this.onStanza(st);
       } catch (e) {
-        this.event("error", { message: `Error procesando stanza: ${e.message}` });
+        this.event("error", { message: t("Error procesando stanza: {message}", { message: e.message }) });
       }
     });
     xmpp.on("online", (address) => this.onOnline(address).catch((e) => this.event("error", { message: e.message })));
@@ -198,13 +200,13 @@ export class XmppAccount extends EventEmitter {
   }
 
   describeError(err) {
-    if (!err) return "Error desconocido";
-    if (err.condition === "not-authorized") return "Usuario o contraseña incorrectos.";
-    if (err.code === "ENOTFOUND") return `No se encuentra el servidor (${err.hostname || ""}).`;
-    if (err.code === "ECONNREFUSED") return "El servidor rechazó la conexión.";
-    if (err.code === "ETIMEDOUT" || err.name === "TimeoutError") return "Tiempo de espera agotado al conectar.";
-    if (err.code === "ECONNRESET") return "La conexión se cerró inesperadamente.";
-    if (/certificate|CERT_/i.test(err.message || err.code || "")) return `Problema con el certificado TLS: ${err.message}`;
+    if (!err) return t("Error desconocido");
+    if (err.condition === "not-authorized") return t("Usuario o contraseña incorrectos.");
+    if (err.code === "ENOTFOUND") return t("No se encuentra el servidor ({x}).", { x: err.hostname || "" });
+    if (err.code === "ECONNREFUSED") return t("El servidor rechazó la conexión.");
+    if (err.code === "ETIMEDOUT" || err.name === "TimeoutError") return t("Tiempo de espera agotado al conectar.");
+    if (err.code === "ECONNRESET") return t("La conexión se cerró inesperadamente.");
+    if (/certificate|CERT_/i.test(err.message || err.code || "")) return t("Problema con el certificado TLS: {message}", { message: err.message });
     return err.message || String(err);
   }
 
@@ -231,7 +233,7 @@ export class XmppAccount extends EventEmitter {
   }
 
   async send(stanza) {
-    if (!this.online) throw new Error("No conectado");
+    if (!this.online) throw new Error(t("No conectado"));
     await this.xmpp.send(stanza);
   }
 
@@ -240,7 +242,7 @@ export class XmppAccount extends EventEmitter {
     this.setState("online");
     this.event("self", { jid: this.ownJid });
 
-    await this.fetchRoster().catch((e) => this.event("error", { message: `Roster: ${e.message}` }));
+    await this.fetchRoster().catch((e) => this.event("error", { message: t("Roster: {message}", { message: e.message }) }));
     await this.sendPresence();
     this.discoverServer().catch(() => {});
     this.loadOwnAvatar().catch(() => {});
@@ -393,7 +395,7 @@ export class XmppAccount extends EventEmitter {
       room.joined = false;
       room.joining = false;
       if (condition !== "conflict") room.wanted = false;
-      this.event("room-error", { room: roomJid, condition, message: text || MUC_ERRORS[condition] || condition });
+      this.event("room-error", { room: roomJid, condition, message: text || (MUC_ERRORS[condition] ? t(MUC_ERRORS[condition]) : condition) });
       return;
     }
     const codes = new Set((mucUser?.getChildren("status") || []).map((s) => s.attrs.code));
@@ -639,7 +641,7 @@ export class XmppAccount extends EventEmitter {
 
   async changeNick(roomJid, nick) {
     const room = this.rooms.get(bare(roomJid));
-    if (!room) throw new Error("No estás en esa sala");
+    if (!room) throw new Error(t("No estás en esa sala"));
     await this.send(this.presenceStanza({ to: `${bare(roomJid)}/${nick}` }));
   }
 

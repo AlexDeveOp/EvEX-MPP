@@ -360,7 +360,7 @@
   font-style: italic;
 }
 .msg.delayed .msg-time::after {
-  content: " · historial";
+  content: var(--history-label, " · historial");
   opacity: 0.7;
 }
 .edited {

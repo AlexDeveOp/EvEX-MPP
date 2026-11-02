@@ -1,125 +1,136 @@
 # EvEX-MPP
 
-Cliente XMPP (Jabber) de escritorio para Windows, pensado para comunidades y alianzas de EVE Online que se coordinan por Jabber. Es una alternativa moderna y muy personalizable a Pidgin: salas con autounión, pings de flota en tarjetas, avisos emergentes siempre visibles, hora EVE y temas.
+**English** | [Español](README.es.md)
+
+A Windows desktop XMPP (Jabber) client built for EVE Online communities and alliances that coordinate over Jabber. It is a modern, highly customizable alternative to Pidgin: rooms with auto-join, fleet pings shown as cards, always-on-top pop-up alerts, EVE time and themes. The interface is available in English and Spanish.
 
 ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6)
 
-## Descargar e instalar
+## Download and install
 
-En [Releases](../../releases) hay dos ejecutables:
+[Releases](../../releases) contains two executables:
 
-| Archivo | Para qué |
+| File | What it is |
 |---|---|
-| `EvEX-MPP-Setup-<versión>.exe` | **Instalador.** Se instala solo para tu usuario, sin permisos de administrador. Deja elegir carpeta, crea accesos en el escritorio y en el menú Inicio, y se puede anclar a la barra de tareas. Se desinstala desde «Aplicaciones instaladas» y conserva tus datos. |
-| `EvEX-MPP-<versión>-portable.exe` | **Portable.** No se instala. Guarda sus datos en `EvEX-MPP-datos`, junto al `.exe`, así que se puede llevar en un USB. |
+| `EvEX-MPP-Setup-<version>.exe` | **Installer.** Installs for your user only, no administrator rights needed. You can choose the folder; it creates desktop and Start menu shortcuts and can be pinned to the taskbar. Uninstall it from "Installed apps"; your data is kept. |
+| `EvEX-MPP-<version>-portable.exe` | **Portable.** Nothing to install. It keeps its data in an `EvEX-MPP-datos` folder next to the `.exe`, so you can carry it on a USB stick. |
 
-Los ejecutables no están firmados, así que la primera vez Windows SmartScreen avisará: «Más información» → «Ejecutar de todas formas».
+The executables are not code-signed, so the first time Windows SmartScreen will warn you: "More info" → "Run anyway".
 
-## Primer uso
+## First steps
 
-1. **Importar desde Pidgin** (recomendado). Copia la cuenta, el servidor de conexión (p. ej. `chat.ejemplo.com:5222`, con STARTTLS), las salas guardadas con su autounión, la contraseña (opcional) y todo el historial de Pidgin, sin duplicados.
-2. O **Añadir cuenta**: dirección (`usuario@ejemplo.com`), contraseña y servidor. Si tu servidor se conecta por un nombre distinto del dominio, indícalo en «Servidor de conexión».
+1. **Import from Pidgin** (recommended). Copies the account, the connection server (e.g. `chat.example.com:5222`, with STARTTLS), saved rooms with their auto-join setting, the password (optional) and your whole Pidgin history, without duplicates.
+2. Or **Add account**: address (`user@example.com`), password and server. If your server is reached through a different host name than the domain, enter it in "Connection server".
 
-Para **cambiar de cuenta**, usa el menú de estado («Disponible ▾») o el icono de la bandeja → «Cambiar de cuenta…». La contraseña solo se guarda después de conectar con éxito.
+To **switch accounts**, use the status menu ("Available ▾") or the tray icon → "Switch account…". The password is only saved after a successful connection.
 
-## Funciones
+To **change the language**, go to Preferences → Appearance → Language. The options are Automatic (follows Windows), Español or English.
 
-**Salas**
-- ★ marca una sala como **favorita** y ⚡ hace que se **abra al conectar**. ⚡ implica ★, y quitar la ★ saca la sala de la lista (con «Deshacer»).
-- Al conectar solo se entra en las salas con ⚡. Las salas abiertas que no son favoritas aparecen aparte, en «Abiertas ahora».
-- Explorador de salas del servidor, con búsqueda, número de usuarios y detalles.
-- Participantes agrupados por rol, apodo por sala, contraseña, invitaciones y moderación.
-- La lista se sincroniza con los marcadores del servidor (XEP-0048). Si el servidor no permite guardarlos (algunos no lo permiten), la lista se guarda en tu PC y las salas que quites no vuelven.
+## Features
 
-**Pings de flota**
-- Los mensajes de los remitentes de pings que configures (p. ej. un bot de broadcasts como `pingbot@ejemplo.com`) se muestran como **tarjetas**: FC, formup (con enlace a Dotlan), PAP, comms, doctrina, grupo y quién lo envió.
-- Cada tarjeta lleva la hora local y la hora EVE.
+**Rooms**
+- ★ marks a room as a **favorite** and ⚡ makes it **open on connect**. ⚡ implies ★, and removing the ★ takes the room off the list (with "Undo").
+- On connect, only ⚡ rooms are joined. Open rooms that are not favorites are listed separately under "Open now".
+- Server room browser with search, user counts and details.
+- Occupants grouped by role, per-room nickname, room passwords, invitations and moderation.
+- The list is synced with server bookmarks (XEP-0048). If the server does not allow saving them (some don't), the list is kept on your PC and rooms you remove do not come back.
 
-**Avisos**
-- **Burbuja propia** que sube desde la barra de tareas (por defecto abajo a la izquierda) y queda **siempre encima**, también sobre EVE en ventana sin bordes. Los pings se quedan hasta que los cierras.
-- Opcionalmente, la notificación de Windows en lugar de la burbuja, o ambas.
-- **«!» ámbar parpadeando en la bandeja** mientras haya pings sin leer, y parpadeo de la barra de tareas.
-- **Sonido distinto para cada tipo** (privado, mención, sala, ping): 9 sonidos incluidos o un archivo tuyo, con volumen.
-- Todo funciona igual con la ventana **minimizada o escondida en la bandeja**.
+**Fleet pings**
+- Messages from the ping senders you configure (e.g. a broadcast bot such as `pingbot@example.com`) are shown as **cards**: FC, formup (with a Dotlan link), PAP, comms, doctrine, target group and who sent it.
+- Every card shows local time and EVE time.
 
-**Mensajes**
-- Hora local (gris) y **hora EVE/UTC** (ámbar) en cada mensaje; cualquiera de las dos se puede ocultar. Reloj EVE en la barra de título.
-- Historial local con búsqueda y menciones con palabras clave.
-- Corregir el último mensaje con ↑, citas y `/me`.
-- Comandos tipo IRC (`/help`) y autocompletado de apodos (Tab) y de `:emoji:`.
-- Recibos de entrega, «escribiendo…» y vistas previas de imágenes y YouTube.
+**Alerts**
+- **Custom pop-up bubble** that slides up from the taskbar (bottom-left by default) and stays **always on top**, including over EVE in borderless window mode. Pings stay until you close them.
+- Optionally Windows notifications instead of the bubble, or both.
+- **Blinking amber "!" in the tray** while there are unread pings, plus taskbar flashing.
+- **A different sound for each kind of alert** (private message, mention, room, ping): 9 built-in sounds or your own file, with volume control.
+- Everything works the same with the window **minimized or hidden in the tray**.
 
-**Personalización**
-- 13 temas (Caldari, Amarr, Gallente, Minmatar, AMOLED, Nord, Dracula…), editor de cada color, y exportar/importar temas.
-- Cualquier fuente de Windows, escala y densidad.
-- 4 estilos de mensaje: moderno, burbujas, IRC y Pidgin.
-- Fondos (imagen, GIF o degradado) para la ventana, la barra lateral o cada conversación.
-- Emojis animados de Google (Noto), Twemoji o los nativos, y emojis propios.
+**Messages**
+- Local time (grey) and **EVE/UTC time** (amber) on every message; either can be hidden. EVE clock in the title bar.
+- Local history with search, and mentions with custom keywords.
+- Correct your last message with ↑, quotes and `/me`.
+- IRC-style commands (`/help`), and nickname (Tab) and `:emoji:` completion.
+- Delivery receipts, "typing…" indicator, and image and YouTube previews.
 
-**Escritorio**
-- Bandeja del sistema (cerrar o minimizar a la bandeja).
-- Ausente automático, inicio con Windows y corrector ortográfico (es/en).
+**Customization**
+- Interface in **English and Spanish**, with a language selector.
+- 13 themes (Caldari, Amarr, Gallente, Minmatar, AMOLED, Nord, Dracula…), a per-color editor, and theme import/export.
+- Any Windows font, UI scale and density.
+- 4 message styles: modern, bubbles, IRC and Pidgin.
+- Backgrounds (image, GIF or gradient) for the window, the sidebar or each conversation.
+- Animated Google emoji (Noto), Twemoji or native emoji, plus custom emoji.
 
-**Atajos de teclado**
+**Desktop**
+- System tray (close or minimize to tray).
+- Automatic away status, start with Windows, and spell checking (en/es).
 
-| Atajo | Acción |
+**Keyboard shortcuts**
+
+| Shortcut | Action |
 |---|---|
-| `Ctrl+K` | Ir a sala o contacto |
-| `Ctrl+Tab` | Siguiente pestaña |
-| `Ctrl+W` | Cerrar pestaña |
-| `Ctrl+J` | Unirse a sala |
-| `Ctrl+B` | Explorar salas |
-| `Ctrl+F` | Buscar en el historial |
-| `Ctrl+,` | Preferencias |
-| `Alt+1…9` | Ir a la pestaña N |
-| `↑` | Corregir el último mensaje |
+| `Ctrl+K` | Go to room or contact |
+| `Ctrl+Tab` | Next tab |
+| `Ctrl+W` | Close tab |
+| `Ctrl+J` | Join a room |
+| `Ctrl+B` | Browse rooms |
+| `Ctrl+F` | Search history |
+| `Ctrl+,` | Preferences |
+| `Alt+1…9` | Go to tab N |
+| `↑` | Correct your last message |
 
-## Datos y seguridad
+## Data and security
 
-- Todo se guarda en `%APPDATA%\EvEX-MPP` (en la versión portable, junto al `.exe`): configuración, historial en JSONL, avatares y archivos propios.
-- Las contraseñas se cifran con DPAPI de Windows (`safeStorage`), así que en otro PC se vuelven a pedir.
-- La interfaz corre aislada (`contextIsolation`, `sandbox`, CSP estricta) y solo habla con el proceso principal por canales concretos.
-- El ejecutable lleva desactivados los *fuses* `RunAsNode`, `NODE_OPTIONS` y los argumentos de inspección.
+- Everything is stored in `%APPDATA%\EvEX-MPP` (in the portable version, next to the `.exe`): settings, JSONL history, avatars and your own files.
+- Passwords are encrypted with Windows DPAPI (`safeStorage`), so on another PC you will be asked for them again.
+- The interface runs isolated (`contextIsolation`, `sandbox`, strict CSP) and only talks to the main process through a fixed set of channels.
+- The executable ships with the `RunAsNode`, `NODE_OPTIONS` and inspector *fuses* disabled.
 
-Pidgin guarda las contraseñas **en texto plano** en `%APPDATA%\.purple\accounts.xml`. Si dejas de usarlo, conviene borrarlas de ahí.
+Pidgin stores passwords **in plain text** in `%APPDATA%\.purple\accounts.xml`. If you stop using it, it is a good idea to remove them from there.
 
-Si usas Pidgin a la vez, los pings se entregan al cliente con **mayor prioridad**. Súbela en Cuentas → Conexión avanzada.
+If you run Pidgin at the same time, pings are delivered to the client with the **highest priority**. Raise it in Accounts → Advanced connection.
 
-## Desarrollo
+## Development
 
 ```
 npm install
-npm start          # lanza la app (scripts/start.mjs quita ELECTRON_RUN_AS_NODE, que VS Code define)
-npm run dev        # con DevTools
-npm run dist       # instalador + portable en dist/
-npm run assets     # regenera iconos (Lucide) y datos de emojis (emojibase)
-npm run probe      # comprueba TLS y SASL del servidor sin autenticarse
-npm run mock       # servidor XMPP simulado en 127.0.0.1:5299 para pruebas
+npm start          # runs the app (scripts/start.mjs clears ELECTRON_RUN_AS_NODE, which VS Code sets)
+npm run dev        # with DevTools
+npm run dist       # installer + portable in dist/
+npm run assets     # regenerates icons (Lucide) and emoji data (emojibase)
+npm run i18n       # checks that every UI string has a translation
+npm run probe      # checks a server's TLS and SASL without logging in
+npm run mock       # fake XMPP server on 127.0.0.1:5299 for testing
 ```
 
-Estructura:
+Layout:
 
 ```
-src/main/       Electron: ventanas, bandeja, burbujas (popups.js), IPC, XMPP (xmpp-account.js),
-                historial (logs.js), importador de Pidgin, almacenamiento y contraseñas (store.js)
-src/preload.cjs Puente IPC con lista de canales permitidos
-src/renderer/   Interfaz en JS y CSS sin compilación (módulos ES)
-scripts/        Arranque, generación de iconos y recursos, prueba de conexión
-test/           Servidor XMPP simulado, driver de DevTools y captura de escritorio
+src/main/        Electron: windows, tray, pop-ups (popups.js), IPC, XMPP (xmpp-account.js),
+                 history (logs.js), Pidgin importer, storage and passwords (store.js)
+src/preload.cjs  IPC bridge with an allow-list of channels
+src/renderer/    Interface in plain JS and CSS, no build step (ES modules)
+src/renderer/locales/  Translations (the source strings in the code are Spanish)
+scripts/         Launcher, icon and asset generation, translation check, connection probe
+test/            Fake XMPP server, DevTools driver and desktop screenshot
 ```
 
-### Probar sin una cuenta real
+### Translations
 
-1. Ejecuta `npm run mock`.
-2. Lanza la app con un perfil aislado: `set EVEX_USERDATA=C:\temp\perfil-pruebas` y luego `npm start`.
-3. Añade la cuenta `tester@test.local`, contraseña `test`, servidor `127.0.0.1`, puerto `5299`, seguridad «TLS si está disponible».
-4. Añade `pingbot` a los remitentes de pings para que el ping simulado salga como tal.
+UI strings are written in Spanish in the code, wrapped in `t("…")`. Each language has a file in `src/renderer/locales/` (for example `en.js`) that maps every Spanish string to its translation. To add a language, copy `en.js` under the new language code (`fr.js`, `de.js`…), translate the values and register it in `src/renderer/js/i18n.js`. `npm run i18n` lists any missing strings.
 
-Variables de diagnóstico:
-- `EVEX_DEBUG=1` muestra por consola la consola de la interfaz, los sonidos y el estado de la bandeja.
-- `EVEX_SHOT=ruta.png` guarda una captura al arrancar.
-- Con `--remote-debugging-port=9333`, `node test/cdp.mjs 9333 pasos.json` automatiza la interfaz.
+### Testing without a real account
 
-## Licencia
+1. Run `npm run mock`.
+2. Start the app with an isolated profile: `set EVEX_USERDATA=C:\temp\test-profile`, then `npm start`.
+3. Add the account `tester@test.local`, password `test`, server `127.0.0.1`, port `5299`, security "TLS if available".
+4. Add `pingbot` to the ping senders so the simulated ping is shown as one.
 
-MIT. Iconos: Lucide (ISC). Datos de emojis: emojibase (MIT). Fuentes: Fontsource (OFL).
+Diagnostic variables:
+- `EVEX_DEBUG=1` prints the interface console, sounds and tray state to stdout.
+- `EVEX_SHOT=path.png` saves a screenshot on startup.
+- With `--remote-debugging-port=9333`, `node test/cdp.mjs 9333 steps.json` automates the interface.
+
+## License
+
+MIT. Icons: Lucide (ISC). Emoji data: emojibase (MIT). Fonts: Fontsource (OFL).

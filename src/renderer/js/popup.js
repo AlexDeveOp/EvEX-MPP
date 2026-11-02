@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 // Contenido de una burbuja de notificación. Los datos llegan ya preparados desde la ventana principal.
 const id = new URLSearchParams(location.search).get("id");
 const call = (ch, ...a) => window.evex.call(ch, ...a);
@@ -18,9 +19,9 @@ async function init() {
 
   const head = el("div", "head");
   head.append(el("div", "badge", d.kind === "ping" ? "!" : "✉"), el("div", "title", d.title));
-  head.append(el("span", "app", d.kind === "ping" ? "PING DE FLOTA" : "EvEX-MPP"));
+  head.append(el("span", "app", d.kind === "ping" ? t("PING DE FLOTA") : "EvEX-MPP"));
   const close = el("button", "close", "✕");
-  close.title = "Cerrar";
+  close.title = t("Cerrar");
   close.addEventListener("click", (e) => {
     e.stopPropagation();
     call("popup:close", id);
@@ -35,11 +36,11 @@ async function init() {
     body.append(dl);
   }
   if (d.time) {
-    const t = el("div", "time");
-    t.append(el("span", "", "🕒"));
-    if (d.time.local) t.append(el("span", "", `${d.time.local} local`));
-    if (d.time.eve) t.append(el("span", "eve", `${d.time.eve} EVE`));
-    body.append(t);
+    const row = el("div", "time");
+    row.append(el("span", "", "🕒"));
+    if (d.time.local) row.append(el("span", "", t("{local} local", { local: d.time.local })));
+    if (d.time.eve) row.append(el("span", "eve", t("{eve} EVE", { eve: d.time.eve })));
+    body.append(row);
   }
   if (d.footer) body.append(el("div", "foot", d.footer));
   card.append(head, body);

@@ -1,6 +1,7 @@
 // Utilidades de DOM: creación de elementos, iconos, menús contextuales, modales y avisos.
 import { ICONS } from "./data/icons.js";
 
+import { t } from "./i18n.js";
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -153,7 +154,7 @@ export function modal({ title, icon: ic, body, actions = [], wide, onClose, clas
   const dialog = h(
     "div",
     { class: `modal ${wide ? "wide" : ""} ${className}`, role: "dialog", "aria-modal": "true" },
-    h("header", { class: "modal-header" }, ic ? icon(ic) : null, h("h2", {}, title), iconButton("x", "Cerrar", close, "modal-close")),
+    h("header", { class: "modal-header" }, ic ? icon(ic) : null, h("h2", {}, title), iconButton("x", t("Cerrar"), close, "modal-close")),
     h("div", { class: "modal-body" }, body),
     footer,
   );
@@ -169,7 +170,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && modalStack.length && !menuEl) modalStack[modalStack.length - 1].close();
 });
 
-export function prompt({ title, label, value = "", placeholder = "", type = "text", okLabel = "Aceptar", icon: ic }) {
+export function prompt({ title, label, value = "", placeholder = "", type = "text", okLabel = t("Aceptar"), icon: ic }) {
   return new Promise((resolve) => {
     let done = false;
     const input = h("input", { class: "input", type, value, placeholder, autofocus: true });
@@ -182,14 +183,14 @@ export function prompt({ title, label, value = "", placeholder = "", type = "tex
       title,
       icon: ic,
       body: h("label", { class: "field" }, label ? h("span", { class: "field-label" }, label) : null, input),
-      actions: ["spacer", { label: "Cancelar", action: (c) => finish(null, c) }, { label: okLabel, primary: true, action: (c) => finish(input.value, c) }],
+      actions: ["spacer", { label: t("Cancelar"), action: (c) => finish(null, c) }, { label: okLabel, primary: true, action: (c) => finish(input.value, c) }],
       onClose: () => !done && resolve(null),
     });
     input.addEventListener("keydown", (e) => e.key === "Enter" && finish(input.value, m.close));
   });
 }
 
-export function confirmDialog({ title, message, okLabel = "Aceptar", danger }) {
+export function confirmDialog({ title, message, okLabel = t("Aceptar"), danger }) {
   return new Promise((resolve) => {
     let done = false;
     modal({
@@ -197,7 +198,7 @@ export function confirmDialog({ title, message, okLabel = "Aceptar", danger }) {
       body: h("p", { class: "muted" }, message),
       actions: [
         "spacer",
-        { label: "Cancelar", action: (c) => ((done = true), resolve(false), c()) },
+        { label: t("Cancelar"), action: (c) => ((done = true), resolve(false), c()) },
         { label: okLabel, primary: !danger, danger, action: (c) => ((done = true), resolve(true), c()) },
       ],
       onClose: () => !done && resolve(false),
@@ -215,7 +216,7 @@ export function toast(message, { kind = "info", timeout = 5000, actions = [], ic
     icon(ic || { info: "info", ok: "check", error: "triangle-alert", warn: "triangle-alert", ping: "siren" }[kind] || "info"),
     h("div", { class: "toast-msg" }, message),
     actions.map((a) => h("button", { class: `btn small ${a.primary ? "primary" : ""}`, onclick: () => (a.action(), dismiss()) }, a.label)),
-    iconButton("x", "Cerrar", () => dismiss(), "toast-close"),
+    iconButton("x", t("Cerrar"), () => dismiss(), "toast-close"),
   );
   const dismiss = () => {
     el.classList.add("leaving");
@@ -262,10 +263,10 @@ export function range(min, max, step, value, onInput, fmt = (v) => v) {
 }
 
 export function debounce(fn, ms) {
-  let t;
+  let timer;
   return (...a) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...a), ms);
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...a), ms);
   };
 }
 

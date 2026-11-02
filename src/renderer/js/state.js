@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 // Estado de la interfaz y acceso al proceso principal.
 export const api = (channel, ...args) => window.evex.call(channel, ...args);
 export const onMain = (event, fn) => window.evex.on(event, fn);
@@ -107,4 +108,4 @@ export function initials(name) {
   return ((parts[0]?.[0] || "?") + (parts[1]?.[0] || "")).toUpperCase();
 }
 
-export const SHOW_LABEL = { online: "Disponible", "": "Disponible", chat: "Hablador", away: "Ausente", xa: "Ausente (ext.)", dnd: "No molestar", offline: "Desconectado" };
+export const SHOW_LABEL = { online: t("Disponible"), "": t("Disponible"), chat: t("Hablador"), away: t("Ausente"), xa: t("Ausente (ext.)"), dnd: t("No molestar"), offline: t("Desconectado") };

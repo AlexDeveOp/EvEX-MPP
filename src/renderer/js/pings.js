@@ -3,6 +3,7 @@ import { h, icon, esc } from "./dom.js";
 import { formatBody, fmtDateTime, fmtEve, fmtTimes, timeAgo } from "./format.js";
 import { S } from "./state.js";
 
+import { t } from "./i18n.js";
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const FIELD_RE = /^([A-Za-z][\w ./()'&-]{1,32}?)\s*:[\s\u200B-\u200D\u2060\uFEFF]*(.+)$/;
 // p. ej. "~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00 EVE ~~~"
@@ -30,7 +31,7 @@ export function parsePing(body) {
     else if (!fields.length) title.push(line);
     else extra.push(line);
   }
-  return { title: title.join(" ") || "Ping", fields, extra, footer };
+  return { title: title.join(" ") || t("Ping"), fields, extra, footer };
 }
 
 const FIELD_ICONS = { "fc name": "crown", fc: "crown", "formup location": "map-pin", formup: "map-pin", location: "map-pin", "pap type": "flag", comms: "radio", doctrine: "swords", ships: "rocket", target: "crosshair", time: "clock" };
@@ -40,7 +41,7 @@ function fieldValue(key, value) {
   if (/formup|location|system/.test(k)) {
     const sys = value.replace(INVISIBLE, "").trim().split(/[\s,(]/)[0];
     if (/^[A-Za-z0-9-]{3,12}$/.test(sys)) {
-      return h("span", { html: formatBody(value).html + ` <a class="link dotlan" href="https://evemaps.dotlan.net/system/${encodeURIComponent(sys)}" title="Ver ${esc(sys)} en Dotlan">🗺 Dotlan</a>` });
+      return h("span", { html: formatBody(value).html + ` <a class="link dotlan" href="https://evemaps.dotlan.net/system/${encodeURIComponent(sys)}" title="${esc(t("Ver {system} en Dotlan", { system: sys }))}">🗺 Dotlan</a>` });
     }
   }
   return h("span", { html: formatBody(value).html });
@@ -57,7 +58,7 @@ export function pingCard(m) {
       { class: "ping-head" },
       icon("siren", "ping-icon"),
       h("div", { class: "ping-title", html: formatBody(p.title).html }),
-      p.footer ? h("span", { class: "ping-group", title: "Destinatarios" }, p.footer.to) : null,
+      p.footer ? h("span", { class: "ping-group", title: t("Destinatarios") }, p.footer.to) : null,
       h("time", { class: "ping-time", title: fmtTimes(m.ts) }, timeAgo(m.ts)),
     ),
     p.fields.length
@@ -76,17 +77,17 @@ export function pingCard(m) {
         "span",
         { class: "ping-times", title: fmtTimes(m.ts) },
         S.settings.showLocalTime !== false ? h("span", { class: "muted" }, `${fmtDateTime(m.ts)} local`) : null,
-        S.settings.showEveTime !== false ? h("span", { class: "eve" }, `${fmtEve(m.ts, true)} EVE`) : null,
+        S.settings.showEveTime !== false ? h("span", { class: "eve" }, t("{eve} EVE", { eve: fmtEve(m.ts, true) })) : null,
       ),
       h(
         "button",
         {
           class: "btn small ghost",
           onclick: () => navigator.clipboard.writeText(m.body),
-          title: "Copiar el ping completo",
+          title: t("Copiar el ping completo"),
         },
         icon("copy"),
-        "Copiar",
+        t("Copiar"),
       ),
     ),
   );

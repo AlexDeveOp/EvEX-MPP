@@ -4,19 +4,20 @@ import { h, icon, modal, clear, debounce, esc } from "./dom.js";
 import { fmtDateTime } from "./format.js";
 import { openConv } from "./convs.js";
 
+import { t } from "./i18n.js";
 export function openSearch({ accountId, conv } = {}) {
   accountId ||= S.accounts[0]?.id;
   if (!accountId) return;
   let scope = conv ? "conv" : "all";
-  const q = h("input", { class: "input", placeholder: "Texto a buscar…", autofocus: true });
-  const nick = h("input", { class: "input", placeholder: "Autor (opcional)" });
+  const q = h("input", { class: "input", placeholder: t("Texto a buscar…"), autofocus: true });
+  const nick = h("input", { class: "input", placeholder: t("Autor (opcional)") });
   const scopeSel = h(
     "select",
     { class: "input", onchange: (e) => ((scope = e.target.value), run()) },
-    conv ? h("option", { value: "conv", selected: true }, `Solo ${displayName(accountId, conv)}`) : null,
-    h("option", { value: "all", selected: !conv }, `Todas las conversaciones de ${account(accountId).alias}`),
+    conv ? h("option", { value: "conv", selected: true }, t("Solo {displayName}", { displayName: displayName(accountId, conv) })) : null,
+    h("option", { value: "all", selected: !conv }, t("Todas las conversaciones de {alias}", { alias: account(accountId).alias })),
   );
-  const results = h("div", { class: "search-results" }, h("div", { class: "empty-state small" }, icon("search"), h("p", {}, "Escribe para buscar en el historial guardado.")));
+  const results = h("div", { class: "search-results" }, h("div", { class: "empty-state small" }, icon("search"), h("p", {}, t("Escribe para buscar en el historial guardado."))));
 
   const highlight = (text, term) => {
     const safe = esc(text);
@@ -28,10 +29,10 @@ export function openSearch({ accountId, conv } = {}) {
   const run = debounce(async () => {
     const term = q.value.trim();
     if (term.length < 2 && !nick.value.trim()) return;
-    clear(results).append(h("div", { class: "loading" }, h("span", { class: "spinner" }), "Buscando…"));
+    clear(results).append(h("div", { class: "loading" }, h("span", { class: "spinner" }), t("Buscando…")));
     const rows = await api("logs:search", accountId, { query: term, nick: nick.value.trim(), conv: scope === "conv" ? conv : undefined, limit: 400 }).catch(() => []);
     clear(results);
-    if (!rows.length) return results.append(h("div", { class: "empty-state small" }, h("p", {}, "Sin resultados.")));
+    if (!rows.length) return results.append(h("div", { class: "empty-state small" }, h("p", {}, t("Sin resultados."))));
     results.append(h("div", { class: "muted pad" }, `${rows.length}${rows.length >= 400 ? "+" : ""} resultados`));
     for (const r of rows) {
       const isRoom = r.conv.includes("@conference.") && !r.conv.includes("/");
@@ -55,7 +56,7 @@ export function openSearch({ accountId, conv } = {}) {
   q.addEventListener("input", run);
   nick.addEventListener("input", run);
   const m = modal({
-    title: "Buscar en el historial",
+    title: t("Buscar en el historial"),
     icon: "search",
     wide: true,
     body: h("div", { class: "search-layout" }, h("div", { class: "rb-toolbar" }, h("div", { class: "input-group grow" }, icon("search"), q), nick, scopeSel), results),

@@ -7,6 +7,7 @@ import { parsePing } from "./pings.js";
 import { themeColors } from "./themes.js";
 import { replaceShortcodes } from "./emoji.js";
 
+import { t } from "./i18n.js";
 export function getConv(accountId, conv, type) {
   const key = convKey(accountId, conv);
   let c = S.convs.get(key);
@@ -37,7 +38,7 @@ export function isPingSender(jid) {
 }
 
 export function convTitle(c) {
-  if (c.type === "pings") return "Pings de flota";
+  if (c.type === "pings") return t("Pings de flota");
   const name = displayName(c.accountId, c.conv);
   // Si la misma sala o contacto está abierto con otra cuenta, se añade el nombre de la cuenta.
   const clash = S.tabs.some((k) => {
@@ -126,7 +127,7 @@ export async function openConv(accountId, conv, type, { focus = true, join = tru
       r.error = "";
       api("room:join", accountId, conv, null, password).catch((e) => {
         r.joining = false;
-        toast(`No se pudo entrar en ${conv}: ${e.message}`, { kind: "error" });
+        toast(t("No se pudo entrar en {conv}: {message}", { conv, message: e.message }), { kind: "error" });
       });
     }
   }
@@ -200,8 +201,8 @@ export function updateBadge() {
 
 // Colores del tema actual para las burbujas de notificación.
 function popupColors() {
-  const t = themeColors();
-  return { surface: t.surface, text: t.text, border: t.border, warn: t.warn, "theme-accent": t.accent };
+  const c = themeColors();
+  return { surface: c.surface, text: c.text, border: c.border, warn: c.warn, "theme-accent": c.accent };
 }
 
 // Horas para la burbuja, respetando qué horas quiere ver el usuario.
@@ -330,11 +331,11 @@ function maybeNotify(c, msg) {
   else if (mode === "mentions") should = msg.mention && n.mentions;
   if (!should) return;
   playSound(c.type === "chat" ? "private" : msg.mention ? "mention" : "room");
-  const title = c.type === "groupchat" ? `${msg.nick} en ${convTitle(c)}` : convTitle(c);
+  const title = c.type === "groupchat" ? t("{nick} en {room}", { nick: msg.nick, room: convTitle(c) }) : convTitle(c);
   api("notify", {
     kind: "msg",
     title,
-    text: n.showPreview ? replaceShortcodes(msg.body).slice(0, 240) : "Nuevo mensaje",
+    text: n.showPreview ? replaceShortcodes(msg.body).slice(0, 240) : t("Nuevo mensaje"),
     accountId: c.accountId,
     conv: c.conv,
     convType: c.type,
@@ -352,10 +353,10 @@ function notifyPing(m) {
   const clean = (s) => s.replace(INVISIBLE, "").trim();
   api("notify", {
     kind: "ping",
-    title: clean(p.title).slice(0, 120) || "Ping de flota",
+    title: clean(p.title).slice(0, 120) || t("Ping de flota"),
     text: p.fields.length ? clean(p.extra.join("\n")).slice(0, 300) : clean(m.body).slice(0, 400),
     fields: p.fields.slice(0, 8).map((f) => ({ key: f.key, value: clean(f.value).slice(0, 140) })),
-    footer: p.footer ? `de ${p.footer.from} → ${p.footer.to}` : m.nick,
+    footer: p.footer ? t("de {from} → {to}", { from: p.footer.from, to: p.footer.to }) : m.nick,
     accountId: null,
     conv: "*",
     convType: "pings",

@@ -5,6 +5,7 @@ import { openConv } from "./convs.js";
 import { avatarEl } from "./chat.js";
 import { SHOW_LABEL } from "./state.js";
 
+import { t } from "./i18n.js";
 let filter = "";
 
 export function initOccupants() {
@@ -18,9 +19,9 @@ export function initOccupants() {
 }
 
 const ROLE_GROUPS = [
-  ["moderator", "Moderadores"],
-  ["participant", "Participantes"],
-  ["visitor", "Visitantes"],
+  ["moderator", t("Moderadores")],
+  ["participant", t("Participantes")],
+  ["visitor", t("Visitantes")],
 ];
 const AFF_ICON = { owner: "crown", admin: "shield", member: null };
 
@@ -37,7 +38,7 @@ function renderOccupants() {
   const scroll = list.scrollTop;
   clear(list);
   if (!r.joined) {
-    list.append(h("div", { class: "sb-empty" }, r.joining ? "Entrando en la sala…" : "No estás en la sala"));
+    list.append(h("div", { class: "sb-empty" }, r.joining ? t("Entrando en la sala…") : t("No estás en la sala")));
     return;
   }
   const occ = [...r.occupants.values()].filter((o) => !filter || o.nick.toLowerCase().includes(filter) || o.jid?.includes(filter));
@@ -67,7 +68,7 @@ function occupantItem(c, r, o) {
     "div",
     {
       class: `occ-item ${o.show || "online"} ${o.self ? "self" : ""}`,
-      title: `${o.nick}${o.jid ? `\n${o.jid}` : ""}\n${SHOW_LABEL[o.show || "online"]}${o.status ? ` — ${o.status}` : ""}\nRol: ${o.role} · Afiliación: ${o.affiliation}`,
+      title: t("{nick}{x}\n{x2}{x3}\nRol: {role} · Afiliación: {affiliation}", { nick: o.nick, x: o.jid ? `\n${o.jid}` : "", x2: SHOW_LABEL[o.show || "online"], x3: o.status ? ` — ${o.status}` : "", role: o.role, affiliation: o.affiliation }),
       onclick: () => mention(o.nick),
       ondblclick: () => !o.self && openConv(c.accountId, `${c.conv}/${o.nick}`, "chat"),
       oncontextmenu: (e) => {
@@ -86,19 +87,19 @@ function occupantMenu(c, r, o) {
   const me = r.occupants.get(r.nick);
   const isMod = me?.role === "moderator";
   const isAdmin = ["admin", "owner"].includes(me?.affiliation);
-  const ask = async (title) => prompt({ title, label: "Motivo (opcional)", icon: "triangle-alert" });
+  const ask = async (title) => prompt({ title, label: t("Motivo (opcional)"), icon: "triangle-alert" });
   const mod = (opts, ok) => api("room:moderate", c.accountId, c.conv, opts).then(() => toast(ok, { kind: "ok" })).catch((e) => toast(e.message, { kind: "error" }));
   return [
     { header: o.nick },
-    !o.self ? { label: "Mensaje privado", icon: "message-square", action: () => openConv(c.accountId, `${c.conv}/${o.nick}`, "chat") } : null,
-    o.jid && !o.self ? { label: "Abrir chat directo", icon: "message-circle", action: () => openConv(c.accountId, o.jid, "chat") } : null,
-    { label: "Mencionar", icon: "at-sign", action: () => mention(o.nick) },
-    o.jid ? { label: "Copiar JID", icon: "copy", action: () => navigator.clipboard.writeText(o.jid) } : null,
-    o.jid && !o.self ? { label: "Añadir a contactos", icon: "user-plus", action: () => api("roster:add", c.accountId, o.jid, o.nick, []).then(() => toast("Solicitud enviada", { kind: "ok" })) } : null,
+    !o.self ? { label: t("Mensaje privado"), icon: "message-square", action: () => openConv(c.accountId, `${c.conv}/${o.nick}`, "chat") } : null,
+    o.jid && !o.self ? { label: t("Abrir chat directo"), icon: "message-circle", action: () => openConv(c.accountId, o.jid, "chat") } : null,
+    { label: t("Mencionar"), icon: "at-sign", action: () => mention(o.nick) },
+    o.jid ? { label: t("Copiar JID"), icon: "copy", action: () => navigator.clipboard.writeText(o.jid) } : null,
+    o.jid && !o.self ? { label: t("Añadir a contactos"), icon: "user-plus", action: () => api("roster:add", c.accountId, o.jid, o.nick, []).then(() => toast(t("Solicitud enviada"), { kind: "ok" })) } : null,
     isMod && !o.self ? "-" : null,
-    isMod && !o.self ? { label: "Expulsar…", icon: "user-x", danger: true, action: async () => { const reason = await ask(`Expulsar a ${o.nick}`); if (reason != null) mod({ nick: o.nick, role: "none", reason }, `${o.nick} expulsado`); } } : null,
-    isMod && !o.self ? { label: o.role === "visitor" ? "Dar voz" : "Quitar voz", icon: "mic-off", action: () => mod({ nick: o.nick, role: o.role === "visitor" ? "participant" : "visitor" }, "Hecho") } : null,
-    isAdmin && o.jid && !o.self ? { label: "Vetar…", icon: "ban", danger: true, action: async () => { const reason = await ask(`Vetar a ${o.nick}`); if (reason != null) mod({ jid: o.jid, affiliation: "outcast", reason }, `${o.nick} vetado`); } } : null,
+    isMod && !o.self ? { label: t("Expulsar…"), icon: "user-x", danger: true, action: async () => { const reason = await ask(t("Expulsar a {nick}", { nick: o.nick })); if (reason != null) mod({ nick: o.nick, role: "none", reason }, `${o.nick} expulsado`); } } : null,
+    isMod && !o.self ? { label: o.role === "visitor" ? t("Dar voz") : t("Quitar voz"), icon: "mic-off", action: () => mod({ nick: o.nick, role: o.role === "visitor" ? "participant" : "visitor" }, t("Hecho")) } : null,
+    isAdmin && o.jid && !o.self ? { label: t("Vetar…"), icon: "ban", danger: true, action: async () => { const reason = await ask(t("Vetar a {nick}", { nick: o.nick })); if (reason != null) mod({ jid: o.jid, affiliation: "outcast", reason }, `${o.nick} vetado`); } } : null,
   ];
 }
 

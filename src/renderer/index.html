@@ -16,25 +16,25 @@
     <div id="app" class="booting">
       <div id="app-bg" aria-hidden="true"></div>
       <header id="titlebar">
-        <button id="tb-sidebar" class="icon-btn" title="Mostrar/ocultar barra lateral" aria-label="Barra lateral">
+        <button id="tb-sidebar" class="icon-btn" title="Mostrar/ocultar barra lateral" aria-label="Barra lateral" data-i18n="title aria-label">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></svg></span>
         </button>
         <img class="tb-logo" src="assets/logo.svg" alt="" />
         <span class="tb-name">EvEX-MPP</span>
-        <button id="tb-switch" class="tb-switch" title="Saltar a sala o contacto (Ctrl+K)">
+        <button id="tb-switch" class="tb-switch" title="Saltar a sala o contacto (Ctrl+K)" data-i18n="title">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg></span>
-          <span>Ir a sala o contacto…</span>
+          <span data-i18n="text">Ir a sala o contacto…</span>
           <kbd>Ctrl K</kbd>
         </button>
         <span class="spacer"></span>
-        <div id="tb-eve" class="tb-eve" title="Hora EVE (UTC)"><span>EVE</span><b id="tb-eve-time">--:--</b></div>
-        <button id="tb-rooms" class="icon-btn" title="Explorar salas (Ctrl+B)" aria-label="Explorar salas">
+        <div id="tb-eve" class="tb-eve" title="Hora EVE (UTC)" data-i18n="title"><span>EVE</span><b id="tb-eve-time">--:--</b></div>
+        <button id="tb-rooms" class="icon-btn" title="Explorar salas (Ctrl+B)" aria-label="Explorar salas" data-i18n="title aria-label">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" /><circle cx="12" cy="12" r="10" /></svg></span>
         </button>
-        <button id="tb-search" class="icon-btn" title="Buscar en el historial (Ctrl+F)" aria-label="Buscar en el historial">
+        <button id="tb-search" class="icon-btn" title="Buscar en el historial (Ctrl+F)" aria-label="Buscar en el historial" data-i18n="title aria-label">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></svg></span>
         </button>
-        <button id="tb-settings" class="icon-btn" title="Preferencias (Ctrl+,)" aria-label="Preferencias">
+        <button id="tb-settings" class="icon-btn" title="Preferencias (Ctrl+,)" aria-label="Preferencias" data-i18n="title aria-label">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /><circle cx="12" cy="12" r="3" /></svg></span>
         </button>
         <div class="tb-overlay-space"></div>
@@ -46,11 +46,11 @@
           <div id="sidebar-accounts"></div>
           <div class="sb-search">
             <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg></span>
-            <input id="sb-filter" class="input" placeholder="Filtrar salas y contactos…" />
+            <input id="sb-filter" class="input" placeholder="Filtrar salas y contactos…" data-i18n="placeholder" />
           </div>
           <div id="sidebar-content"></div>
         </aside>
-        <div class="resizer" data-for="sidebar" title="Arrastra para cambiar el ancho"></div>
+        <div class="resizer" data-for="sidebar" title="Arrastra para cambiar el ancho" data-i18n="title"></div>
 
         <section id="center">
           <nav id="tabs" class="empty"></nav>
@@ -59,14 +59,14 @@
           </div>
         </section>
 
-        <div class="resizer" data-for="occupants" title="Arrastra para cambiar el ancho"></div>
+        <div class="resizer" data-for="occupants" title="Arrastra para cambiar el ancho" data-i18n="title"></div>
         <aside id="occupants" class="hidden">
           <header class="occ-head">
             <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><path d="M16 3.128a4 4 0 0 1 0 7.744" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" /></svg></span>
-            <span>Participantes</span>
+            <span data-i18n="text">Participantes</span>
             <span id="occ-count" class="sb-count">0</span>
           </header>
-          <div class="sb-search"><input id="occ-filter" class="input" placeholder="Buscar participante…" /></div>
+          <div class="sb-search"><input id="occ-filter" class="input" placeholder="Buscar participante…" data-i18n="placeholder" /></div>
           <div id="occ-list"></div>
         </aside>
       </div>

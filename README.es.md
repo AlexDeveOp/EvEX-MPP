@@ -1,0 +1,136 @@
+# EvEX-MPP
+
+[English](README.md) | **Español**
+
+Cliente XMPP (Jabber) de escritorio para Windows, pensado para comunidades y alianzas de EVE Online que se coordinan por Jabber. Es una alternativa moderna y muy personalizable a Pidgin: salas con autounión, pings de flota en tarjetas, avisos emergentes siempre visibles, hora EVE y temas. La interfaz está en español e inglés.
+
+![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6)
+
+## Descargar e instalar
+
+En [Releases](../../releases) hay dos ejecutables:
+
+| Archivo | Para qué |
+|---|---|
+| `EvEX-MPP-Setup-<versión>.exe` | **Instalador.** Se instala solo para tu usuario, sin permisos de administrador. Deja elegir carpeta, crea accesos en el escritorio y en el menú Inicio, y se puede anclar a la barra de tareas. Se desinstala desde «Aplicaciones instaladas» y conserva tus datos. |
+| `EvEX-MPP-<versión>-portable.exe` | **Portable.** No se instala. Guarda sus datos en `EvEX-MPP-datos`, junto al `.exe`, así que se puede llevar en un USB. |
+
+Los ejecutables no están firmados, así que la primera vez Windows SmartScreen avisará: «Más información» → «Ejecutar de todas formas».
+
+## Primer uso
+
+1. **Importar desde Pidgin** (recomendado). Copia la cuenta, el servidor de conexión (p. ej. `chat.ejemplo.com:5222`, con STARTTLS), las salas guardadas con su autounión, la contraseña (opcional) y todo el historial de Pidgin, sin duplicados.
+2. O **Añadir cuenta**: dirección (`usuario@ejemplo.com`), contraseña y servidor. Si tu servidor se conecta por un nombre distinto del dominio, indícalo en «Servidor de conexión».
+
+Para **cambiar de cuenta**, usa el menú de estado («Disponible ▾») o el icono de la bandeja → «Cambiar de cuenta…». La contraseña solo se guarda después de conectar con éxito.
+
+Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opciones son Automático (el de Windows), Español o English.
+
+## Funciones
+
+**Salas**
+- ★ marca una sala como **favorita** y ⚡ hace que se **abra al conectar**. ⚡ implica ★, y quitar la ★ saca la sala de la lista (con «Deshacer»).
+- Al conectar solo se entra en las salas con ⚡. Las salas abiertas que no son favoritas aparecen aparte, en «Abiertas ahora».
+- Explorador de salas del servidor, con búsqueda, número de usuarios y detalles.
+- Participantes agrupados por rol, apodo por sala, contraseña, invitaciones y moderación.
+- La lista se sincroniza con los marcadores del servidor (XEP-0048). Si el servidor no permite guardarlos (algunos no lo permiten), la lista se guarda en tu PC y las salas que quites no vuelven.
+
+**Pings de flota**
+- Los mensajes de los remitentes de pings que configures (p. ej. un bot de broadcasts como `pingbot@ejemplo.com`) se muestran como **tarjetas**: FC, formup (con enlace a Dotlan), PAP, comms, doctrina, grupo y quién lo envió.
+- Cada tarjeta lleva la hora local y la hora EVE.
+
+**Avisos**
+- **Burbuja propia** que sube desde la barra de tareas (por defecto abajo a la izquierda) y queda **siempre encima**, también sobre EVE en ventana sin bordes. Los pings se quedan hasta que los cierras.
+- Opcionalmente, la notificación de Windows en lugar de la burbuja, o ambas.
+- **«!» ámbar parpadeando en la bandeja** mientras haya pings sin leer, y parpadeo de la barra de tareas.
+- **Sonido distinto para cada tipo** (privado, mención, sala, ping): 9 sonidos incluidos o un archivo tuyo, con volumen.
+- Todo funciona igual con la ventana **minimizada o escondida en la bandeja**.
+
+**Mensajes**
+- Hora local (gris) y **hora EVE/UTC** (ámbar) en cada mensaje; cualquiera de las dos se puede ocultar. Reloj EVE en la barra de título.
+- Historial local con búsqueda y menciones con palabras clave.
+- Corregir el último mensaje con ↑, citas y `/me`.
+- Comandos tipo IRC (`/help`) y autocompletado de apodos (Tab) y de `:emoji:`.
+- Recibos de entrega, «escribiendo…» y vistas previas de imágenes y YouTube.
+
+**Personalización**
+- Interfaz en **español e inglés**, con selector de idioma.
+- 13 temas (Caldari, Amarr, Gallente, Minmatar, AMOLED, Nord, Dracula…), editor de cada color, y exportar/importar temas.
+- Cualquier fuente de Windows, escala y densidad.
+- 4 estilos de mensaje: moderno, burbujas, IRC y Pidgin.
+- Fondos (imagen, GIF o degradado) para la ventana, la barra lateral o cada conversación.
+- Emojis animados de Google (Noto), Twemoji o los nativos, y emojis propios.
+
+**Escritorio**
+- Bandeja del sistema (cerrar o minimizar a la bandeja).
+- Ausente automático, inicio con Windows y corrector ortográfico (es/en).
+
+**Atajos de teclado**
+
+| Atajo | Acción |
+|---|---|
+| `Ctrl+K` | Ir a sala o contacto |
+| `Ctrl+Tab` | Siguiente pestaña |
+| `Ctrl+W` | Cerrar pestaña |
+| `Ctrl+J` | Unirse a sala |
+| `Ctrl+B` | Explorar salas |
+| `Ctrl+F` | Buscar en el historial |
+| `Ctrl+,` | Preferencias |
+| `Alt+1…9` | Ir a la pestaña N |
+| `↑` | Corregir el último mensaje |
+
+## Datos y seguridad
+
+- Todo se guarda en `%APPDATA%\EvEX-MPP` (en la versión portable, junto al `.exe`): configuración, historial en JSONL, avatares y archivos propios.
+- Las contraseñas se cifran con DPAPI de Windows (`safeStorage`), así que en otro PC se vuelven a pedir.
+- La interfaz corre aislada (`contextIsolation`, `sandbox`, CSP estricta) y solo habla con el proceso principal por canales concretos.
+- El ejecutable lleva desactivados los *fuses* `RunAsNode`, `NODE_OPTIONS` y los argumentos de inspección.
+
+Pidgin guarda las contraseñas **en texto plano** en `%APPDATA%\.purple\accounts.xml`. Si dejas de usarlo, conviene borrarlas de ahí.
+
+Si usas Pidgin a la vez, los pings se entregan al cliente con **mayor prioridad**. Súbela en Cuentas → Conexión avanzada.
+
+## Desarrollo
+
+```
+npm install
+npm start          # lanza la app (scripts/start.mjs quita ELECTRON_RUN_AS_NODE, que VS Code define)
+npm run dev        # con DevTools
+npm run dist       # instalador + portable en dist/
+npm run assets     # regenera iconos (Lucide) y datos de emojis (emojibase)
+npm run i18n       # comprueba que todos los textos tienen traducción
+npm run probe      # comprueba TLS y SASL de un servidor sin autenticarse
+npm run mock       # servidor XMPP simulado en 127.0.0.1:5299 para pruebas
+```
+
+Estructura:
+
+```
+src/main/        Electron: ventanas, bandeja, burbujas (popups.js), IPC, XMPP (xmpp-account.js),
+                 historial (logs.js), importador de Pidgin, almacenamiento y contraseñas (store.js)
+src/preload.cjs  Puente IPC con lista de canales permitidos
+src/renderer/    Interfaz en JS y CSS sin compilación (módulos ES)
+src/renderer/locales/  Traducciones (el texto original del código está en español)
+scripts/         Arranque, generación de iconos y recursos, comprobación de traducciones, prueba de conexión
+test/            Servidor XMPP simulado, driver de DevTools y captura de escritorio
+```
+
+### Traducciones
+
+Los textos se escriben en español dentro del código con `t("…")`. Cada idioma tiene un fichero en `src/renderer/locales/` (por ejemplo `en.js`) que asocia cada texto español con su traducción. Para añadir un idioma, copia `en.js` con el código del idioma (`fr.js`, `de.js`…), traduce los valores y regístralo en `src/renderer/js/i18n.js`. `npm run i18n` lista los textos que faltan.
+
+### Probar sin una cuenta real
+
+1. Ejecuta `npm run mock`.
+2. Lanza la app con un perfil aislado: `set EVEX_USERDATA=C:\temp\perfil-pruebas` y luego `npm start`.
+3. Añade la cuenta `tester@test.local`, contraseña `test`, servidor `127.0.0.1`, puerto `5299`, seguridad «TLS si está disponible».
+4. Añade `pingbot` a los remitentes de pings para que el ping simulado salga como tal.
+
+Variables de diagnóstico:
+- `EVEX_DEBUG=1` muestra por consola la consola de la interfaz, los sonidos y el estado de la bandeja.
+- `EVEX_SHOT=ruta.png` guarda una captura al arrancar.
+- Con `--remote-debugging-port=9333`, `node test/cdp.mjs 9333 pasos.json` automatiza la interfaz.
+
+## Licencia
+
+MIT. Iconos: Lucide (ISC). Datos de emojis: emojibase (MIT). Fuentes: Fontsource (OFL).

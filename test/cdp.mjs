@@ -1,9 +1,11 @@
-// Driver mÃ­nimo por Chrome DevTools Protocol: node cdp.mjs <puerto> <pasos.json>
+﻿// Driver mínimo por Chrome DevTools Protocol para automatizar la interfaz.
+// Arranca la app con --remote-debugging-port=9333 y luego: node test/cdp.mjs 9333 pasos.json
 // Cada paso: {eval: "js"} | {shot: "ruta.png"} | {wait: ms}
 import fs from "node:fs";
+
 const [port, stepsFile] = process.argv.slice(2);
-const steps = JSON.parse(fs.readFileSync(stepsFile, "utf8").replace(/^\uFEFF/, ""));
-let targets;
+const steps = JSON.parse(fs.readFileSync(stepsFile, "utf8").replace(/^﻿/, ""));
+let targets = [];
 for (let i = 0; i < 40; i++) {
   try {
     targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
@@ -11,7 +13,8 @@ for (let i = 0; i < 40; i++) {
   } catch {}
   await new Promise((r) => setTimeout(r, 500));
 }
-const page = targets.find((t) => t.type === "page" && t.url.startsWith("app://"));
+// La ventana principal; las burbujas de aviso también son páginas de la app.
+const page = targets.find((t) => t.type === "page" && t.url.includes("index.html")) || targets.find((t) => t.type === "page" && t.url.startsWith("app://"));
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r));
 let id = 0;
@@ -47,4 +50,3 @@ for (const s of steps) {
 }
 ws.close();
 process.exit(0);
-
