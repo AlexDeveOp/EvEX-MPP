@@ -51,9 +51,11 @@ jobs:
         shell: pwsh
         run: |
           Set-Location dist
-          Get-ChildItem *.exe | Sort-Object Name | ForEach-Object {
+          $lines = Get-ChildItem *.exe | Sort-Object Name | ForEach-Object {
             "{0}  {1}" -f (Get-FileHash $_.Name -Algorithm SHA256).Hash.ToLower(), $_.Name
-          } | Set-Content -Encoding ascii checksums.txt
+          }
+          # Saltos de línea LF: así funciona también `sha256sum -c checksums.txt` (Linux, macOS, Git Bash).
+          [IO.File]::WriteAllText("$PWD/checksums.txt", ($lines -join "`n") + "`n")
           Get-Content checksums.txt
 
       # Las atestaciones son gratuitas en repositorios públicos; en privados dependen del plan de GitHub.

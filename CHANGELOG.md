@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Fixed
+- `checksums.txt` is written with LF line endings, so `sha256sum -c checksums.txt` works on Linux, macOS and Git Bash. The v0.4.0 file was re-uploaded with the same hashes.
+
 ## [0.4.0] - 2026-11-02
 
 ### Added
