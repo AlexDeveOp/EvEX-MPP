@@ -8,10 +8,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
-- README (English and Spanish) explains commit signing, GitHub vigilant mode and why the two oldest commits show as Unverified.
+- README (English and Spanish) explains commit signing and GitHub vigilant mode.
+
+### Changed
+- The whole history is signed: every commit and release tag shows as Verified.
 
 ### Fixed
-- `checksums.txt` is written with LF line endings, so `sha256sum -c checksums.txt` works on Linux, macOS and Git Bash. The v0.4.0 file was re-uploaded with the same hashes.
+- `checksums.txt` is written with LF line endings, so `sha256sum -c checksums.txt` works on Linux, macOS and Git Bash.
 
 ## [0.4.0] - 2026-11-02
 
@@ -64,6 +67,6 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 [Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.0...HEAD
 [0.4.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/AlexDeveOp/EvEX-MPP/releases/tag/v0.3.0
+[0.3.0]: https://github.com/AlexDeveOp/EvEX-MPP/tree/v0.3.0
 [0.2.0]: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/CHANGELOG.md#020---2026-11-02
 [0.1.0]: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/CHANGELOG.md#010---2026-11-02

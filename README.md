@@ -88,9 +88,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - The interface runs isolated (`contextIsolation`, `sandbox`, strict CSP) and only talks to the main process through a fixed set of channels.
 - The executable ships with the `RunAsNode`, `NODE_OPTIONS` and inspector *fuses* disabled.
 
-**Signed commits.** Since version 0.4.0, every commit and release tag is signed with the maintainer’s SSH signing key, so GitHub shows them as **Verified**. The account has GitHub’s *vigilant mode* turned on: any commit attributed to the maintainer that is **not** signed is marked **Unverified**, which makes impersonation easy to spot (anyone can put someone else’s name and email in a git commit, but nobody else can sign with their key).
-
-The two oldest commits in the history, `f7efcc8` (0.3.0) and `a6700f0` (the English/Spanish interface), were made before signing was set up, so they show as **Unverified**. They were not tampered with: signing them now would mean rewriting the published history, which is worse for transparency. Every commit from 0.4.0 onwards is signed.
+**Signed commits.** Every commit and release tag in this repository is signed with the maintainer’s SSH signing key, so GitHub shows them as **Verified**. The account has GitHub’s *vigilant mode* turned on: any commit attributed to the maintainer that is **not** signed would be marked **Unverified**, which makes impersonation easy to spot (anyone can put someone else’s name and email in a git commit, but nobody else can sign with their key). If you ever see an Unverified commit from the maintainer here, treat it as suspicious and report it (see [SECURITY.md](SECURITY.md)).
 
 Pidgin stores passwords **in plain text** in `%APPDATA%\.purple\accounts.xml`. If you stop using it, it is a good idea to remove them from there.
 
