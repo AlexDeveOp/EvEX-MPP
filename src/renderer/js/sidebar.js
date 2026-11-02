@@ -1,0 +1,409 @@
+// Barra lateral: cuentas y estado, pings, salas (favoritas / abiertas) y contactos.
+import { S, api, on, account, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
+import { h, icon, iconButton, $, clear, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle } from "./dom.js";
+import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
+import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";
+import { openRoomBrowser, openJoinRoom } from "./rooms.js";
+import { openAccounts, connectWithPrompt, openSwitchAccount } from "./accounts.js";
+import { openBackgroundEditor } from "./settings.js";
+import { openSearch } from "./search.js";
+
+const collapsed = new Set(JSON.parse(localStorage.getItem("evex.collapsed") || "[]"));
+let filter = "";
+
+export function initSidebar() {
+  const render = rafThrottle(renderSidebar);
+  for (const evt of ["sidebar", "accounts", "roster", "presence", "room", "conn", "settings", "avatar", "tabs"]) on(evt, render);
+  const input = $("#sb-filter");
+  input.addEventListener("input", () => {
+    filter = input.value.trim().toLowerCase();
+    renderSidebar();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      input.value = "";
+      filter = "";
+      renderSidebar();
+    }
+  });
+  renderSidebar();
+}
+
+function saveCollapsed() {
+  localStorage.setItem("evex.collapsed", JSON.stringify([...collapsed]));
+}
+
+function section(id, title, count, actions, content) {
+  const isCollapsed = collapsed.has(id);
+  return h(
+    "section",
+    { class: `sb-section ${isCollapsed ? "collapsed" : ""}` },
+    h(
+      "header",
+      {
+        class: "sb-section-head",
+        onclick: (e) => {
+          if (e.target.closest(".icon-btn")) return;
+          isCollapsed ? collapsed.delete(id) : collapsed.add(id);
+          saveCollapsed();
+          renderSidebar();
+        },
+      },
+      icon(isCollapsed ? "chevron-right" : "chevron-down", "sb-chevron"),
+      h("span", { class: "sb-section-title" }, title),
+      count != null ? h("span", { class: "sb-count" }, count) : null,
+      h("span", { class: "spacer" }),
+      actions,
+    ),
+    isCollapsed ? null : h("div", { class: "sb-items" }, content),
+  );
+}
+
+const matches = (...texts) => !filter || texts.some((t) => String(t || "").toLowerCase().includes(filter));
+
+function renderSidebar() {
+  const root = $("#sidebar-content");
+  const scroll = root.scrollTop;
+  clear(root);
+
+  clear($("#sidebar-accounts")).append(accountCards());
+
+  const pc = pingsConv();
+  root.append(
+    h(
+      "div",
+      { class: `sb-item pings ${S.active === PINGS_KEY ? "active" : ""} ${pc.unread ? "unread" : ""}`, onclick: () => openConv(null, "*", "pings") },
+      icon("siren", "sb-icon"),
+      h("span", { class: "sb-name" }, "Pings de flota"),
+      pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,
+    ),
+  );
+
+  // Con varias cuentas, solo se listan salas y contactos de las que están en uso.
+  const active = S.accounts.filter((a) => conn(a.id).state !== "offline");
+  for (const acc of active.length ? active : S.accounts) {
+    root.append(roomsSection(acc));
+    root.append(contactsSection(acc));
+  }
+  if (!S.accounts.length) {
+    root.append(h("div", { class: "empty-state small" }, icon("user-plus"), h("p", {}, "No hay cuentas configuradas."), h("button", { class: "btn primary", onclick: () => openAccounts() }, "Añadir cuenta")));
+  }
+  root.scrollTop = scroll;
+}
+
+// ---------- cuentas ----------
+
+const STATUS_OPTIONS = [
+  ["", "Disponible", "online"],
+  ["chat", "Hablador", "chat"],
+  ["away", "Ausente", "away"],
+  ["xa", "Ausente (extendido)", "xa"],
+  ["dnd", "No molestar", "dnd"],
+];
+
+function accountCards() {
+  const wrap = h("div", { class: "sb-accounts" });
+  for (const acc of S.accounts) {
+    const st = conn(acc.id);
+    const online = st.state === "online";
+    const show = online ? st.show || "online" : st.state === "connecting" || st.state === "reconnecting" ? "connecting" : "offline";
+    const label = online ? SHOW_LABEL[st.show || ""] : { connecting: "Conectando…", reconnecting: "Reconectando…", error: "Error", offline: "Desconectado" }[st.state] || st.state;
+    const card = h(
+      "div",
+      { class: `account-card ${st.state}` },
+      avatarEl(acc.jid, acc.alias, "account-avatar", show),
+      h(
+        "div",
+        { class: "account-info" },
+        h("div", { class: "account-name" }, acc.alias),
+        h(
+          "button",
+          { class: "status-btn", onclick: (e) => menuFor(e.currentTarget, statusMenu(acc)) },
+          h("span", { class: `presence-dot ${show}` }),
+          h("span", {}, label),
+          st.statusText && online ? h("span", { class: "status-text" }, `— ${st.statusText}`) : null,
+          icon("chevron-down"),
+        ),
+        st.state === "error" && st.error ? h("div", { class: "account-error", title: st.error }, st.error) : null,
+      ),
+      online
+        ? iconButton("power", "Desconectar", () => api("account:disconnect", acc.id))
+        : iconButton("log-in", "Conectar", () => connectWithPrompt(acc.id), "accent"),
+    );
+    wrap.append(card);
+  }
+  return wrap;
+}
+
+function statusMenu(acc) {
+  const st = conn(acc.id);
+  const online = st.state === "online";
+  return [
+    ...STATUS_OPTIONS.map(([show, label, cls]) => ({
+      label,
+      icon: "circle",
+      checked: online && (st.show || "") === show,
+      action: async () => {
+        if (!online) await connectWithPrompt(acc.id);
+        api("presence:set", acc.id, show, st.statusText || "").catch((e) => toast(e.message, { kind: "error" }));
+      },
+      cls,
+    })),
+    "-",
+    {
+      label: "Mensaje de estado…",
+      icon: "square-pen",
+      disabled: !online,
+      action: async () => {
+        const msg = await prompt({ title: "Mensaje de estado", label: "Lo verán tus contactos y las salas", value: st.statusText || "", icon: "square-pen" });
+        if (msg != null) api("presence:set", acc.id, st.show || "", msg);
+      },
+    },
+    { label: "Cambiar mi avatar…", icon: "image", disabled: !online, action: () => api("avatar:set", acc.id).catch((e) => toast(e.message, { kind: "error" })) },
+    "-",
+    online ? { label: "Desconectar", icon: "power", action: () => api("account:disconnect", acc.id) } : { label: "Conectar", icon: "log-in", action: () => connectWithPrompt(acc.id) },
+    { label: "Cambiar de cuenta…", icon: "refresh-cw", action: openSwitchAccount },
+    { label: "Configurar cuenta…", icon: "user-cog", action: () => openAccounts(acc.id) },
+  ];
+}
+
+// ---------- salas ----------
+
+function roomsSection(acc) {
+  const live = S.rooms[acc.id] || new Map();
+  const favorites = acc.rooms.filter((r) => r.favorite || r.autojoin);
+  // Salas abiertas en esta sesión que no están en favoritas (también las que tengan ambos iconos apagados).
+  const others = [];
+  for (const [jid, r] of live) {
+    if (!(r.joined || r.joining) || favorites.some((x) => x.jid === jid)) continue;
+    const saved = acc.rooms.find((x) => x.jid === jid);
+    others.push(saved || { jid, name: jid.split("@")[0], favorite: false, autojoin: false, temp: true });
+  }
+  const sortRooms = (a, b) => (a.name || a.jid).localeCompare(b.name || b.jid);
+  const favItems = favorites.sort(sortRooms).filter((r) => matches(r.name, r.jid)).map((r) => roomItem(acc, r));
+  const otherItems = others.sort(sortRooms).filter((r) => matches(r.name, r.jid)).map((r) => roomItem(acc, r));
+  const items = [...favItems, ...(otherItems.length ? [h("div", { class: "sb-subhead" }, "Abiertas ahora (no favoritas)"), ...otherItems] : [])];
+  return section(
+    `rooms:${acc.id}`,
+    S.accounts.length > 1 ? `Salas favoritas · ${acc.alias}` : "Salas favoritas",
+    `${[...live.values()].filter((r) => r.joined).length}/${favorites.length}`,
+    [iconButton("compass", "Explorar salas del servidor", () => openRoomBrowser(acc.id)), iconButton("plus", "Unirse a una sala", () => openJoinRoom(acc.id))],
+    items.length ? items : h("div", { class: "sb-empty" }, filter ? "Sin resultados" : "Sin salas. Usa ", !filter ? h("a", { href: "#", onclick: (e) => (e.preventDefault(), openRoomBrowser(acc.id)) }, "Explorar salas") : null),
+  );
+}
+
+function roomItem(acc, room) {
+  const fav = !!(room.favorite || room.autojoin);
+  const key = convKey(acc.id, room.jid);
+  const c = S.convs.get(key);
+  const r = roomState(acc.id, room.jid);
+  const mode = c ? notifyMode(c) : "mentions";
+  const badge = c ? (mode === "all" ? c.unread : c.mentions) : 0;
+  const dim = c && !c.mentions && c.unread && mode !== "all";
+  return h(
+    "div",
+    {
+      class: `sb-item room ${S.active === key ? "active" : ""} ${r.joined ? "joined" : r.joining ? "joining" : "parted"} ${c?.unread ? "unread" : ""} ${dim ? "quiet-unread" : ""}`,
+      title: `${room.jid}${r.subject ? `\n${r.subject}` : ""}`,
+      onclick: () => openConv(acc.id, room.jid, "groupchat"),
+      oncontextmenu: (e) => {
+        e.preventDefault();
+        showMenu(e.clientX, e.clientY, roomMenu(acc, room));
+      },
+    },
+    icon(r.error ? "triangle-alert" : "hash", "sb-icon"),
+    h("span", { class: "sb-name" }, room.name || room.jid.split("@")[0]),
+    r.joined ? h("span", { class: "sb-meta" }, r.occupants.size) : null,
+    badge ? h("span", { class: `badge ${c.mentions ? "mention" : ""}` }, badge > 99 ? "99+" : badge) : null,
+    h(
+      "span",
+      { class: "sb-quick" },
+      iconButton("zap", room.autojoin ? "Se abre al iniciar" : "Abrir al iniciar", (e) => (e.stopPropagation(), toggleAutojoin(acc.id, room.jid)), room.autojoin ? "on zap" : ""),
+      iconButton("star", fav ? "Favorita (clic para quitarla)" : "Añadir a favoritas", (e) => (e.stopPropagation(), toggleFavorite(acc.id, room.jid)), fav ? "on star" : ""),
+    ),
+  );
+}
+
+function roomMenu(acc, room) {
+  const key = convKey(acc.id, room.jid);
+  const r = roomState(acc.id, room.jid);
+  return [
+    { label: r.joined ? "Abrir" : "Entrar", icon: "log-in", action: () => openConv(acc.id, room.jid, "groupchat") },
+    r.joined || r.joining ? { label: "Salir de la sala", icon: "door-open", action: () => closeConv(key) } : null,
+    "-",
+    { label: "Favorita", icon: "star", checked: !!(room.favorite || room.autojoin), action: () => toggleFavorite(acc.id, room.jid) },
+    { label: "Entrar automáticamente al iniciar", icon: "zap", checked: !!room.autojoin, action: () => toggleAutojoin(acc.id, room.jid) },
+    { header: "Notificaciones" },
+    ...[
+      ["default", "Por defecto"],
+      ["all", "Todos los mensajes"],
+      ["mentions", "Solo menciones"],
+      ["none", "Silenciada"],
+    ].map(([v, l]) => ({
+      label: l,
+      checked: (S.settings.notifications.roomModes[key] || "default") === v,
+      action: () =>
+        updateSettings((s) => {
+          if (v === "default") delete s.notifications.roomModes[key];
+          else s.notifications.roomModes[key] = v;
+        }),
+    })),
+    "-",
+    {
+      label: "Renombrar…",
+      icon: "pencil",
+      disabled: room.temp,
+      action: async () => {
+        const name = await prompt({ title: "Nombre de la sala", label: room.jid, value: room.name, icon: "pencil" });
+        if (name == null) return;
+        acc.rooms.find((x) => x.jid === room.jid).name = name.trim() || room.jid.split("@")[0];
+        saveRooms(acc.id);
+      },
+    },
+    {
+      label: "Apodo en esta sala…",
+      icon: "user",
+      disabled: room.temp,
+      action: async () => {
+        const nick = await prompt({ title: "Apodo para esta sala", label: "Vacío = apodo de la cuenta", value: room.nick || "", icon: "user" });
+        if (nick == null) return;
+        acc.rooms.find((x) => x.jid === room.jid).nick = nick.trim();
+        saveRooms(acc.id);
+      },
+    },
+    { label: "Fondo personalizado…", icon: "image", action: () => openBackgroundEditor(key) },
+    { label: "Buscar en el historial", icon: "search", action: () => openSearch({ accountId: acc.id, conv: room.jid }) },
+    { label: "Copiar dirección", icon: "copy", action: () => navigator.clipboard.writeText(room.jid) },
+    "-",
+    !room.temp
+      ? {
+          label: "Quitar de la lista",
+          icon: "trash-2",
+          danger: true,
+          action: async () => {
+            if (!(await confirmDialog({ title: "Quitar sala", message: `¿Quitar ${room.name} de tu lista de salas? El historial local se conserva.`, okLabel: "Quitar", danger: true }))) return;
+            acc.rooms = acc.rooms.filter((x) => x.jid !== room.jid);
+            saveRooms(acc.id);
+          },
+        }
+      : null,
+  ];
+}
+
+// ---------- contactos ----------
+
+function contactsSection(acc) {
+  const roster = [...rosterOf(acc.id).values()].filter((c) => c.inRoster);
+  const showOffline = S.settings.behavior.showOffline;
+  const groups = new Map();
+  let online = 0;
+  for (const c of roster) {
+    const p = bestPresence(c);
+    if (p.show !== "offline") online++;
+    if (!showOffline && p.show === "offline" && !S.convs.get(convKey(acc.id, c.jid))?.unread) continue;
+    if (!matches(c.name, c.jid)) continue;
+    for (const g of c.groups.length ? c.groups : ["Contactos"]) {
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push({ c, p });
+    }
+  }
+  const RANK = { chat: 0, online: 0, away: 1, xa: 2, dnd: 3, offline: 9 };
+  const content = [];
+  for (const [g, list] of [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    list.sort((a, b) => RANK[a.p.show] - RANK[b.p.show] || (a.c.name || a.c.jid).localeCompare(b.c.name || b.c.jid));
+    const gid = `group:${acc.id}:${g}`;
+    const isCollapsed = collapsed.has(gid);
+    content.push(
+      h(
+        "div",
+        {
+          class: "sb-group",
+          onclick: () => {
+            isCollapsed ? collapsed.delete(gid) : collapsed.add(gid);
+            saveCollapsed();
+            renderSidebar();
+          },
+        },
+        icon(isCollapsed ? "chevron-right" : "chevron-down"),
+        h("span", {}, g),
+        h("span", { class: "sb-count" }, `${list.filter((x) => x.p.show !== "offline").length}/${list.length}`),
+      ),
+    );
+    if (!isCollapsed) for (const { c, p } of list) content.push(contactItem(acc, c, p));
+  }
+  if (!content.length) content.push(h("div", { class: "sb-empty" }, conn(acc.id).state === "online" ? (filter ? "Sin resultados" : "Nadie conectado") : "Sin conexión"));
+  return section(
+    `contacts:${acc.id}`,
+    S.accounts.length > 1 ? `Contactos · ${acc.alias}` : "Contactos",
+    `${online}/${roster.length}`,
+    [
+      iconButton(showOffline ? "eye" : "eye-off", showOffline ? "Ocultar desconectados" : "Mostrar desconectados", () => updateSettings((s) => (s.behavior.showOffline = !s.behavior.showOffline)), showOffline ? "on" : ""),
+      iconButton("user-plus", "Añadir contacto", () => addContact(acc)),
+    ],
+    content,
+  );
+}
+
+function contactItem(acc, c, p) {
+  const key = convKey(acc.id, c.jid);
+  const conv = S.convs.get(key);
+  return h(
+    "div",
+    {
+      class: `sb-item contact ${p.show} ${S.active === key ? "active" : ""} ${conv?.unread ? "unread" : ""}`,
+      title: `${c.jid}${p.status ? `\n${p.status}` : ""}`,
+      onclick: () => openConv(acc.id, c.jid, "chat"),
+      oncontextmenu: (e) => {
+        e.preventDefault();
+        showMenu(e.clientX, e.clientY, contactMenu(acc, c));
+      },
+    },
+    avatarEl(c.jid, c.name || c.jid, "sb-avatar", p.show),
+    h("span", { class: "sb-name-wrap" }, h("span", { class: "sb-name" }, c.name || c.jid.split("@")[0]), p.status ? h("span", { class: "sb-status" }, p.status) : null),
+    conv?.unread ? h("span", { class: "badge mention" }, conv.unread) : null,
+  );
+}
+
+function contactMenu(acc, c) {
+  return [
+    { label: "Enviar mensaje", icon: "message-square", action: () => openConv(acc.id, c.jid, "chat") },
+    { label: "Buscar en el historial", icon: "search", action: () => openSearch({ accountId: acc.id, conv: c.jid }) },
+    "-",
+    {
+      label: "Renombrar…",
+      icon: "pencil",
+      action: async () => {
+        const name = await prompt({ title: "Renombrar contacto", label: c.jid, value: c.name, icon: "pencil" });
+        if (name != null) api("roster:update", acc.id, c.jid, name.trim(), c.groups).catch((e) => toast(e.message, { kind: "error" }));
+      },
+    },
+    {
+      label: "Cambiar grupo…",
+      icon: "folder-open",
+      action: async () => {
+        const g = await prompt({ title: "Grupos", label: "Separados por comas", value: c.groups.join(", "), icon: "folder-open" });
+        if (g != null) api("roster:update", acc.id, c.jid, c.name, g.split(",").map((x) => x.trim()).filter(Boolean)).catch((e) => toast(e.message, { kind: "error" }));
+      },
+    },
+    { label: "Fondo personalizado…", icon: "image", action: () => openBackgroundEditor(convKey(acc.id, c.jid)) },
+    { label: "Copiar dirección", icon: "copy", action: () => navigator.clipboard.writeText(c.jid) },
+    "-",
+    {
+      label: "Eliminar contacto",
+      icon: "trash-2",
+      danger: true,
+      action: async () => {
+        if (await confirmDialog({ title: "Eliminar contacto", message: `¿Eliminar a ${c.name || c.jid} de tu lista?`, okLabel: "Eliminar", danger: true })) api("roster:remove", acc.id, c.jid);
+      },
+    },
+  ];
+}
+
+async function addContact(acc) {
+  const jid = await prompt({ title: "Añadir contacto", label: "Dirección XMPP", placeholder: `usuario@${acc.jid.split("@")[1]}`, icon: "user-plus" });
+  if (!jid) return;
+  const full = jid.includes("@") ? jid.trim().toLowerCase() : `${jid.trim().toLowerCase()}@${acc.jid.split("@")[1]}`;
+  api("roster:add", acc.id, full, "", []).then(() => toast(`Solicitud enviada a ${full}`, { kind: "ok" })).catch((e) => toast(e.message, { kind: "error" }));
+}
+
+export { avatarUrl };

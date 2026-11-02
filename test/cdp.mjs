@@ -1,0 +1,50 @@
+// Driver mÃ­nimo por Chrome DevTools Protocol: node cdp.mjs <puerto> <pasos.json>
+// Cada paso: {eval: "js"} | {shot: "ruta.png"} | {wait: ms}
+import fs from "node:fs";
+const [port, stepsFile] = process.argv.slice(2);
+const steps = JSON.parse(fs.readFileSync(stepsFile, "utf8").replace(/^\uFEFF/, ""));
+let targets;
+for (let i = 0; i < 40; i++) {
+  try {
+    targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+    if (targets.some((t) => t.type === "page")) break;
+  } catch {}
+  await new Promise((r) => setTimeout(r, 500));
+}
+const page = targets.find((t) => t.type === "page" && t.url.startsWith("app://"));
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((r) => ws.addEventListener("open", r));
+let id = 0;
+const pending = new Map();
+ws.addEventListener("message", (e) => {
+  const m = JSON.parse(e.data);
+  if (m.id && pending.has(m.id)) {
+    pending.get(m.id)(m);
+    pending.delete(m.id);
+  }
+  if (m.method === "Runtime.exceptionThrown") console.log("EXCEPTION", JSON.stringify(m.params.exceptionDetails).slice(0, 800));
+  if (m.method === "Runtime.consoleAPICalled" && ["error", "warning"].includes(m.params.type)) console.log("CONSOLE", m.params.type, m.params.args.map((a) => a.value ?? a.description).join(" ").slice(0, 600));
+});
+const send = (method, params = {}) =>
+  new Promise((r) => {
+    const i = ++id;
+    pending.set(i, r);
+    ws.send(JSON.stringify({ id: i, method, params }));
+  });
+await send("Runtime.enable");
+for (const s of steps) {
+  if (s.wait) await new Promise((r) => setTimeout(r, s.wait));
+  if (s.eval) {
+    const r = await send("Runtime.evaluate", { expression: s.eval, awaitPromise: true, returnByValue: true });
+    const v = r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description ?? r.result?.result?.description;
+    console.log("EVAL:", s.label || s.eval.slice(0, 60), "=>", typeof v === "string" ? v.slice(0, 1500) : JSON.stringify(v)?.slice(0, 1500));
+  }
+  if (s.shot) {
+    const r = await send("Page.captureScreenshot", { format: "png" });
+    fs.writeFileSync(s.shot, Buffer.from(r.result.data, "base64"));
+    console.log("SHOT", s.shot);
+  }
+}
+ws.close();
+process.exit(0);
+

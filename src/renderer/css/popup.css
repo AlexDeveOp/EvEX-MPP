@@ -1,0 +1,167 @@
+/* Burbuja de notificación (ventana transparente propia). */
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  font-size: 13.5px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.card {
+  --accent: var(--theme-accent, #3b9bff);
+  position: relative;
+  margin: 0 0 4px;
+  border-radius: 14px;
+  background: var(--surface, #1a2230);
+  color: var(--text, #e6edf3);
+  border: 1px solid var(--border, #263244);
+  border-left: 5px solid var(--accent);
+  box-shadow: 0 8px 26px rgb(0 0 0 / 0.45);
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0;
+}
+.card.in-bottom {
+  animation: rise 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards;
+}
+.card.in-top {
+  animation: drop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards;
+}
+.card.out {
+  animation: fade 0.24s ease-in forwards;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(110%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.card.ping {
+  --accent: var(--warn, #f59e0b);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, var(--surface, #1a2230)), var(--surface, #1a2230) 70%);
+}
+.card.ping .head .badge {
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 10px 4px 12px;
+}
+.badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #111;
+  font-weight: 900;
+  font-size: 16px;
+}
+.card.msg .badge {
+  color: #fff;
+}
+.title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 1.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app {
+  font-size: 0.75em;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+.close {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+.close:hover {
+  opacity: 1;
+  background: rgb(127 127 127 / 0.2);
+}
+.body {
+  padding: 2px 14px 12px 47px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 260px;
+  overflow: hidden;
+}
+.fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin-top: 6px;
+}
+.fields dt {
+  opacity: 0.65;
+  font-size: 0.9em;
+}
+.fields dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.foot {
+  margin-top: 6px;
+  font-size: 0.8em;
+  opacity: 0.6;
+}
+.time {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+}
+.time .eve {
+  font-weight: 700;
+  color: var(--warn, #f59e0b);
+  font-family: Consolas, monospace;
+}
