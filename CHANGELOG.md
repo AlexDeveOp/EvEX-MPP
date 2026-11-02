@@ -7,6 +7,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-02
+
+Privacy and offline release: the most used animated emoji come with the app, an optional new-version notice, and a privacy policy that lists every network connection.
+
 ### Added
 - The 160 most used animated emoji (Animated Noto Emoji by Google, CC BY 4.0) come with the app: they work offline and are no longer requested from Google. Other emoji use the Windows style unless you turn on *Preferences → Emoji → Download animated emoji that don't come with the app* (off by default). The emoji picker no longer loads images from the Internet with the default style.
 - Optional new-version notice: *Preferences → Accounts and data → Updates* (off by default) checks the latest GitHub release once a day and only notifies, with a link to the release page. *Check now* checks on demand.
@@ -14,6 +18,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - `npm run assets:emoji` (regenerates the bundled animated emoji) and `npm run license-pages` (regenerates the installer's privacy and license page).
 - Privacy policy (`PRIVACY.md`, English and Spanish): what is stored, every network connection the app makes and how to turn each one off. A summary is shown by the installer before installing.
 - "Code signing policy" section in the README, in preparation for code signing through SignPath Foundation.
+
+### Changed
+- Security fixes are now provided for 0.5.x only (`SECURITY.md`).
+- `sharp` 0.35.5 (development only) for the emoji generator.
+
+### Security
+- The emoji generator only accepts hexadecimal codepoints as file names, and the update check strictly validates the repository name before querying GitHub (CodeQL).
 
 ## [0.4.2] - 2026-11-02
 
@@ -108,7 +119,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.3.0...v0.4.0
