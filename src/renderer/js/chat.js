@@ -133,6 +133,20 @@ function renderTabs() {
     bar.append(tab);
   });
   bar.classList.toggle("empty", !S.tabs.length);
+  // Sin barra de desplazamiento: la rueda recorre las pestañas a lo ancho y la activa queda siempre a la vista.
+  if (!bar.dataset.wheel) {
+    bar.dataset.wheel = "1";
+    bar.addEventListener(
+      "wheel",
+      (e) => {
+        if (bar.scrollWidth <= bar.clientWidth) return;
+        bar.scrollLeft += e.deltaY || e.deltaX;
+        e.preventDefault();
+      },
+      { passive: false },
+    );
+  }
+  bar.querySelector(".tab.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function tabIcon(c) {

@@ -540,19 +540,21 @@ body.resizing {
   width: 24px;
   height: 24px;
 }
-/* Sin pasar el ratón solo se ve el rayo de las salas con autounión. */
-.sb-item:not(:hover) .sb-quick .icon-btn:not(.on.zap) {
-  display: none;
-}
-.sb-item:not(:hover) .sb-quick .on.zap {
-  width: 16px;
-  opacity: 0.8;
-}
-.sb-item:hover .sb-meta {
-  display: none;
+/* Nada cambia de tamaño al pasar el ratón ni al hacer clic (antes la fila temblaba y se veía el número un instante):
+   el número de personas siempre está y la estrella y el rayo tienen su sitio reservado; solo se funden.
+   Sin pasar el ratón solo se ve el rayo de las salas con autounión. */
+.sb-quick .icon-btn {
+  transition: opacity 0.12s;
 }
 .sb-quick .icon-btn:not(.on) {
   opacity: 0.45;
+}
+.sb-item:not(:hover) .sb-quick .icon-btn:not(.on.zap) {
+  opacity: 0;
+  pointer-events: none;
+}
+.sb-item:not(:hover) .sb-quick .on.zap {
+  opacity: 0.8;
 }
 .sb-group {
   display: flex;
@@ -663,16 +665,25 @@ body.resizing {
 
 /* ---------- pestañas ---------- */
 
+/* Altura fija justa para las pestañas, sin barras de desplazamiento. Si no caben a lo ancho se recorren con la rueda
+   del ratón y la activa se coloca sola a la vista (chat.js). El borde inferior va por dentro (sombra) para que la
+   pestaña activa lo tape sin salirse de la barra. */
 #tabs {
   --panel-color: var(--bg2);
   display: flex;
   gap: 2px;
+  height: 40px;
+  box-sizing: border-box;
   padding: 6px 8px 0;
   background: var(--bg2);
-  border-bottom: 1px solid var(--border);
+  box-shadow: inset 0 -1px 0 var(--border);
   overflow-x: auto;
+  overflow-y: hidden;
   flex: none;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+#tabs::-webkit-scrollbar {
+  display: none;
 }
 #tabs.empty {
   display: none;
@@ -692,7 +703,6 @@ body.resizing {
   border: 1px solid transparent;
   border-bottom: 0;
   position: relative;
-  top: 1px;
   flex: none;
 }
 .tab:hover {
