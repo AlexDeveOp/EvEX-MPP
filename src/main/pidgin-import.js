@@ -81,10 +81,19 @@ export function scanPidgin({ includePasswords = false } = {}) {
 // ---------- registros ----------
 
 const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+function stripTags(s) {
+  // Se repite hasta que no queden etiquetas: quitar una puede dejar otra formada ("<<b>b>").
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(/<[^>]*>/g, "");
+  } while (s !== prev);
+  return s;
+}
+
+// Devuelve texto plano; quien lo muestre debe escaparlo (formatBody lo hace).
 function decodeHtml(s) {
-  return s
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
+  return stripTags(s.replace(/<br\s*\/?>/gi, "\n"))
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
       if (e[0] === "#") return String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
       return ENTITIES[e.toLowerCase()] ?? m;

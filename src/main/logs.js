@@ -95,22 +95,25 @@ export class Logs {
 
   tailFile(file, limit, beforeTs) {
     let text;
+    let fd;
     try {
-      const stat = fs.statSync(file);
+      // Se abre una sola vez y todo se lee del mismo descriptor, sin volver a buscar el fichero por su ruta.
+      fd = fs.openSync(file, "r");
+      const { size } = fs.fstatSync(fd);
       // Leer solo el final del fichero cuando es grande.
       const max = 4 * 1024 * 1024;
-      if (stat.size > max && !beforeTs && limit !== Infinity) {
-        const fd = fs.openSync(file, "r");
+      if (size > max && !beforeTs && limit !== Infinity) {
         const buf = Buffer.alloc(max);
-        fs.readSync(fd, buf, 0, max, stat.size - max);
-        fs.closeSync(fd);
+        fs.readSync(fd, buf, 0, max, size - max);
         text = buf.toString("utf8");
         text = text.slice(text.indexOf("\n") + 1);
       } else {
-        text = fs.readFileSync(file, "utf8");
+        text = fs.readFileSync(fd, "utf8");
       }
     } catch {
       return [];
+    } finally {
+      if (fd !== undefined) fs.closeSync(fd);
     }
     const out = [];
     const lines = text.split("\n");

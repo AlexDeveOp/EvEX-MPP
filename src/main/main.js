@@ -450,7 +450,12 @@ function copyToMedia(src, sub = "files") {
   const name = `${hash}${ext}`;
   fs.mkdirSync(mediaDir(sub), { recursive: true });
   const dest = mediaDir(sub, name);
-  if (!fs.existsSync(dest)) fs.writeFileSync(dest, data);
+  // "wx" falla si ya existe: el nombre es el hash del contenido, así que ya está copiado.
+  try {
+    fs.writeFileSync(dest, data, { flag: "wx" });
+  } catch (err) {
+    if (err.code !== "EEXIST") throw err;
+  }
   return `media://evex/${sub}/${name}`;
 }
 
