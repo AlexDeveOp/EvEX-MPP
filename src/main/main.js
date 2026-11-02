@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import * as store from "./store.js";
 import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
-import { scanPidgin, importLogs, scanPidginSounds } from "./pidgin-import.js";
+import { scanPidgin, importLogs, scanPidginSounds, repairImportedLogs } from "./pidgin-import.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, closeAllPopups } from "./popups.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
@@ -673,6 +673,25 @@ function registerIpc() {
     const out = {};
     for (const k of kinds || []) if (r.sounds[k]) out[k] = copyToMedia(r.sounds[k].file, "sounds");
     return out;
+  });
+
+  // Repara el historial importado de Pidgin con versiones anteriores (fechas día/mes y avisos de Pidgin).
+  // Antes copia la carpeta de historial entera, por si hubiera que volver atrás.
+  handle("pidgin:repairLogs", async () => {
+    const scan = scanPidgin();
+    const targets = store.get().accounts.map((acc) => ({ acc, p: scan.accounts.find((p) => p.jid === acc.jid) })).filter((x) => x.p && fs.existsSync(x.p.logsDir));
+    if (!targets.length) return { accounts: 0 };
+    const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
+    const backup = path.join(userData(), `logs-copia-${stamp}`);
+    fs.cpSync(path.join(userData(), "logs"), backup, { recursive: true });
+    const total = { accounts: targets.length, conversations: 0, fixed: 0, removed: 0, backup: path.basename(backup) };
+    for (const { acc, p } of targets) {
+      const r = await repairImportedLogs({ logsDir: p.logsDir, selfNames: [p.alias, p.jid.split("@")[0]].filter(Boolean).map((s) => s.toLowerCase()), logs, accountId: acc.id });
+      total.conversations += r.conversations;
+      total.fixed += r.fixed;
+      total.removed += r.removed;
+    }
+    return total;
   });
 
   handle("pidgin:scan", () => {

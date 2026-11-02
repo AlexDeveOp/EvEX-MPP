@@ -144,23 +144,57 @@ function fileBaseDate(name) {
   return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : null;
 }
 
-function resolveDate(a, b, c, base) {
-  // El formato depende de la configuración regional de Pidgin: AAAA/MM/DD, DD/MM/AAAA o MM/DD/AAAA.
+// El formato depende de la configuración regional de Pidgin: AAAA/MM/DD, DD/MM/AAAA o MM/DD/AAAA.
+// order: "dmy" | "mdy" | null (detectado con detectDateOrder en todos los registros de la cuenta).
+// Sin orden conocido se descartan las interpretaciones posteriores a la fecha del fichero (+2 días, por sesiones largas):
+// un registro no puede tener mensajes del futuro. Antes no se descartaban y 12/08 (12 de agosto) salía como 8 de diciembre.
+// legacy: la regla antigua, solo para reparar lo que se importó con ella.
+function resolveDate(a, b, c, base, order = null, legacy = false) {
   a = +a;
   b = +b;
   c = +c;
   if (a > 999) return [a, b, c];
-  const candidates = [];
+  if (!legacy && order === "dmy") return [c, b, a];
+  if (!legacy && order === "mdy") return [c, a, b];
+  let candidates = [];
   if (b <= 12) candidates.push([c, b, a]);
   if (a <= 12) candidates.push([c, a, b]);
   if (!candidates.length) return [c, b, a];
   if (!base) return candidates[0];
-  // Elegir la interpretación más cercana (y no posterior) a la fecha del fichero.
+  if (!legacy) {
+    const limit = base.getTime() + 2 * 86400e3;
+    const notFuture = candidates.filter((x) => new Date(x[0], x[1] - 1, x[2]).getTime() <= limit);
+    if (notFuture.length) candidates = notFuture;
+  }
+  // La interpretación más cercana a la fecha del fichero.
   candidates.sort((x, y) => Math.abs(new Date(x[0], x[1] - 1, x[2]) - base) - Math.abs(new Date(y[0], y[1] - 1, y[2]) - base));
   return candidates[0];
 }
 
-export function parseLogFile(file, { selfNames = [], isRoom = false } = {}) {
+const DATE_IN_LOG = /\((\d{1,2})[/.-](\d{1,2})[/.-]\d{2,4} \d{1,2}:\d{2}:\d{2}/g;
+// Mira las fechas de los registros hasta encontrar una que delate el formato (un 25/10 solo puede ser día/mes).
+export function detectDateOrder(files) {
+  for (const file of files) {
+    let text;
+    try {
+      text = fs.readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    for (const m of text.matchAll(DATE_IN_LOG)) {
+      if (+m[1] > 12) return "dmy";
+      if (+m[2] > 12) return "mdy";
+    }
+  }
+  return null;
+}
+
+// Avisos que Pidgin escribe en sus registros (entradas, salidas, desconexiones, cambios de apodo…): no son mensajes y
+// no se importan. Se conservan los cambios de tema, que Pidgin también muestra.
+const TOPIC_RE = /ha cambiado el tema|cambi[oó] el tema|changed the topic/i;
+
+// dateOrder: formato de fecha detectado para la cuenta. legacy: leer como las versiones anteriores (solo para reparar).
+export function parseLogFile(file, { selfNames = [], isRoom = false, dateOrder = null, legacy = false } = {}) {
   const name = path.basename(file);
   const base = fileBaseDate(name);
   const html = name.endsWith(".html") || name.endsWith(".htm");
@@ -174,6 +208,7 @@ export function parseLogFile(file, { selfNames = [], isRoom = false } = {}) {
   const out = [];
   let lastTs = base ? base.getTime() : 0;
   let day = base ? new Date(base.getFullYear(), base.getMonth(), base.getDate()) : null;
+  let skipping = false;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
@@ -187,10 +222,13 @@ export function parseLogFile(file, { selfNames = [], isRoom = false } = {}) {
     if (/^\s*(<\/?(body|html)>\s*)+$/i.test(line) || !line.trim()) continue;
     const m = line.match(TIME_RE);
     if (!m) {
+      // Las líneas de continuación de un aviso descartado se descartan con él (antes se pegaban al mensaje anterior).
+      if (skipping) continue;
       const extra = html ? decodeHtml(line) : line;
       if (out.length && extra.trim()) out[out.length - 1].body += "\n" + extra;
       continue;
     }
+    skipping = false;
     const [, d1, d2, d3, hh, mm, ss, ampm] = m;
     let h = +hh;
     if (ampm) {
@@ -200,7 +238,7 @@ export function parseLogFile(file, { selfNames = [], isRoom = false } = {}) {
     }
     let ts;
     if (d1) {
-      const [y, mo, d] = resolveDate(d1, d2, d3, base);
+      const [y, mo, d] = resolveDate(d1, d2, d3, base, dateOrder, legacy);
       ts = new Date(y, mo - 1, d, h, +mm, +ss).getTime();
     } else if (day) {
       ts = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, +mm, +ss).getTime();
@@ -216,21 +254,34 @@ export function parseLogFile(file, { selfNames = [], isRoom = false } = {}) {
     let body;
     if (html) {
       const nm = rest.match(/^\s*(?:<\/[^>]+>\s*)*<b>(.*?):<\/b>(?:\s*<\/[^>]+>)*\s?([\s\S]*)$/i);
+      // Acción /me: Pidgin la escribe como «***nick acción».
+      const act = !legacy && !nm && rest.match(/^\s*(?:<\/[^>]+>\s*)*<b>\*\*\*(.*?)<\/b>(?:\s*<\/[^>]+>)*\s?([\s\S]*)$/i);
       if (nm) {
         nick = decodeHtml(nm[1]).trim();
         body = decodeHtml(nm[2]);
+      } else if (act) {
+        nick = decodeHtml(act[1]).trim();
+        body = `/me ${decodeHtml(act[2]).trim()}`;
       } else {
         body = decodeHtml(rest).trim();
       }
     } else {
       const nm = rest.match(/^\s*([^:]{1,64}): ([\s\S]*)$/);
+      const act = !legacy && !nm && rest.match(/^\s*\*\*\*(\S+) ([\s\S]*)$/);
       if (nm) {
         nick = nm[1].trim();
         body = nm[2];
+      } else if (act) {
+        nick = act[1];
+        body = `/me ${act[2]}`;
       } else body = rest.trim();
     }
     body = body.replace(/\n+$/, "");
     if (!body && !nick) continue;
+    if (!legacy && !nick && !TOPIC_RE.test(body)) {
+      skipping = true;
+      continue;
+    }
     const isSelf = nick && selfNames.includes(nick.toLowerCase());
     const entry = { ts, nick, body };
     if (isSelf) entry.out = 1;
@@ -250,6 +301,9 @@ export async function importLogs({ logsDir, selfNames, logs, accountId, alreadyI
   const doneFiles = [];
   let messages = 0;
   let idx = 0;
+  // El formato de fecha se decide una vez con todos los registros de la cuenta: un fichero suelto puede no tener
+  // ninguna fecha que lo delate.
+  const dateOrder = detectDateOrder(logFiles(logsDir, convs));
   for (const d of convs) {
     idx++;
     const isRoom = d.name.endsWith(".chat");
@@ -259,7 +313,7 @@ export async function importLogs({ logsDir, selfNames, logs, accountId, alreadyI
     for (const f of fs.readdirSync(dir)) {
       const full = path.join(dir, f);
       if (alreadyImported[full] || !/\.(html?|txt)$/i.test(f)) continue;
-      for (const e of parseLogFile(full, { selfNames, isRoom })) entries.push({ ...e, src: full });
+      for (const e of parseLogFile(full, { selfNames, isRoom, dateOrder })) entries.push({ ...e, src: full });
       doneFiles.push(full);
     }
     if (entries.length) messages += logs.mergeImport(accountId, conv, entries);
@@ -267,4 +321,93 @@ export async function importLogs({ logsDir, selfNames, logs, accountId, alreadyI
     await new Promise((r) => setImmediate(r));
   }
   return { conversations: convs.length, messages, files: doneFiles };
+}
+
+function logFiles(logsDir, convs) {
+  const out = [];
+  for (const d of convs) {
+    const dir = path.join(logsDir, d.name);
+    try {
+      for (const f of fs.readdirSync(dir)) if (/\.(html?|txt)$/i.test(f)) out.push(path.join(dir, f));
+    } catch {}
+  }
+  return out;
+}
+
+// ---------- reparar lo importado con versiones anteriores ----------
+
+const SEP = String.fromCharCode(0);
+// Reconoce una entrada importada: autor, segundo exacto y texto (sin espacios sobrantes).
+const entryKey = (e) => `${e.nick || ""}${SEP}${Math.floor((e.ts || 0) / 1000)}${SEP}${String(e.body ?? "").trim()}`;
+const sameClock = (a, b) => {
+  const x = new Date(a);
+  const y = new Date(b);
+  return x.getHours() === y.getHours() && x.getMinutes() === y.getMinutes() && x.getSeconds() === y.getSeconds();
+};
+
+// Sin volver a importar: lee otra vez los registros de Pidgin con la regla antigua y con la nueva y, en el historial
+// guardado, corrige la fecha de los mensajes mal fechados, convierte las acciones /me y quita los avisos de Pidgin.
+export async function repairImportedLogs({ logsDir, selfNames, logs, accountId, onProgress }) {
+  let convs;
+  try {
+    convs = fs.readdirSync(logsDir, { withFileTypes: true }).filter((d) => d.isDirectory());
+  } catch {
+    return { conversations: 0, fixed: 0, removed: 0, dateOrder: null };
+  }
+  const dateOrder = detectDateOrder(logFiles(logsDir, convs));
+  let fixed = 0;
+  let removed = 0;
+  let conversations = 0;
+  let idx = 0;
+  for (const d of convs) {
+    idx++;
+    const isRoom = d.name.endsWith(".chat");
+    const conv = (isRoom ? d.name.slice(0, -5) : d.name).toLowerCase();
+    const dir = path.join(logsDir, d.name);
+    // Para cada entrada tal y como la importó la versión anterior: null = quitarla; objeto = sus datos correctos.
+    const plan = new Map();
+    for (const f of fs.readdirSync(dir)) {
+      if (!/\.(html?|txt)$/i.test(f)) continue;
+      const full = path.join(dir, f);
+      const before = parseLogFile(full, { selfNames, isRoom, legacy: true });
+      const after = parseLogFile(full, { selfNames, isRoom, dateOrder });
+      // Las entradas que se conservan salen en el mismo orden en las dos lecturas. Se busca unas cuantas por delante
+      // para que una diferencia (p. ej. una línea de continuación) no desempareje el resto del fichero.
+      const same = (old, next) => {
+        if (!next || next.nick !== old.nick && !(next.body.startsWith("/me ") && !old.nick)) return false;
+        const a = old.body.trim();
+        const b = next.body.trim();
+        const text = b === a || (b.startsWith("/me ") && a === `***${next.nick} ${b.slice(4).trim()}`) || (a.length > 20 && b.startsWith(a.split("\n")[0]));
+        return text && sameClock(next.ts, old.ts);
+      };
+      let k = 0;
+      for (const old of before) {
+        let j = k;
+        while (j < after.length && j < k + 8 && !same(old, after[j])) j++;
+        if (j < after.length && j < k + 8) {
+          const next = after[j];
+          k = j + 1;
+          if (next.ts !== old.ts || next.nick !== old.nick || next.body !== old.body) plan.set(entryKey(old), next);
+        } else if (!old.nick && !TOPIC_RE.test(old.body)) plan.set(entryKey(old), null);
+      }
+    }
+    if (plan.size) {
+      const changed = logs.rewrite(accountId, conv, (e) => {
+        const key = entryKey(e);
+        if (!plan.has(key)) return e;
+        const next = plan.get(key);
+        if (!next) {
+          removed++;
+          return null;
+        }
+        fixed++;
+        const { sys, ...rest } = e;
+        return { ...(next.nick ? rest : e), ts: next.ts, nick: next.nick, body: next.body };
+      });
+      if (changed) conversations++;
+    }
+    onProgress?.({ done: idx, total: convs.length, conv });
+    await new Promise((r) => setImmediate(r));
+  }
+  return { conversations, fixed, removed, dateOrder };
 }

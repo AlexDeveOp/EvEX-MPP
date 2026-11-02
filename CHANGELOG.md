@@ -21,6 +21,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - Several alerts of the same kind arriving at once ring only once.
 
 ### Fixed
+- Pidgin import read ambiguous dates the wrong way round: with a day/month Pidgin, 12/08 (12 August) became 8 December, so old messages appeared in the future and out of order. The date format is now detected from all the account's logs and dates in the future are never chosen ([#9](https://github.com/AlexDeveOp/EvEX-MPP/issues/9)).
+- Pidgin import brought in Pidgin's own notices as messages (account disconnected, joined/left the room, nickname changes), hundreds of thousands in busy rooms. They are no longer imported; topic changes are kept and `/me` actions are imported as actions ([#10](https://github.com/AlexDeveOp/EvEX-MPP/issues/10)).
+- *Preferences → Accounts and data → Repair history imported from Pidgin* fixes both problems in history imported with earlier versions, without importing again, after making a full backup of the history.
 - The siren of recent fleet pings kept pulsing after its hour had passed if the pings view stayed open: it was only checked when the view was drawn. Cards are now re-checked every 30 seconds while any siren is pulsing ([#8](https://github.com/AlexDeveOp/EvEX-MPP/issues/8)).
 - The hover color of rows in the room/contact list and the occupant list sometimes flickered while moving the mouse. These lists are redrawn whenever someone joins, leaves or changes presence (several times per second in big rooms), and the new rows had no hover state until the mouse moved again. The row under the mouse now stays highlighted across redraws ([#7](https://github.com/AlexDeveOp/EvEX-MPP/issues/7)).
 - The tab bar showed scroll bars. It now has a fixed height that fits the tabs exactly; when there are more tabs than fit, the mouse wheel scrolls them sideways and the active tab is always brought into view ([#5](https://github.com/AlexDeveOp/EvEX-MPP/issues/5)).

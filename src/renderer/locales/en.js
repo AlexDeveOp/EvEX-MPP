@@ -762,4 +762,13 @@ export default {
   "Durante 2 horas": "For 2 hours",
   "Hasta que vuelvas a abrir los pings": "Until you open the pings again",
   "Con «hasta que vuelvas a abrir los pings» solo laten los que han llegado desde la última vez que saliste de la vista de pings. Si desactivas las animaciones (Apariencia), no late nunca.": "With “until you open the pings again”, only the pings that arrived since you last left the pings view pulse. If you turn off animations (Appearance), it never pulses.",
+  "Si importaste el historial de Pidgin con una versión anterior, puede tener fechas cambiadas (día y mes al revés) y miles de avisos de Pidgin (entradas, salidas y desconexiones). La reparación los corrige sin volver a importar.": "If you imported your Pidgin history with an earlier version, it may have swapped dates (day and month reversed) and thousands of Pidgin notices (joins, leaves and disconnections). The repair fixes them without importing again.",
+  "Reparar historial importado de Pidgin": "Repair history imported from Pidgin",
+  "Se vuelven a leer tus registros de Pidgin (sin cambiarlos) para corregir la fecha de los mensajes mal fechados y quitar los avisos de Pidgin. Antes se hace una copia de seguridad completa del historial en la carpeta de datos.": "Your Pidgin logs are read again (without changing them) to fix the date of misdated messages and remove Pidgin's notices. A full backup of the history is made in the data folder first.",
+  "Reparar": "Repair",
+  "Reparando el historial…": "Repairing the history…",
+  "No hay historial de Pidgin para ninguna de tus cuentas.": "There is no Pidgin history for any of your accounts.",
+  "Historial reparado": "History repaired",
+  "Fechas corregidas: {fixed}. Avisos de Pidgin quitados: {removed}. Copia de seguridad: {backup} (en la carpeta de datos). La ventana se recargará para mostrar el historial corregido.": "Dates fixed: {fixed}. Pidgin notices removed: {removed}. Backup: {backup} (in the data folder). The window will reload to show the repaired history.",
+  "No se pudo reparar el historial: {message}": "Could not repair the history: {message}",
 };

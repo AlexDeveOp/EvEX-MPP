@@ -1,6 +1,6 @@
 // Ventana de preferencias y editor de fondos.
 import { S, api, emit, saveSettings } from "./state.js";
-import { h, icon, iconButton, modal, field, toggle, select, range, clear, toast, debounce } from "./dom.js";
+import { h, icon, iconButton, modal, field, toggle, select, range, clear, toast, debounce, confirmDialog } from "./dom.js";
 
 const append = (el, ...children) => el.append(...children.filter(Boolean));
 import { PRESETS, TOKENS, GRADIENTS, BUNDLED_FONTS, applyAppearance, themeColors, backgroundCss, resolveThemeId } from "./themes.js";
@@ -558,6 +558,8 @@ const RENDER = {
         t("Datos locales"),
         h("p", { class: "muted small" }, t("Configuración, historial (JSONL), avatares y archivos personalizados se guardan en la carpeta de datos de la aplicación. Las contraseñas se cifran con DPAPI de Windows.")),
         h("button", { class: "btn", onclick: () => api("shell:openUserData") }, icon("folder-open"), t("Abrir carpeta de datos")),
+        h("p", { class: "muted small" }, t("Si importaste el historial de Pidgin con una versión anterior, puede tener fechas cambiadas (día y mes al revés) y miles de avisos de Pidgin (entradas, salidas y desconexiones). La reparación los corrige sin volver a importar.")),
+        h("button", { class: "btn", onclick: repairPidginHistory }, icon("wand-sparkles"), t("Reparar historial importado de Pidgin")),
         h("p", { class: "muted small" }, `EvEX-MPP ${S.version}`),
       ),
       group(
@@ -827,4 +829,28 @@ function gifsGroup() {
       ),
     ),
   );
+}
+
+async function repairPidginHistory() {
+  const ok = await confirmDialog({
+    title: t("Reparar historial importado de Pidgin"),
+    message: t("Se vuelven a leer tus registros de Pidgin (sin cambiarlos) para corregir la fecha de los mensajes mal fechados y quitar los avisos de Pidgin. Antes se hace una copia de seguridad completa del historial en la carpeta de datos."),
+    okLabel: t("Reparar"),
+  });
+  if (!ok) return;
+  const busy = toast(t("Reparando el historial…"), { timeout: 0 });
+  try {
+    const r = await api("pidgin:repairLogs");
+    busy();
+    if (!r.accounts) return toast(t("No hay historial de Pidgin para ninguna de tus cuentas."), { kind: "warn" });
+    await confirmDialog({
+      title: t("Historial reparado"),
+      message: t("Fechas corregidas: {fixed}. Avisos de Pidgin quitados: {removed}. Copia de seguridad: {backup} (en la carpeta de datos). La ventana se recargará para mostrar el historial corregido.", r),
+      okLabel: t("Recargar"),
+    });
+    location.reload();
+  } catch (err) {
+    busy();
+    toast(t("No se pudo reparar el historial: {message}", { message: err.message }), { kind: "error", timeout: 10000 });
+  }
 }

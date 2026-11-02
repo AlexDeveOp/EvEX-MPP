@@ -93,6 +93,48 @@ export class Logs {
     return added;
   }
 
+  // Reescribe todas las entradas de una conversación (reparaciones). fn devuelve la entrada, otra en su lugar o null para
+  // quitarla. Quedan ordenadas por fecha y sin duplicados; se escribe en un temporal y se renombra (atómico).
+  rewrite(accountId, conv, fn) {
+    const file = this.file(accountId, conv);
+    let text;
+    try {
+      text = fs.readFileSync(file, "utf8");
+    } catch {
+      return false;
+    }
+    let changed = false;
+    const out = [];
+    const seen = new Set();
+    for (const line of text.split("\n")) {
+      if (!line) continue;
+      let e;
+      try {
+        e = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      let r = fn(e);
+      if (r !== e) changed = true;
+      if (!r) continue;
+      if (r !== e) r = { ...r, key: Logs.key(r) };
+      const k = r.key || Logs.key(r);
+      if (seen.has(k)) {
+        changed = true;
+        continue;
+      }
+      seen.add(k);
+      out.push(r);
+    }
+    if (!changed) return false;
+    out.sort((a, b) => a.ts - b.ts);
+    const tmp = `${file}.tmp`;
+    fs.writeFileSync(tmp, out.map((e) => JSON.stringify(e)).join("\n") + (out.length ? "\n" : ""));
+    fs.renameSync(tmp, file);
+    this.recent.delete(file);
+    return true;
+  }
+
   tailFile(file, limit, beforeTs) {
     let text;
     let fd;
