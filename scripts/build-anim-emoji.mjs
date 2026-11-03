@@ -15,6 +15,8 @@ const API = "https://googlefonts.github.io/noto-emoji-animation/data/api.json";
 const SRC = (cp) => `https://fonts.gstatic.com/s/e/notoemoji/latest/${cp}/512.webp`;
 const TOP = Number(process.env.TOP) || 150;
 const SIZE = 72;
+// Calidad del WebP (0-100). Con 50 ocupan un 5 % menos que con 60 (18,1 frente a 19,0 MB) y se ven igual, también a 2x.
+const QUALITY = Number(process.env.QUALITY) || 50;
 // Emoticonos que la app convierte (emoji.js → EMOTICONS) y algunos habituales en flotas.
 const FORCED = ["1f642", "1f603", "1f606", "1f609", "1f641", "1f61b", "1f62e", "1f622", "1f610", "1f615", "2764_fe0f", "1f494", "1f60e", "1f618", "1f620", "1f44b", "1f64c", "1f63a", "1f60a", "1f611", "1f616", "1f44d", "1f44e", "1f525", "1f680", "1f4a5", "2705", "274c", "26a0_fe0f", "1f389", "1f4af", "1f440"];
 
@@ -46,7 +48,7 @@ for (const [n, cp] of chosen.entries()) {
   }
   const out = await sharp(Buffer.from(await res.arrayBuffer()), { animated: true })
     .resize(SIZE, SIZE)
-    .webp({ quality: 60, effort: 6, minSize: true, mixed: true })
+    .webp({ quality: QUALITY, effort: 6, minSize: true, mixed: true })
     .toBuffer();
   const file = path.join(outDir, `${key(cp)}.webp`);
   if (path.dirname(file) !== outDir) throw new Error(`nombre no válido: ${cp}`);

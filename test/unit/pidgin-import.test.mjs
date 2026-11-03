@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { parseLogFile, detectDateOrder, repairImportedLogs } from "../../src/main/pidgin-import.js";
+import { parseLogFile, detectDateOrder, repairImportedLogs, shouldOfferRepair } from "../../src/main/pidgin-import.js";
 import { Logs } from "../../src/main/logs.js";
 import { tempDir } from "./helpers.mjs";
 
@@ -138,4 +138,31 @@ test("repairImportedLogs corrige lo importado antes: fechas, avisos de Pidgin y 
   // Repetirla no cambia nada más.
   const again = await repairImportedLogs({ logsDir: dir, selfNames: [], logs, accountId: "acc" });
   assert.equal(again.fixed + again.removed, 0);
+});
+
+test("shouldOfferRepair ofrece la reparación una sola vez y solo si hay historial importado con una versión anterior", () => {
+  const old = { "C:/purple/logs/a.html": 1, __trayHintShown: 1 };
+  const current = { "C:/purple/logs/a.html": 2 };
+  assert.equal(shouldOfferRepair({ imported: old }), true);
+  // Lo importado con las reglas actuales (2) no necesita reparación, ni tampoco tener solo marcas internas (__…).
+  assert.equal(shouldOfferRepair({ imported: current }), false);
+  assert.equal(shouldOfferRepair({ imported: { __trayHintShown: 1 } }), false);
+  assert.equal(shouldOfferRepair({ imported: {} }), false);
+  // Ya reparado, ya ofrecido o con la copia de una reparación anterior a la marca: no se vuelve a ofrecer.
+  assert.equal(shouldOfferRepair({ imported: { ...old, __logsRepaired: 1 } }), false);
+  assert.equal(shouldOfferRepair({ imported: { ...old, __repairOffered: 1 } }), false);
+  assert.equal(shouldOfferRepair({ imported: old, dataEntries: ["config.json", "logs", "logs-copia-2026-11-03-01-21-02"] }), false);
+  assert.equal(shouldOfferRepair({ imported: old, dataEntries: ["config.json", "logs"] }), true);
+  // Sin registros de Pidgin para ninguna cuenta no hay nada que reparar.
+  assert.equal(shouldOfferRepair({ imported: old, hasTargets: () => false }), false);
+});
+
+test("shouldOfferRepair no busca los registros de Pidgin si ya sabe que no hay que ofrecerla", () => {
+  let scans = 0;
+  const hasTargets = () => (scans++, true);
+  shouldOfferRepair({ imported: { "a.html": 2 }, hasTargets });
+  shouldOfferRepair({ imported: { "a.html": 1, __logsRepaired: 1 }, hasTargets });
+  assert.equal(scans, 0);
+  shouldOfferRepair({ imported: { "a.html": 1 }, hasTargets });
+  assert.equal(scans, 1);
 });

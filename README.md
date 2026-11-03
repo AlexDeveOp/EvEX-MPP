@@ -65,7 +65,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - 4 message styles: modern, bubbles, IRC and Pidgin.
 - **GIFs**: a *GIF* button next to the emoji one. *My GIFs* keeps the GIFs you save (right-click → *Save to My GIFs*) and works without any service; optional search in GIPHY or KLIPY with your own free key.
 - **Backgrounds** for the window, the sidebar and each room or chat: an image from your PC, pasted (Ctrl+V), dragged from File Explorer or a browser, or downloaded from an Internet address, with fit (fill, whole image, stretch, tile, original), zoom, position (drag it in the preview), brightness, saturation, intensity and blur; or a gradient or color.
-- Animated Google emoji (Noto), Twemoji or native emoji, plus custom emoji. The most used animated emoji come with the app and work offline.
+- Animated Google emoji (Noto), Twemoji or native emoji, plus custom emoji. The most used animated emoji and all flags come with the app and work offline (Windows cannot draw flags).
 
 **Desktop**
 - System tray (close or minimize to tray).
@@ -119,7 +119,8 @@ npm run dev        # with DevTools
 npm run dist       # installer + portable in dist/
 npm run assets     # regenerates icons (Lucide) and emoji data (emojibase)
 npm run assets:emoji  # regenerates the bundled animated emoji (downloads from Google, ~15 min)
-npm test           # unit tests and XMPP integration tests (against the fake server)
+npm run assets:flags  # regenerates the bundled flag emoji (downloads from Google, ~1 min)
+npm test           # unit, property-based (fast-check) and XMPP integration tests (against the fake server)
 npm run lint       # ESLint
 npm run check      # syntax check of every JavaScript file
 npm run i18n       # checks that every UI string has a translation
@@ -160,4 +161,4 @@ Diagnostic variables:
 
 ## License
 
-MIT. Icons: Lucide (ISC). Emoji data: emojibase (MIT). Fonts: Fontsource (OFL). Animated emoji: [Animated Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/) © Google, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), resized. Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. Icons: Lucide (ISC). Emoji data: emojibase (MIT). Fonts: Fontsource (OFL). Animated emoji: [Animated Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/) © Google, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), resized. Flag emoji: [Noto Emoji](https://github.com/googlefonts/noto-emoji) © Google (Apache 2.0), resized. Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
