@@ -520,8 +520,9 @@ body.resizing {
 .sb-item.room.parted .sb-name {
   opacity: 0.6;
 }
-.sb-item.room.joining .sb-icon {
-  animation: pulse 1.2s infinite;
+.animations .sb-item.room.joining .sb-icon {
+  /* Latidos limitados: una animación infinita hace que Chromium redibuje a 60 fps aunque no pase nada. */
+  animation: pulse 1.2s 8;
 }
 .sb-item.pings {
   margin-top: 6px;
@@ -649,7 +650,10 @@ body.resizing {
 .presence-dot.connecting {
   background: var(--accent);
   opacity: 1;
-  animation: pulse 1s infinite;
+}
+.animations .presence-dot.connecting {
+  /* Latidos limitados: una animación infinita hace que Chromium redibuje a 60 fps aunque no pase nada. */
+  animation: pulse 1s 8;
 }
 .presence-dot.offline {
   background: transparent;
@@ -912,7 +916,8 @@ body.resizing {
   filter: drop-shadow(0 10px 30px color-mix(in srgb, var(--accent) 45%, transparent));
 }
 .animations .welcome-logo img {
-  animation: float 5s ease-in-out infinite;
+  /* Latidos limitados: una animación infinita hace que Chromium redibuje a 60 fps aunque no pase nada. */
+  animation: float 5s ease-in-out 3;
 }
 .welcome-actions {
   display: flex;
