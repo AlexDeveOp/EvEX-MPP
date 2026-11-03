@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { xml } from "@xmpp/client";
-import { XmppAccount } from "../../src/main/xmpp-account.js";
+import { XmppAccount, JOIN_TIMEOUT, OCCUPANT_BATCH_MS } from "../../src/main/xmpp-account.js";
 import { tempDir } from "./helpers.mjs";
 
 const PORT = 15299 + Math.floor(Math.random() * 500);
@@ -144,4 +144,71 @@ test("una sala con contraseña rechaza la entrada sin ella", async (t) => {
   await acc.joinRoom("secret@conference.test.local", "probador").catch(() => {});
   const err = await waitFor((e) => e.type === "room-error");
   assert.equal(err.condition, "not-authorized");
+});
+
+// Cuenta sin red: se simula estar conectado y se descarta lo que se envía.
+function offlineAccount(t) {
+  const acc = new XmppAccount({ id: "t1", jid: "usuario@test.local" }, { avatarDir: tempDir(t) });
+  acc.xmpp = { status: "online" };
+  acc.send = async () => {};
+  const events = [];
+  acc.on("event", (e) => events.push(e));
+  return { acc, events };
+}
+
+const MUC_USER = "http://jabber.org/protocol/muc#user";
+function roomPresence(acc, roomJid, nick, { type, codes = [] } = {}) {
+  const x = xml("x", { xmlns: MUC_USER }, xml("item", { role: "participant", affiliation: "none" }), ...codes.map((code) => xml("status", { code })));
+  const st = xml("presence", { from: `${roomJid}/${nick}`, ...(type ? { type } : {}) }, x);
+  acc.onRoomPresence(acc.rooms.get(roomJid), roomJid, nick, st, x);
+}
+
+test("una sala que no responde pasa a error a los 30 s y se puede reintentar", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { acc, events } = offlineAccount(t);
+  await acc.joinRoom("muda@conference.test.local", "probador");
+  t.mock.timers.tick(JOIN_TIMEOUT - 1);
+  assert.equal(events.length, 0);
+  t.mock.timers.tick(1);
+  const err = events.find((e) => e.type === "room-error");
+  assert.equal(err?.condition, "timeout");
+  const room = acc.rooms.get("muda@conference.test.local");
+  assert.equal(room.joining, false);
+  assert.equal(room.wanted, true, "al reconectar se vuelve a intentar");
+});
+
+test("entrar a tiempo cancela el tiempo máximo", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { acc, events } = offlineAccount(t);
+  await acc.joinRoom("general@conference.test.local", "probador");
+  roomPresence(acc, "general@conference.test.local", "probador", { codes: ["110"] });
+  t.mock.timers.tick(JOIN_TIMEOUT * 2);
+  assert.deepEqual(events.map((e) => e.type), ["room-joined"]);
+});
+
+test("los cambios de participantes salen agrupados y antes que el siguiente evento", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { acc, events } = offlineAccount(t);
+  const roomJid = "general@conference.test.local";
+  await acc.joinRoom(roomJid, "probador");
+  roomPresence(acc, roomJid, "piloto_uno");
+  roomPresence(acc, roomJid, "probador", { codes: ["110"] });
+  assert.deepEqual(events.map((e) => e.type), ["room-joined"], "antes de entrar, los participantes van en room-joined");
+
+  roomPresence(acc, roomJid, "piloto_dos");
+  roomPresence(acc, roomJid, "piloto_uno", { type: "unavailable" });
+  assert.equal(events.length, 1, "todavía en el lote");
+  t.mock.timers.tick(OCCUPANT_BATCH_MS);
+  const batch = events[1];
+  assert.equal(batch.type, "occupants");
+  assert.deepEqual(batch.events.map((e) => [e.room, e.occupant.nick, e.occupant.available]), [
+    [roomJid, "piloto_dos", true],
+    [roomJid, "piloto_uno", false],
+  ]);
+
+  roomPresence(acc, roomJid, "piloto_tres");
+  roomPresence(acc, roomJid, "piloto_tres", { type: "unavailable", codes: ["303"] });
+  assert.deepEqual(events.slice(2).map((e) => e.type), ["occupants", "occupant-nick"], "el lote sale antes que el cambio de apodo");
+  t.mock.timers.tick(OCCUPANT_BATCH_MS);
+  assert.equal(events.length, 4, "no queda ningún lote vacío pendiente");
 });
