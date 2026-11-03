@@ -1620,3 +1620,27 @@ select.input {
   flex: 1;
   min-width: 260px;
 }
+/* Paneles de ejemplo en la vista previa del fondo de la ventana: muestran la transparencia de los paneles. */
+.bg-stage-panels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --p-alpha: 76%;
+}
+.bg-stage-panels > div {
+  position: absolute;
+  background: color-mix(in srgb, var(--bg2) var(--p-alpha), transparent);
+  border: 1px solid color-mix(in srgb, var(--border) var(--p-alpha), transparent);
+}
+.bg-stage-panels .p-side {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 22%;
+}
+.bg-stage-panels .p-head {
+  left: 22%;
+  right: 0;
+  top: 0;
+  height: 12%;
+}

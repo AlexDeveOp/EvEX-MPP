@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { imageAdjust, backgroundCss, applyBackgroundLayer } from "../../src/renderer/js/themes.js";
+import { imageAdjust, backgroundCss, applyBackgroundLayer, panelTransparency } from "../../src/renderer/js/themes.js";
 
 const img = (extra = {}) => ({ type: "image", value: "media://evex/files/abc.png", opacity: 0.4, blur: 0, ...extra });
 
@@ -34,4 +34,12 @@ test("applyBackgroundLayer aplica zoom, punto de origen, filtros e intensidad", 
   assert.equal(el.style.background, "");
   assert.equal(el.style.opacity, 0);
   assert.equal(el.style.transform, "");
+});
+
+test("panelTransparency: el valor antiguo («dim») se ve igual que antes y el nuevo llega a paneles transparentes", () => {
+  assert.equal(panelTransparency({ dim: 0.4 }), 0.4 * 0.6, "un ajuste de antes no cambia de aspecto");
+  assert.equal(panelTransparency({}), 0.4 * 0.6, "sin nada, el valor por defecto de siempre");
+  assert.equal(panelTransparency({ dim: 0.4, panels: 1 }), 1, "el deslizador nuevo manda y llega al 100 %");
+  assert.equal(panelTransparency({ panels: 0 }), 0);
+  assert.equal(panelTransparency({ panels: 7 }), 1, "se acota");
 });

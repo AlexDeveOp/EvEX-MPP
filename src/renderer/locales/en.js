@@ -524,6 +524,7 @@ export default {
   "Vacío = apodo de la cuenta": "Empty = the account nickname",
   "Fondo personalizado…": "Custom background…",
   "Quitar de la lista": "Remove from the list",
+  "Quitar de tus imágenes": "Remove from your images",
   "Quitar sala": "Remove room",
   "¿Quitar {name} de tu lista de salas? El historial local se conserva.": "Remove {name} from your room list? The local history is kept.",
   "Contactos": "Contacts",

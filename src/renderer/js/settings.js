@@ -3,7 +3,7 @@ import { S, api, emit, saveSettings } from "./state.js";
 import { h, icon, iconButton, modal, field, toggle, select, range, clear, toast, debounce, confirmDialog } from "./dom.js";
 
 const append = (el, ...children) => el.append(...children.filter(Boolean));
-import { PRESETS, TOKENS, GRADIENTS, BUNDLED_FONTS, applyAppearance, themeColors, backgroundCss, resolveThemeId, applyBackgroundLayer, imageAdjust } from "./themes.js";
+import { PRESETS, TOKENS, GRADIENTS, BUNDLED_FONTS, applyAppearance, themeColors, backgroundCss, resolveThemeId, applyBackgroundLayer, imageAdjust, panelTransparency } from "./themes.js";
 import { PRESETS as SOUNDS, SOUND_GROUPS, previewSound, outputDevices } from "./sounds.js";
 import { addCustomEmoji, emojifyHtml } from "./emoji.js";
 import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
@@ -700,12 +700,16 @@ function backgroundEditor(bg, change, { noDim } = {}) {
   };
 
   // ---- Biblioteca de imágenes importadas («Tus imágenes») ----
-  // Las importadas y, además, las que ya se usan en algún fondo (incluidas las de antes de existir la lista).
-  const library = () => {
+  // La primera vez se añaden las imágenes que ya se usaban en algún fondo (de antes de existir la lista); después
+  // la lista es solo bgLibrary, para que la × quite de verdad (antes las imágenes en uso volvían a aparecer).
+  if (!S.settings.bgLibrarySeeded) {
     const st = S.settings;
     const used = [st.background, st.sidebarBackground, ...Object.values(st.conversationBackgrounds || {})].filter((b) => b?.type === "image" && String(b.value).startsWith("media:")).map((b) => b.value);
-    return [...new Set([...(st.bgLibrary || []), ...used])];
-  };
+    st.bgLibrary = [...new Set([...(st.bgLibrary || []), ...used])];
+    st.bgLibrarySeeded = true;
+    saveSettings();
+  }
+  const library = () => S.settings.bgLibrary || [];
   const addToLibrary = (url) => look((x) => (x.bgLibrary = [url, ...(x.bgLibrary || []).filter((u) => u !== url)].slice(0, 24)));
   const removeFromLibrary = (url) => look((x) => (x.bgLibrary = (x.bgLibrary || []).filter((u) => u !== url)));
 
@@ -822,7 +826,8 @@ function backgroundEditor(bg, change, { noDim } = {}) {
       wrap.append(field(t("Color"), input));
     }
     if (bg.type === "image") {
-      // Tus imágenes: un clic vuelve a ponerla; la × la quita de la lista (no borra el fichero).
+      // Tus imágenes: un clic vuelve a ponerla; la × la quita de la lista (no borra el fichero) y, si es la de este
+      // fondo, también la quita del fondo (se puede deshacer).
       const lib = library();
       if (lib.length) {
         wrap.append(
@@ -838,11 +843,12 @@ function backgroundEditor(bg, change, { noDim } = {}) {
                   "span",
                   {
                     class: "gif-remove",
-                    title: t("Quitar de la lista"),
+                    title: t("Quitar de tus imágenes"),
                     onclick: (ev) => {
                       ev.stopPropagation();
                       removeFromLibrary(url);
-                      render();
+                      if (bg.value === url) commit({ value: "" });
+                      else render();
                     },
                   },
                   "×",
@@ -933,16 +939,34 @@ function backgroundEditor(bg, change, { noDim } = {}) {
       }
     }
     if (bg.type !== "none") {
-      const common = (label, k, min, max, step, def, fmt) => {
-        const r = range(min, max, step, bg[k] ?? def, (v) => change((b) => (b[k] = v)), fmt);
+      const common = (label, k, min, max, step, def, fmt, after) => {
+        const r = range(
+          min,
+          max,
+          step,
+          bg[k] ?? def,
+          (v) => {
+            change((b) => (b[k] = v));
+            bg[k] = v;
+            after?.();
+          },
+          fmt,
+        );
         r.querySelector("input").addEventListener("pointerdown", remember);
         return field(label, r);
       };
+      // Paneles de ejemplo en la vista previa: con Preferencias abiertas no se ve la ventana de detrás.
+      const panels = noDim ? null : h("div", { class: "bg-stage-panels" }, h("div", { class: "p-side" }), h("div", { class: "p-head" }));
+      const paintPanels = () => panels?.style.setProperty("--p-alpha", `${Math.round((1 - panelTransparency(bg)) * 100)}%`);
+      if (panels) {
+        stage.append(panels);
+        paintPanels();
+      }
       append(
         wrap,
         common(t("Intensidad"), "opacity", 0.05, 1, 0.05, 0.35, (v) => `${Math.round(v * 100)}%`),
         common(t("Desenfoque"), "blur", 0, 30, 1, 0, (v) => `${v}px`),
-        noDim ? null : common(t("Transparencia de los paneles"), "dim", 0, 1, 0.05, 0.4, (v) => `${Math.round(v * 100)}%`),
+        noDim ? null : common(t("Transparencia de los paneles"), "panels", 0, 1, 0.05, panelTransparency(bg), (v) => `${Math.round(v * 100)}%`, paintPanels),
       );
     }
     wrap.append(importSection());
@@ -966,7 +990,7 @@ export function openBackgroundEditor(key) {
     body: backgroundEditor(bg, (fn) => {
       fn(bg);
       apply();
-    }),
+    }, { noDim: true }),
     actions: [
       {
         label: t("Quitar fondo"),

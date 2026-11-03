@@ -121,6 +121,12 @@ export function imageAdjust(bg) {
   };
 }
 
+// Transparencia de los paneles sobre el fondo de la ventana, de 0 (opacos) a 1 (sin panel). Antes se guardaba «dim»,
+// que solo llegaba al 60 %: se respeta su valor hasta que se mueva el deslizador nuevo («panels»).
+export function panelTransparency(bg) {
+  return Math.min(1, Math.max(0, bg?.panels ?? (bg?.dim ?? 0.4) * 0.6));
+}
+
 // Pinta un fondo en una capa (ventana, barra lateral, sala o la vista previa del editor), con encaje, zoom, posición
 // y filtros. El zoom va con transform para que funcione igual con todos los encajes (también el mosaico).
 export function applyBackgroundLayer(el, bg) {
@@ -178,7 +184,7 @@ export function applyAppearance(settings = S.settings) {
 
   const bg = settings.background;
   applyBackgroundLayer(document.getElementById("app-bg"), bg);
-  root.style.setProperty("--bg-dim", bg.type === "none" ? 1 : 1 - (bg.dim ?? 0.4) * 0.6);
+  root.style.setProperty("--bg-dim", bg.type === "none" ? 1 : 1 - panelTransparency(bg));
   app.classList.toggle("has-bg", bg.type !== "none" && !!bg.value);
 
   const sb = settings.sidebarBackground;
