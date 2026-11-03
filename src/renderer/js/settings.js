@@ -7,6 +7,7 @@ import { emojiTabs } from "./settings/emoji.js";
 import { notificationTabs } from "./settings/notifications.js";
 import { pingTabs } from "./settings/pings.js";
 import { dataTabs } from "./settings/data.js";
+import { networkTabs } from "./settings/network.js";
 
 export { openBackgroundEditor } from "./settings/backgrounds.js";
 
@@ -19,6 +20,7 @@ const TABS = [
   ["notifications", t("Notificaciones"), "bell"],
   ["pings", t("Pings de flota"), "siren"],
   ["behavior", t("Comportamiento"), "sliders-horizontal"],
+  ["network", t("Red y proxy"), "globe"],
   ["data", t("Cuentas y datos"), "database"],
 ];
 
@@ -38,4 +40,4 @@ export function openSettings(tab = "appearance") {
   show(tab);
 }
 
-const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs };
+const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs };
