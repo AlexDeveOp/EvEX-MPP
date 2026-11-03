@@ -104,6 +104,21 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.tag {
+  max-width: 120px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #111;
+  font-size: 0.75em;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card.rule:not(.ping) {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, var(--surface, #1a2230)), var(--surface, #1a2230) 70%);
+}
 .app {
   font-size: 0.75em;
   opacity: 0.6;

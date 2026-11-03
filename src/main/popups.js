@@ -78,7 +78,7 @@ export function showPopup(data) {
 
 function armTimer(p) {
   clearTimeout(p.timer);
-  const sticky = p.data.kind === "ping" && options.pingSticky;
+  const sticky = p.data.sticky || (p.data.kind === "ping" && options.pingSticky);
   if (!sticky) p.timer = setTimeout(() => closePopup(p.id), Math.max(3, options.duration) * 1000);
 }
 

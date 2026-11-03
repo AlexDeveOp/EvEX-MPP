@@ -2,6 +2,7 @@
 import { h, icon, esc } from "./dom.js";
 import { formatBody, fmtDateTime, fmtEve, fmtTimes, timeAgo } from "./format.js";
 import { S } from "./state.js";
+import { matchRule, highlightRules, ruleLabel } from "./keywords.js";
 
 import { t } from "./i18n.js";
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
@@ -38,15 +39,15 @@ export function parsePing(body) {
 
 const FIELD_ICONS = { "fc name": "crown", fc: "crown", "formup location": "map-pin", formup: "map-pin", location: "map-pin", "pap type": "flag", comms: "radio", doctrine: "swords", ships: "rocket", target: "crosshair", time: "clock" };
 
-function fieldValue(key, value) {
+function fieldValue(key, value, rules) {
   const k = key.toLowerCase();
   if (/formup|location|system/.test(k)) {
     const sys = value.replace(INVISIBLE, "").trim().split(/[\s,(]/)[0];
     if (/^[A-Za-z0-9-]{3,12}$/.test(sys)) {
-      return h("span", { html: formatBody(value).html + ` <a class="link dotlan" href="https://evemaps.dotlan.net/system/${encodeURIComponent(sys)}" title="${esc(t("Ver {system} en Dotlan", { system: sys }))}">🗺 Dotlan</a>` });
+      return h("span", { html: formatBody(value, { rules }).html + ` <a class="link dotlan" href="https://evemaps.dotlan.net/system/${encodeURIComponent(sys)}" title="${esc(t("Ver {system} en Dotlan", { system: sys }))}">🗺 Dotlan</a>` });
     }
   }
-  return h("span", { html: formatBody(value).html });
+  return h("span", { html: formatBody(value, { rules }).html });
 }
 
 // ---------- pings recientes: la sirena late ----------
@@ -92,14 +93,17 @@ export function pingCard(m) {
   const p = parsePing(m.body);
   const fresh = isFreshPing(m.ts);
   if (fresh) watchFresh();
+  const rule = matchRule(m.body, "pings");
+  const rules = highlightRules("pings");
   const card = h(
     "article",
-    { class: `ping-card ${fresh ? "fresh" : ""}`, dataset: { key: m.key, ts: String(m.ts) } },
+    { class: `ping-card ${fresh ? "fresh" : ""} ${rule ? "kw" : ""}`, dataset: { key: m.key, ts: String(m.ts) }, style: rule ? { "--kw": rule.color } : null },
     h(
       "header",
       { class: "ping-head" },
       icon("siren", "ping-icon"),
-      h("div", { class: "ping-title", html: formatBody(p.title).html }),
+      h("div", { class: "ping-title", html: formatBody(p.title, { rules }).html }),
+      rule ? h("span", { class: "kw-tag", title: t("Regla por palabra clave") }, ruleLabel(rule)) : null,
       p.footer ? h("span", { class: "ping-group", title: t("Destinatarios") }, p.footer.to) : null,
       h("time", { class: "ping-time", title: fmtTimes(m.ts) }, timeAgo(m.ts)),
     ),
@@ -107,10 +111,10 @@ export function pingCard(m) {
       ? h(
           "dl",
           { class: "ping-fields" },
-          p.fields.map((f) => [h("dt", {}, icon(FIELD_ICONS[f.key.toLowerCase()] || "chevron-right"), f.key), h("dd", {}, fieldValue(f.key, f.value))]),
+          p.fields.map((f) => [h("dt", {}, icon(FIELD_ICONS[f.key.toLowerCase()] || "chevron-right"), f.key), h("dd", {}, fieldValue(f.key, f.value, rules))]),
         )
       : null,
-    p.extra.length ? h("div", { class: "ping-extra", html: formatBody(p.extra.join("\n")).html }) : null,
+    p.extra.length ? h("div", { class: "ping-extra", html: formatBody(p.extra.join("\n"), { rules }).html }) : null,
     h(
       "footer",
       { class: "ping-foot" },

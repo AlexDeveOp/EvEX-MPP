@@ -8,6 +8,7 @@ import { openGifPicker } from "./gifs.js";
 import { activate, closeConv, openConv, convTitle, markRead, loadHistory, systemMessage, mentionWords, moveTab, notifyMode, getConv } from "./convs.js";
 import { applyBackgroundLayer } from "./themes.js";
 import { pingCard, pingMatches, pingGroups } from "./pings.js";
+import { matchRule, highlightRules } from "./keywords.js";
 import { openBackgroundEditor } from "./settings.js";
 import { openSearch } from "./search.js";
 
@@ -590,7 +591,9 @@ function messageEl(c, m, cont) {
   const action = isAction(m.body);
   const body = action ? m.body.replace(/^\/me\s/, "") : m.body;
   const { quote, rest } = splitQuote(body);
-  const fb = formatBody(rest, { mentionWords: m.out ? [] : mentionWords(c) });
+  const where = c.type === "chat" ? "private" : "rooms";
+  const rule = m.out ? null : matchRule(m.body, where);
+  const fb = formatBody(rest, { mentionWords: m.out ? [] : mentionWords(c), rules: m.out ? [] : highlightRules(where) });
   const color = nickColor(m.nick);
   const avatar = avatarEl(senderJid(c, m), m.nick, "msg-avatar");
   const bodyEl = h(
@@ -608,9 +611,9 @@ function messageEl(c, m, cont) {
   return h(
     "div",
     {
-      class: `msg ${cont ? "cont" : ""} ${m.out ? "out" : "in"} ${m.mention ? "mention" : ""} ${action ? "action" : ""} ${m.delayed ? "delayed" : ""}`,
+      class: `msg ${cont ? "cont" : ""} ${m.out ? "out" : "in"} ${m.mention ? "mention" : ""} ${rule ? "kw" : ""} ${action ? "action" : ""} ${m.delayed ? "delayed" : ""}`,
       dataset: { key: m.key, nick: m.nick },
-      style: { "--nick": color },
+      style: { "--nick": color, ...(rule ? { "--kw": rule.color } : {}) },
     },
     avatar,
     h(

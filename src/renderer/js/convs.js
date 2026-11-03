@@ -1,7 +1,8 @@
 // Conversaciones abiertas: pestañas, entrada de mensajes, no leídos, menciones, notificaciones y pings.
 import { S, api, emit, convKey, account, roomState, displayName, saveSettings, PINGS_KEY, conn } from "./state.js";
 import { mentionRegex, fmtTime, fmtEve } from "./format.js";
-import { playSound, startPingRepeat } from "./sounds.js";
+import { playSound, playRuleSound, startPingRepeat } from "./sounds.js";
+import { matchRule, ruleLabel } from "./keywords.js";
 import { toast } from "./dom.js";
 import { parsePing, markPingsSeen } from "./pings.js";
 import { themeColors } from "./themes.js";
@@ -267,6 +268,9 @@ export function ingestMessage(ev) {
   };
   const mre = mentionRegex(mentionWords(c));
   msg.mention = !msg.out && !msg.sys && !!mre && mre.test(msg.body);
+  // Una regla por palabra clave puede contar como mención y decide el sonido y la burbuja del aviso.
+  const rule = !msg.out && !msg.sys ? matchRule(msg.body, isPingSender(ev.conv) ? "pings" : type === "chat" ? "private" : "rooms") : null;
+  if (rule && rule.notify !== "never" && type === "groupchat") msg.mention = true;
 
   // Los pings van a la pestaña «Pings de flota», no a un chat privado con el bot.
   if (isPingSender(ev.conv) && !msg.out) {
@@ -283,7 +287,7 @@ export function ingestMessage(ev) {
     }
     if (!msg.delayed || Date.now() - msg.ts < 3600e3) {
       if (S.active !== PINGS_KEY || !S.focused) pc.unread++;
-      notifyPing(pm);
+      notifyPing(pm, rule);
     }
     emit("message", { conv: pc, msg: pm });
     emit("tabs");
@@ -323,21 +327,32 @@ export function ingestMessage(ev) {
     emit("tabs");
     updateBadge();
   }
-  if (fresh && !visible) maybeNotify(c, msg);
+  if (fresh && !visible) maybeNotify(c, msg, rule);
 }
 
-function maybeNotify(c, msg) {
+// Etiqueta, color y permanencia de la burbuja cuando el aviso viene de una regla.
+function ruleExtras(rule) {
+  return rule && rule.notify !== "never" ? { tag: ruleLabel(rule), accent: rule.color, sticky: rule.sticky } : {};
+}
+
+function maybeNotify(c, msg, rule) {
   const n = S.settings.notifications;
-  if (!n.enabled || n.dnd || conn(c.accountId).show === "dnd") return;
+  const forced = rule && rule.notify !== "never";
+  if (!n.enabled) return;
+  if ((n.dnd || conn(c.accountId).show === "dnd") && !(forced && rule.dnd)) return;
   const mode = notifyMode(c);
   let should = false;
-  if (c.type === "chat") should = n.privateMessages;
+  if (forced && rule.notify === "always") should = true;
+  else if (c.type === "chat") should = n.privateMessages || forced;
   else if (mode === "all") should = true;
-  else if (mode === "mentions") should = msg.mention && n.mentions;
+  else if (mode === "mentions") should = msg.mention && (n.mentions || forced);
   if (!should) return;
-  playSound(c.type === "chat" ? "private" : msg.mention ? "mention" : "room");
+  const kind = c.type === "chat" ? "private" : msg.mention ? "mention" : "room";
+  if (forced) playRuleSound(rule, kind);
+  else playSound(kind);
   const title = c.type === "groupchat" ? t("{nick} en {room}", { nick: msg.nick, room: convTitle(c) }) : convTitle(c);
   api("notify", {
+    ...ruleExtras(rule),
     kind: "msg",
     title,
     text: n.showPreview ? replaceShortcodes(msg.body).slice(0, 240) : t("Nuevo mensaje"),
@@ -349,15 +364,18 @@ function maybeNotify(c, msg) {
   }).catch(() => {});
 }
 
-function notifyPing(m) {
+function notifyPing(m, rule) {
   const n = S.settings.notifications;
-  if (!n.enabled || !n.pings) return;
-  playSound("ping");
+  const forced = rule && rule.notify !== "never";
+  if (!n.enabled || !(n.pings || (forced && rule.notify === "always"))) return;
+  if (forced) playRuleSound(rule, "ping");
+  else playSound("ping");
   startPingRepeat();
   // La burbuja muestra el ping ya desglosado: título, campos (FC, formup, doctrina…) y quién lo envía.
   const p = parsePing(m.body);
   const clean = (s) => s.replace(INVISIBLE, "").trim();
   api("notify", {
+    ...ruleExtras(rule),
     kind: "ping",
     title: clean(p.title).slice(0, 120) || t("Ping de flota"),
     text: p.fields.length ? clean(p.extra.join("\n")).slice(0, 300) : clean(m.body).slice(0, 400),

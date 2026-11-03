@@ -337,6 +337,26 @@
   border-left: 3px solid color-mix(in srgb, var(--text2) 50%, transparent);
   color: var(--text2);
 }
+/* Reglas por palabra clave: cada una con su color (--kw). */
+.msg.kw {
+  background: color-mix(in srgb, var(--kw) 13%, transparent);
+  box-shadow: inset 3px 0 0 var(--kw);
+}
+.msg-body mark.kw,
+.ping-card mark.kw {
+  background: color-mix(in srgb, var(--kw) 32%, transparent);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+#app[data-style="bubbles"] .msg.in.kw .msg-body {
+  box-shadow: 0 0 0 2px var(--kw);
+}
+#app[data-style="bubbles"] .msg.in.kw {
+  background: transparent;
+  box-shadow: none;
+}
 .msg-body mark.mention {
   background: color-mix(in srgb, var(--accent) 30%, transparent);
   color: inherit;
@@ -787,6 +807,23 @@
 .ping-card.fresh {
   border-color: color-mix(in srgb, var(--warn) 55%, var(--border));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--warn) 25%, transparent), 0 4px 18px color-mix(in srgb, var(--warn) 18%, transparent);
+}
+.ping-card.kw {
+  border-color: color-mix(in srgb, var(--kw) 60%, var(--border));
+  box-shadow: inset 4px 0 0 var(--kw), 0 2px 10px rgb(0 0 0 / 0.12);
+}
+.kw-tag {
+  flex: none;
+  max-width: 140px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--kw);
+  color: #111;
+  font-size: 0.78em;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .animations .ping-card.fresh .ping-icon {
   animation: pulse 1.4s infinite;

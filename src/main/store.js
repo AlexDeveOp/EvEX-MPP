@@ -46,6 +46,8 @@ export const DEFAULT_SETTINGS = {
     allRoomMessages: false,
     pings: true,
     keywords: [],
+    // Reglas por palabra clave: palabras, dónde se aplican y su aviso, sonido y color (ver renderer/js/keywords.js).
+    keywordRules: [],
     showPreview: true,
     flashTaskbar: true,
     sound: true,

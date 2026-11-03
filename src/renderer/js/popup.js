@@ -16,9 +16,15 @@ async function init() {
   if (!d) return;
   for (const [k, v] of Object.entries(d.colors || {})) document.documentElement.style.setProperty(`--${k}`, v);
   card.classList.add(d.kind === "ping" ? "ping" : "msg", (d.corner || "").startsWith("top") ? "in-top" : "in-bottom");
+  // Aviso de una regla por palabra clave: su color y su nombre en la cabecera.
+  if (/^#[0-9a-f]{6}$/i.test(d.accent || "")) {
+    card.classList.add("rule");
+    card.style.setProperty("--accent", d.accent);
+  }
 
   const head = el("div", "head");
   head.append(el("div", "badge", d.kind === "ping" ? "!" : "✉"), el("div", "title", d.title));
+  if (d.tag) head.append(el("span", "tag", d.tag));
   head.append(el("span", "app", d.kind === "ping" ? t("PING DE FLOTA") : "EvEX-MPP"));
   const close = el("button", "close", "✕");
   close.title = t("Cerrar");

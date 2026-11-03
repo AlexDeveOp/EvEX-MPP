@@ -14,7 +14,12 @@ export function mentionRegex(words) {
   return new RegExp(`(?<![\\p{L}\\p{N}_])(${list.join("|")})(?![\\p{L}\\p{N}_])`, "giu");
 }
 
-function plainToHtml(text, { mentionRe, custom }) {
+// Marca las coincidencias solo en el texto, sin entrar en etiquetas ni entidades HTML.
+function markText(html, re, open) {
+  return html.replace(/(<[^>]*>|&[#\w]+;)|[^<&]+/g, (m, skip) => (skip ? m : m.replace(re, (x) => (x ? `${open}${x}</mark>` : x))));
+}
+
+function plainToHtml(text, { mentionRe, rules, custom }) {
   const s = S.settings;
   if (s.emoticonToEmoji) text = replaceEmoticons(text);
   text = replaceShortcodes(text);
@@ -32,6 +37,8 @@ function plainToHtml(text, { mentionRe, custom }) {
     .replace(/(^|[\s(])_(?!\s)([^_\n]+?)_(?=$|[\s).,!?:;])/g, "$1<em>$2</em>")
     .replace(/(^|[\s(])~(?!\s)([^~\n]+?)~(?=$|[\s).,!?:;])/g, "$1<del>$2</del>");
   if (mentionRe) html = html.replace(mentionRe, '<mark class="mention">$1</mark>');
+  // Reglas por palabra clave: cada una con su color (validado como #rrggbb en keywords.js).
+  for (const r of rules) html = markText(html, r.re, `<mark class="kw" style="--kw:${r.color}">`);
   html = emojifyHtml(html);
   html = html.replace(/\n/g, "<br>");
   // eslint-disable-next-line no-control-regex -- \u0000 marca dónde va cada emoji personalizado; el texto escapado no puede contenerlo.
@@ -43,7 +50,7 @@ function shortUrl(url) {
   return u.length > 70 ? `${u.slice(0, 45)}…${u.slice(-20)}` : u;
 }
 
-export function formatBody(body, { mentionWords = [] } = {}) {
+export function formatBody(body, { mentionWords = [], rules = [] } = {}) {
   const mentionRe = mentionRegex(mentionWords);
   const custom = customEmojiMap();
   const previews = [];
@@ -52,7 +59,7 @@ export function formatBody(body, { mentionWords = [] } = {}) {
   let m;
   TOKEN_RE.lastIndex = 0;
   while ((m = TOKEN_RE.exec(body))) {
-    if (m.index > last) html += plainToHtml(body.slice(last, m.index), { mentionRe, custom });
+    if (m.index > last) html += plainToHtml(body.slice(last, m.index), { mentionRe, rules, custom });
     if (m[1] != null) html += `<pre class="code-block"><code>${esc(m[1].replace(/^\n/, ""))}</code></pre>`;
     else if (m[2] != null) html += `<code class="code-inline">${esc(m[2])}</code>`;
     else {
@@ -73,7 +80,7 @@ export function formatBody(body, { mentionWords = [] } = {}) {
     }
     last = TOKEN_RE.lastIndex;
   }
-  if (last < body.length) html += plainToHtml(body.slice(last), { mentionRe, custom });
+  if (last < body.length) html += plainToHtml(body.slice(last), { mentionRe, rules, custom });
 
   const mention = !!mentionRe && new RegExp(mentionRe.source, "iu").test(body);
   const jumbo = S.settings.jumboEmoji && isEmojiOnly(replaceShortcodes(body));

@@ -1644,3 +1644,69 @@ select.input {
   top: 0;
   height: 12%;
 }
+
+/* Reglas por palabra clave (Preferencias → Notificaciones). */
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.rule-card {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--kw, var(--accent));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+.rule-card.off {
+  opacity: 0.6;
+}
+.rule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.rule-head .rule-name {
+  flex: 1;
+  min-width: 0;
+}
+.rule-color {
+  width: 34px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.rule-up .icon {
+  transform: rotate(180deg);
+}
+.rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0 12px;
+}
+.rule-where {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.rule-status {
+  white-space: nowrap;
+  color: var(--text2);
+}
+.rule-status.good {
+  color: var(--ok);
+}
+.rule-status.bad {
+  color: var(--danger);
+}
+.rule-hint {
+  margin: -4px 0 10px;
+}
+.rule-test .input {
+  flex: 1;
+  min-width: 0;
+}

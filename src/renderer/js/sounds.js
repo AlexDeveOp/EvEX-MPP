@@ -116,6 +116,21 @@ export function playSound(kind) {
   play(n.sounds?.[kind]);
 }
 
+// Sonido de una regla por palabra clave: el suyo propio o, con "default", el del aviso normal (kind).
+// Con «aunque esté en No molestar» activado en la regla, suena también en ese modo.
+export function playRuleSound(rule, kind) {
+  const n = S.settings.notifications;
+  if (!n.sound) return;
+  if (n.dnd && !rule.dnd && !ALWAYS.has(kind)) return;
+  const id = `rule:${rule.id}`;
+  const now = Date.now();
+  if (now - (lastPlayed.get(id) || 0) < COOLDOWN_MS) return;
+  lastPlayed.set(id, now);
+  const sound = rule.sound?.preset && rule.sound.preset !== "default" ? rule.sound : n.sounds?.[kind];
+  console.debug(`[sonido] regla ${rule.id}: ${sound?.preset}`);
+  play(sound);
+}
+
 export function previewSound(sound) {
   play(sound);
 }
