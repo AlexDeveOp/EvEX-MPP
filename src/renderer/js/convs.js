@@ -268,6 +268,7 @@ export function ingestMessage(ev) {
     subject: ev.subject || "",
   };
   const mre = mentionRegex(mentionWords(c));
+  if (mre) mre.lastIndex = 0;
   msg.mention = !msg.out && !msg.sys && !!mre && mre.test(msg.body);
   // Una regla por palabra clave puede contar como mención y decide el sonido y la burbuja del aviso.
   const rule = !msg.out && !msg.sys ? matchRule(msg.body, isPingSender(ev.conv) ? "pings" : type === "chat" ? "private" : "rooms") : null;
@@ -307,7 +308,8 @@ export function ingestMessage(ev) {
   }
 
   c.messages.push(msg);
-  if (c.messages.length > 3000) c.messages.splice(0, c.messages.length - 2500);
+  // Tope de memoria por conversación, salvo mientras se están leyendo los antiguos (chat.js marca c.reading).
+  if (c.messages.length > 3000 && !c.reading) c.messages.splice(0, c.messages.length - 2500);
   if (c.typing.delete(msg.nick) || (type === "chat" && c.typing.size)) {
     if (type === "chat") c.typing.clear();
     emit("typing", { key: c.key });

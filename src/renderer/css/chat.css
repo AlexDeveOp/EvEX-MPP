@@ -826,7 +826,8 @@
   white-space: nowrap;
 }
 .animations .ping-card.fresh .ping-icon {
-  animation: pulse 1.4s infinite;
+  /* Latidos limitados: una animación infinita hace que Chromium redibuje a 60 fps aunque no pase nada. */
+  animation: pulse 1.4s 8;
 }
 .ping-head {
   display: flex;
@@ -1011,7 +1012,8 @@
   background: color-mix(in srgb, var(--warn) 28%, transparent);
 }
 .animations .formup-chip[data-state="now"] {
-  animation: pulse 1.4s infinite;
+  /* Latidos limitados: una animación infinita hace que Chromium redibuje a 60 fps aunque no pase nada. */
+  animation: pulse 1.4s 8;
 }
 .formup-chip[data-state="past"],
 .formup-chip[data-state="old"] {

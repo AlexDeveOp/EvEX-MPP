@@ -305,3 +305,48 @@ export function rafThrottle(fn) {
     });
   };
 }
+
+// Deja los hijos de `target` iguales a los de `next` tocando solo lo que cambia (las listas se repintan cada vez
+// que alguien entra, sale o cambia de estado, y reconstruirlas enteras movía miles de nodos):
+// - un nodo igual (isEqualNode) se conserva con sus manejadores;
+// - una fila con data-key igual que está más abajo se mueve a su sitio;
+// - un contenedor con el mismo data-morph se compara por dentro;
+// - lo demás se sustituye por el nodo nuevo, y lo que sobra se quita.
+export function morphChildren(target, next) {
+  const byKey = new Map();
+  for (const el of target.children) if (el.dataset.key != null) byKey.set(el.dataset.key, el);
+  const used = new Set();
+  let cur = target.firstChild;
+  for (const n of [...next.childNodes]) {
+    while (cur && used.has(cur)) cur = cur.nextSibling;
+    if (cur && cur.isEqualNode(n)) {
+      used.add(cur);
+      cur = cur.nextSibling;
+      continue;
+    }
+    if (cur && cur.nodeType === 1 && n.nodeType === 1 && cur.tagName === n.tagName && cur.dataset.morph != null && cur.dataset.morph === n.dataset.morph) {
+      for (const a of [...cur.attributes]) if (!n.hasAttribute(a.name)) cur.removeAttribute(a.name);
+      for (const a of n.attributes) if (cur.getAttribute(a.name) !== a.value) cur.setAttribute(a.name, a.value);
+      morphChildren(cur, n);
+      used.add(cur);
+      cur = cur.nextSibling;
+      continue;
+    }
+    const old = n.nodeType === 1 && n.dataset.key != null ? byKey.get(n.dataset.key) : null;
+    // La fila actual sobra aquí (se fue o cambió de sitio) y la buscada va justo detrás: se salta la actual en vez
+    // de mover una a una todas las siguientes. Si vuelve a hacer falta más abajo, se moverá entonces.
+    if (old && cur && old === cur.nextSibling && !used.has(old) && old.isEqualNode(n)) {
+      used.add(old);
+      cur = old.nextSibling;
+      continue;
+    }
+    if (old && !used.has(old) && old.isEqualNode(n)) {
+      target.insertBefore(old, cur);
+      used.add(old);
+      continue;
+    }
+    target.insertBefore(n, cur);
+    used.add(n);
+  }
+  for (const el of [...target.childNodes]) if (!used.has(el)) el.remove();
+}
