@@ -228,8 +228,12 @@ function createWindow() {
     );
   }
 
-  win.once("ready-to-show", () => {
-    if (!(START_HIDDEN || s.behavior.startMinimized)) win.show();
+  win.once("ready-to-show", async () => {
+    // Arrancar oculta (inicio automático o «Iniciar minimizada») solo si hay bandeja; sin ella, minimizada en la barra.
+    await trayCheck;
+    const hidden = START_HIDDEN || s.behavior.startMinimized;
+    if (!hidden) win.show();
+    else if (!trayAvailable) win.minimize();
     if (DEV) win.webContents.openDevTools({ mode: "detach" });
   });
   win.loadURL("app://evex/index.html");
@@ -428,7 +432,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: store.secretStorage(), trayAvailable },
+      system: { platform: process.platform, secretStorage: await store.secretStorage(), trayAvailable },
     };
   });
 

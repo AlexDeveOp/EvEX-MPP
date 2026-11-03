@@ -39,11 +39,12 @@ export function desktopEntry({ exe, args = [] }) {
   return ["[Desktop Entry]", "Type=Application", "Name=EvEX-MPP", "Comment=XMPP chat client", `Exec=${[exe, ...args].map(quoteExec).join(" ")}`, "Terminal=false", "X-GNOME-Autostart-enabled=true", ""].join("\n");
 }
 
-// Dónde guarda las contraseñas el sistema: "os" en Windows y macOS; en Linux, el llavero que haya elegido Chromium.
-// "basic_text" significa que no hay llavero: las contraseñas solo quedarían ofuscadas, así que no se guardan.
-export function secretStorageKind({ platform = process.platform, backend = "" } = {}) {
-  if (platform !== "linux") return "os";
-  return backend || "unknown";
+// Dónde guarda las contraseñas el sistema: "os" en Windows y macOS; en Linux, "keyring" o "basic_text".
+// En Linux se mira el prefijo de un texto cifrado de prueba: "v11" = clave guardada en el llavero (GNOME Keyring,
+// KWallet); "v10" = clave fija de Chromium, la misma en todos los equipos, es decir, sin llavero. No sirve
+// safeStorage.getSelectedStorageBackend(): con el cifrado asíncrono de Electron siempre dice "basic_text".
+export function linuxStorageKind(prefix) {
+  return prefix === "v11" ? "keyring" : "basic_text";
 }
 
-export const hasSecureStorage = (kind) => kind !== "basic_text" && kind !== "unknown";
+export const hasSecureStorage = (kind) => kind === "os" || kind === "keyring";

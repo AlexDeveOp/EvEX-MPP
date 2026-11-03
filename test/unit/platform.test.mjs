@@ -1,7 +1,7 @@
 // Diferencias entre sistemas: rutas de Pidgin, fuentes de fontconfig, inicio automático en Linux y llavero.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { purpleDirFor, pidginSoundDirsFor, parseFcList, autostartFile, desktopEntry, secretStorageKind, hasSecureStorage } from "../../src/main/platform.js";
+import { purpleDirFor, pidginSoundDirsFor, parseFcList, autostartFile, desktopEntry, linuxStorageKind, hasSecureStorage } from "../../src/main/platform.js";
 
 test("la carpeta de Pidgin es %APPDATA%\\.purple en Windows y ~/.purple en Linux", () => {
   assert.equal(purpleDirFor({ platform: "win32", env: { APPDATA: "C:\\Users\\x\\AppData\\Roaming" } }), "C:\\Users\\x\\AppData\\Roaming\\.purple");
@@ -34,13 +34,13 @@ test("una ruta con espacios o comillas va entre comillas y escapada en Exec", ()
   assert.match(entry, /^Exec="\/home\/x\/Mis Apps\/Ev\\"X\.AppImage" --hidden$/m);
 });
 
-test("sin llavero en Linux (basic_text) no hay almacenamiento seguro; en Windows siempre lo hay", () => {
-  assert.equal(secretStorageKind({ platform: "win32", backend: "" }), "os");
-  assert.equal(secretStorageKind({ platform: "linux", backend: "gnome_libsecret" }), "gnome_libsecret");
-  assert.equal(secretStorageKind({ platform: "linux", backend: "" }), "unknown");
+// Comprobado en Linux con Electron 45: con GNOME Keyring el cifrado empieza por "v11"; con --password-store=basic, "v10".
+test("en Linux solo hay almacenamiento seguro si el cifrado usa la clave del llavero (v11)", () => {
+  assert.equal(linuxStorageKind("v11"), "keyring");
+  assert.equal(linuxStorageKind("v10"), "basic_text");
+  assert.equal(linuxStorageKind(""), "basic_text");
   assert.equal(hasSecureStorage("os"), true);
-  assert.equal(hasSecureStorage("gnome_libsecret"), true);
-  assert.equal(hasSecureStorage("kwallet6"), true);
+  assert.equal(hasSecureStorage("keyring"), true);
   assert.equal(hasSecureStorage("basic_text"), false);
-  assert.equal(hasSecureStorage("unknown"), false);
+  assert.equal(hasSecureStorage(undefined), false);
 });
