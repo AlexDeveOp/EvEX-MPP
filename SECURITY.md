@@ -6,8 +6,8 @@ Only the latest release receives security fixes.
 
 | Version | Supported |
 |---|---|
-| 0.5.x | ✅ |
-| < 0.5 | ❌ |
+| 0.6.x | ✅ |
+| < 0.6 | ❌ |
 
 ## Reporting a vulnerability
 
@@ -26,12 +26,12 @@ Every release is built by GitHub Actions from the tagged source code and include
 
 1. Check the SHA-256 hash of the file you downloaded (PowerShell):
    ```powershell
-   Get-FileHash .\EvEX-MPP-Setup-0.5.0.exe -Algorithm SHA256
+   Get-FileHash .\EvEX-MPP-Setup-0.6.0.exe -Algorithm SHA256
    ```
    It must match the line for that file in `checksums.txt`.
 2. When the repository is public, releases also carry a signed build provenance attestation. With the GitHub CLI:
    ```
-   gh attestation verify EvEX-MPP-Setup-0.5.0.exe --repo AlexDeveOp/EvEX-MPP
+   gh attestation verify EvEX-MPP-Setup-0.6.0.exe --repo AlexDeveOp/EvEX-MPP
    ```
    This proves the file was built by this repository's release workflow from a specific commit.
    The attestation is also attached to the release as `EvEX-MPP-vX.Y.Z.intoto.jsonl`; add `--bundle <that file>` to check it without querying GitHub's attestation API.
