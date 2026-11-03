@@ -28,6 +28,7 @@ async function boot() {
   S.accounts = init.accounts;
   S.settings = init.settings;
   S.version = init.version;
+  S.system = { ...S.system, ...(init.system || {}) };
   S.focused = init.focused;
   applyAppearance();
 

@@ -6,6 +6,7 @@ import { parseFormup, countdownText, countdownSettings } from "../formup.js";
 import { parsePing } from "../pings.js";
 import { fmtTime, fmtEve } from "../format.js";
 import { t } from "../i18n.js";
+import { isWindows, onWindows } from "../system.js";
 import { VOICE_DEFAULTS, TEMPLATE_FIELDS, voiceSettings, listVoices, pingSpeech, speak, stopSpeaking, speechAvailable } from "../tts.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
 
@@ -26,6 +27,18 @@ function pingAlertGroup() {
   );
 }
 
+// Sin voces: en Windows se añaden en Configuración; en Linux hacen falta speech-dispatcher y una voz.
+function noVoicesHelp() {
+  if (isWindows()) return h("p", { class: "muted small" }, t("Windows no tiene voces instaladas: añádelas en Configuración → Hora e idioma → Voz."));
+  return h(
+    "div",
+    { class: "muted small voice-help" },
+    h("p", {}, t("No hay voces instaladas. En Linux la lectura en voz alta usa speech-dispatcher; instálalo con una voz, por ejemplo:")),
+    h("code", { class: "code-inline" }, "sudo apt install speech-dispatcher espeak-ng"),
+    h("p", {}, t("Después cierra EvEX-MPP del todo y vuelve a abrirlo.")),
+  );
+}
+
 // Ping de ejemplo para probar la lectura en voz alta.
 const SAMPLE_PING = "Capital fleet up now!!\nFC Name: Bob FC\nFormup Location: Jita\nPAP Type: Strategic\nComms: Op 1\nDoctrine: Typhoons\n\n~~~ This was a coord broadcast from bob to all ~~~";
 
@@ -38,7 +51,7 @@ function voiceGroup() {
   listVoices().then((list) => {
     for (const voice of list) voiceSel.append(h("option", { value: voice.name }, `${voice.name} (${voice.lang})`));
     voiceSel.value = list.some((x) => x.name === v.voice) ? v.voice : "";
-    if (!list.length) voiceSel.after(h("p", { class: "muted small" }, t("Windows no tiene voces instaladas: añádelas en Configuración → Hora e idioma → Voz.")));
+    if (!list.length) voiceSel.after(noVoicesHelp());
   });
   const template = h("textarea", { class: "input", rows: 2 });
   template.value = v.template;
@@ -53,7 +66,7 @@ function voiceGroup() {
   groups.value = v.groups;
   groups.addEventListener("change", () => set({ groups: groups.value.trim() }));
   body.append(
-    field(t("Voz"), voiceSel, t("Las voces instaladas en Windows. No se envía nada a Internet. Suena por la salida de audio predeterminada de Windows.")),
+    field(t("Voz"), voiceSel, onWindows(t("Las voces instaladas en Windows. No se envía nada a Internet. Suena por la salida de audio predeterminada de Windows."), t("Las voces instaladas en el sistema. No se envía nada a Internet. Suena por la salida de audio predeterminada del sistema."))),
     field(t("Velocidad"), range(0.5, 2, 0.05, v.rate, (x) => set({ rate: x }), (x) => `${x.toFixed(2)}×`)),
     field(t("Tono"), range(0.5, 1.5, 0.05, v.pitch, (x) => set({ pitch: x }), (x) => x.toFixed(2))),
     field(t("Volumen de la voz"), range(0, 1, 0.05, v.volume, (x) => set({ volume: x }), (x) => `${Math.round(x * 100)}%`)),

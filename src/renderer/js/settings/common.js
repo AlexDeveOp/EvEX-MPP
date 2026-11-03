@@ -48,6 +48,18 @@ export function soundRow(kind, label) {
   return field(t(label), h("div", { class: "row sound-row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cur())), pick, vol));
 }
 
+// Opción que no se puede usar en este sistema: desactivada, apagada y con el motivo debajo.
+export function unavailable(row, reason) {
+  const input = row.querySelector("input");
+  if (input) {
+    input.checked = false;
+    input.disabled = true;
+  }
+  row.classList.add("unavailable");
+  row.querySelector(".toggle-text")?.append(h("small", { class: "muted" }, reason));
+  return row;
+}
+
 export function popupTestColors() {
   const c = themeColors();
   return { surface: c.surface, text: c.text, border: c.border, warn: c.warn, "theme-accent": c.accent };

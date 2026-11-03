@@ -4,6 +4,7 @@ import { h, icon, iconButton, modal, field, toggle, select, range, clear, toast,
 import { PRESETS as SOUNDS, SOUND_GROUPS, previewSound, outputDevices } from "../sounds.js";
 import { newRule, normalizeRule, compileRule } from "../keywords.js";
 import { t } from "../i18n.js";
+import { isWindows, onWindows, trayAvailable } from "../system.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
 
 export const notificationTabs = {
@@ -14,7 +15,7 @@ export const notificationTabs = {
     kw.value = (n.keywords || []).join("\n");
     kw.addEventListener("change", () => full((x) => (x.notifications.keywords = kw.value.split("\n").map((s) => s.trim()).filter(Boolean))));
     // Salida de audio: se rellena al abrir (la lista depende de los dispositivos conectados).
-    const device = select([["", t("Predeterminada de Windows")]], n.outputDevice || "", (v) => (set((x) => (x.outputDevice = v)), previewSound(S.settings.notifications.sounds.private)));
+    const device = select([["", onWindows(t("Predeterminada de Windows"), t("Predeterminada del sistema"))]], n.outputDevice || "", (v) => (set((x) => (x.outputDevice = v)), previewSound(S.settings.notifications.sounds.private)));
     outputDevices().then((list) => {
       for (const d of list) device.append(h("option", { value: d.id }, d.label));
       device.value = list.some((d) => d.id === n.outputDevice) ? n.outputDevice : "";
@@ -27,7 +28,7 @@ export const notificationTabs = {
         toggle(n.enabled, (v) => set((x) => (x.enabled = v)), t("Notificaciones de escritorio")),
         toggle(n.dnd, (v) => set((x) => (x.dnd = v)), t("No molestar"), t("Silencia todo excepto los pings de flota y los avisos de conexión perdida o recuperada")),
         toggle(n.showPreview, (v) => set((x) => (x.showPreview = v)), t("Mostrar el texto del mensaje en la notificación")),
-        toggle(n.flashTaskbar, (v) => set((x) => (x.flashTaskbar = v)), t("Hacer parpadear la barra de tareas")),
+        isWindows() ? toggle(n.flashTaskbar, (v) => set((x) => (x.flashTaskbar = v)), t("Hacer parpadear la barra de tareas")) : null,
       ),
       group(
         t("Aspecto del aviso"),
@@ -36,7 +37,7 @@ export const notificationTabs = {
           select(
             [
               ["custom", t("Burbuja de EvEX-MPP (sube desde la barra de tareas, siempre encima)")],
-              ["windows", t("Notificación de Windows (centro de notificaciones)")],
+              ["windows", onWindows(t("Notificación de Windows (centro de notificaciones)"), t("Notificación del sistema"))],
               ["both", t("Ambas")],
             ],
             n.popupStyle,
@@ -59,7 +60,7 @@ export const notificationTabs = {
         ),
         field(t("Duración de los avisos de mensajes"), range(3, 30, 1, n.popupDuration, (v) => set((x) => (x.popupDuration = v)), (v) => `${v} s`)),
         toggle(n.pingSticky, (v) => set((x) => (x.pingSticky = v)), t("Los pings se quedan en pantalla hasta cerrarlos"), t("Si no, desaparecen como los mensajes")),
-        toggle(n.trayBlink, (v) => set((x) => (x.trayBlink = v)), t("Parpadear el «!» de la bandeja con pings sin leer")),
+        trayAvailable() ? toggle(n.trayBlink, (v) => set((x) => (x.trayBlink = v)), t("Parpadear el «!» de la bandeja con pings sin leer")) : null,
         h(
           "div",
           { class: "row" },

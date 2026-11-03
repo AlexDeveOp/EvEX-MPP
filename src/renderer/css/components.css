@@ -1710,3 +1710,18 @@ select.input {
   flex: 1;
   min-width: 0;
 }
+
+/* Opción que no existe en este sistema (p. ej. la bandeja en un escritorio que no la muestra). */
+.toggle-row.unavailable {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.toggle-row.unavailable .switch {
+  pointer-events: none;
+}
+.voice-help p {
+  margin: 4px 0;
+}
+.voice-help code {
+  user-select: all;
+}

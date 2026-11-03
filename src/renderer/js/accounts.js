@@ -2,6 +2,7 @@
 import { S, api, emit, account, conn, onMain } from "./state.js";
 import { h, icon, iconButton, modal, field, toast, clear, confirmDialog, select } from "./dom.js";
 import { closeConv } from "./convs.js";
+import { onWindows, noKeyring, passwordStoreHint, mayRememberPassword, afterAccountSave } from "./system.js";
 
 import { t, locale } from "./i18n.js";
 export async function connectWithPrompt(accountId) {
@@ -11,23 +12,33 @@ export async function connectWithPrompt(accountId) {
     if (e.message !== "NEED_PASSWORD") return toast(e.message, { kind: "error" });
     const acc = account(accountId);
     const pass = h("input", { class: "input", type: "password", autofocus: true });
-    const save = h("input", { type: "checkbox", checked: acc.savePassword });
+    const save = h("input", { type: "checkbox", checked: acc.savePassword && !noKeyring(), disabled: noKeyring() });
     return new Promise((resolve) => {
       const go = async (close) => {
         if (!pass.value) return;
         close();
-        if (save.checked) await api("account:save", { account: { id: acc.id, savePassword: true }, password: pass.value });
+        if (save.checked && (await mayRememberPassword())) afterAccountSave(await api("account:save", { account: { id: acc.id, savePassword: true }, password: pass.value }));
         api("account:connect", accountId, pass.value).then(resolve, (err) => (toast(err.message, { kind: "error" }), resolve()));
       };
       const m = modal({
         title: t("Contraseña"),
         icon: "key-round",
-        body: h("div", { class: "form" }, h("p", { class: "muted" }, t("Introduce la contraseña de {jid}", { jid: acc.jid })), field(t("Contraseña"), pass), h("label", { class: "check" }, save, t("Recordar (cifrada con Windows)"))),
+        body: h("div", { class: "form" }, h("p", { class: "muted" }, t("Introduce la contraseña de {jid}", { jid: acc.jid })), field(t("Contraseña"), pass), h("label", { class: "check" }, save, t("Recordar ({hint})", { hint: passwordStoreHint() }))),
         actions: ["spacer", { label: t("Cancelar"), action: (c) => (c(), resolve()) }, { label: t("Conectar"), primary: true, icon: "log-in", action: go }],
       });
       pass.addEventListener("keydown", (ev) => ev.key === "Enter" && go(m.close));
     });
   }
+}
+
+// Casilla «Recordar contraseña»: en un Linux sin llavero no se puede marcar.
+function savePasswordCheck(label) {
+  if (noKeyring()) {
+    const input = label.querySelector("input");
+    input.checked = false;
+    input.disabled = true;
+  }
+  return label;
 }
 
 const SECURITY = [
@@ -71,7 +82,7 @@ export function openSwitchAccount() {
     try {
       await switchTo(accountId, { password, exclusive });
       // La contraseña solo se guarda cuando se ha comprobado que funciona.
-      if (password && rememberPassword) Object.assign(account(accountId), await api("account:save", { account: { id: accountId, savePassword: true }, password }));
+      if (password && rememberPassword && (await mayRememberPassword())) Object.assign(account(accountId), afterAccountSave(await api("account:save", { account: { id: accountId, savePassword: true }, password })));
       close();
       toast(t("Conectado como {jid}", { jid: account(accountId).jid }), { kind: "ok" });
     } catch (e) {
@@ -107,7 +118,7 @@ export function openSwitchAccount() {
   const port = h("input", { class: "input", type: "number", value: 5222 });
   const conf = h("input", { class: "input", placeholder: "conference.servidor" });
   const sec = select(SECURITY, v.security, (x) => (v.security = x));
-  const remember = h("input", { type: "checkbox", checked: true });
+  const remember = h("input", { type: "checkbox", checked: !noKeyring(), disabled: noKeyring() });
   let editingId = null;
 
   jid.addEventListener("change", () => {
@@ -148,7 +159,7 @@ export function openSwitchAccount() {
           port: Number(port.value) || 5222,
           security: v.security,
           conferenceServer: conf.value.trim() || `conference.${j.split("@")[1]}`,
-          savePassword: existing ? existing.savePassword : remember.checked,
+          savePassword: (existing ? existing.savePassword : remember.checked) && !noKeyring(),
           autoLogin: true,
         },
       });
@@ -181,7 +192,7 @@ export function openSwitchAccount() {
         field(t("Seguridad"), sec),
         field(t("Servidor de salas"), conf),
       ),
-      h("label", { class: "check" }, remember, t("Recordar la contraseña (cifrada con Windows)")),
+      h("label", { class: "check" }, remember, t("Recordar la contraseña ({hint})", { hint: passwordStoreHint() })),
       S.accounts.length
         ? h("label", { class: "check" }, h("input", { type: "checkbox", checked: true, onchange: (e) => (exclusive = e.target.checked) }), t("Desconectar las demás cuentas"), h("small", { class: "muted" }, t(" — y dejarán de conectarse al iniciar")))
         : null,
@@ -248,7 +259,9 @@ export function openAccounts(focusId) {
     const save = async (connect) => {
       if (!/^[^@\s]+@[^@\s]+$/.test(v.jid.trim())) return toast(t("La dirección debe tener el formato usuario@servidor"), { kind: "error" });
       try {
-        const saved = await api("account:save", { account: { ...v, id: a?.id, jid: v.jid.trim().toLowerCase() }, password: pass.value || undefined });
+        // En Linux, la contraseña solo se manda a guardar si hay llavero y el usuario acepta el aviso.
+        const keep = pass.value && v.savePassword && (await mayRememberPassword());
+        const saved = afterAccountSave(await api("account:save", { account: { ...v, savePassword: v.savePassword && !noKeyring(), id: a?.id, jid: v.jid.trim().toLowerCase() }, password: keep ? pass.value : undefined }));
         const i = S.accounts.findIndex((x) => x.id === saved.id);
         if (i >= 0) S.accounts[i] = saved;
         else S.accounts.push(saved);
@@ -280,7 +293,7 @@ export function openAccounts(focusId) {
           field(t("Servidor de salas (MUC)"), inp("conferenceServer", { placeholder: "conference.servidor" })),
           field(t("Recurso"), inp("resource"), t("Identifica este cliente; distinto de Pidgin para poder usar ambos")),
         ),
-        h("div", { class: "checks" }, chk("savePassword", t("Recordar contraseña"), t("(cifrada con DPAPI de Windows)")), chk("autoLogin", t("Conectar al iniciar")), chk("syncBookmarks", t("Sincronizar marcadores de salas con el servidor"))),
+        h("div", { class: "checks" }, savePasswordCheck(chk("savePassword", t("Recordar contraseña"), `(${passwordStoreHint()})`)), chk("autoLogin", t("Conectar al iniciar")), chk("syncBookmarks", t("Sincronizar marcadores de salas con el servidor"))),
         advanced,
       );
       clear(advanced).append(
@@ -338,7 +351,7 @@ export async function openPidginImport() {
     return modal({ title: t("Importar de Pidgin"), icon: "import", body: h("p", {}, t("No se encontraron cuentas XMPP de Pidgin en {dir}.", { dir: scan.dir })), actions: ["spacer", { label: t("Cerrar"), action: (c) => c() }] });
   }
   const chosen = new Set(scan.accounts.map((a) => a.jid));
-  const opts = { importRooms: true, importPasswords: true, importLogs: true };
+  const opts = { importRooms: true, importPasswords: !noKeyring(), importLogs: true };
   const progress = h("div", { class: "import-progress hidden" }, h("div", { class: "bar" }, h("i")), h("span", { class: "muted" }));
   const body = h(
     "div",
@@ -362,9 +375,13 @@ export async function openPidginImport() {
     h(
       "label",
       { class: "check" },
-      h("input", { type: "checkbox", checked: true, onchange: (e) => (opts.importPasswords = e.target.checked) }),
+      h("input", { type: "checkbox", checked: opts.importPasswords, disabled: noKeyring(), onchange: (e) => (opts.importPasswords = e.target.checked) }),
       t("Importar la contraseña guardada"),
-      h("small", { class: "muted" }, t(" — Pidgin la guarda en texto plano; aquí se cifra con Windows")),
+      h(
+        "small",
+        { class: "muted" },
+        noKeyring() ? t(" — no disponible: este sistema no tiene llavero") : onWindows(t(" — Pidgin la guarda en texto plano; aquí se cifra con Windows"), t(" — Pidgin la guarda en texto plano; aquí se cifra con el llavero del sistema")),
+      ),
     ),
     h("label", { class: "check" }, h("input", { type: "checkbox", checked: true, onchange: (e) => (opts.importLogs = e.target.checked) }), t("Importar historial de conversaciones"), h("small", { class: "muted" }, " — puede tardar un poco; no se duplica si lo repites")),
     progress,
@@ -391,6 +408,7 @@ export async function openPidginImport() {
         icon: "import",
         action: async (close) => {
           if (!chosen.size) return;
+          if (opts.importPasswords && !(await mayRememberPassword())) opts.importPasswords = false;
           body.querySelectorAll("input").forEach((i) => (i.disabled = true));
           progress.classList.remove("hidden");
           progress.querySelector("span").textContent = t("Importando…");
