@@ -3,6 +3,7 @@ import { S, api } from "../state.js";
 import { h, icon, iconButton, field, toggle, select, range, clear, toast } from "../dom.js";
 import { PRESETS, TOKENS, BUNDLED_FONTS, themeColors, resolveThemeId } from "../themes.js";
 import { t, LANGUAGES, setLanguagePreference } from "../i18n.js";
+import { onWindows } from "../system.js";
 import { look, full, group } from "./common.js";
 
 let systemFonts = null;
@@ -52,7 +53,7 @@ export const appearanceTabs = {
         field(
           t("Idioma de la interfaz"),
           select(
-            LANGUAGES.map(([v, label]) => [v, label ?? t("Automático (idioma de Windows)")]),
+            LANGUAGES.map(([v, label]) => [v, label ?? onWindows(t("Automático (idioma de Windows)"), t("Automático (idioma del sistema)"))]),
             s.language || "auto",
             (v) => changeLanguage(v),
           ),
@@ -62,7 +63,7 @@ export const appearanceTabs = {
       group(t("Tema"), themeGrid, h("p", { class: "muted small" }, t("Personaliza cada color en la pestaña «Colores». Puedes exportar e importar temas."))),
       group(
         t("Tipografía"),
-        field(t("Fuente de la interfaz"), fontSel, t("Incluye Inter, Nunito, Rajdhani, Orbitron y todas las fuentes instaladas en Windows")),
+        field(t("Fuente de la interfaz"), fontSel, onWindows(t("Incluye Inter, Nunito, Rajdhani, Orbitron y todas las fuentes instaladas en Windows"), t("Incluye Inter, Nunito, Rajdhani, Orbitron y todas las fuentes instaladas en el sistema"))),
         field(t("Fuente monoespaciada (código)"), monoSel),
         field(t("Tamaño de letra"), range(11, 22, 1, s.fontSize, (v) => look((x) => (x.fontSize = v)), (v) => `${v}px`)),
         field(t("Escala de la interfaz"), range(0.8, 1.5, 0.05, s.uiScale, (v) => look((x) => (x.uiScale = v)), (v) => `${Math.round(v * 100)}%`)),

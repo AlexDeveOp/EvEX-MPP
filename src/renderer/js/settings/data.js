@@ -6,7 +6,13 @@ import { openAccounts, openPidginImport } from "../accounts.js";
 import { repairPidginHistory } from "../pidgin-repair.js";
 import { t } from "../i18n.js";
 import { exportTheme, importTheme } from "./appearance.js";
-import { look, group } from "./common.js";
+import { look, group, unavailable } from "./common.js";
+import { onWindows, trayAvailable } from "../system.js";
+
+// Sin bandeja (p. ej. GNOME sin extensión) la ventana oculta no se podría volver a abrir: estas opciones se desactivan.
+function trayOption(row) {
+  return trayAvailable() ? row : unavailable(row, t("No disponible: este escritorio no muestra la bandeja del sistema, así que la ventana oculta no se podría volver a abrir."));
+}
 
 export const dataTabs = {
   behavior() {
@@ -27,10 +33,10 @@ export const dataTabs = {
       ),
       group(
         t("Ventana"),
-        toggle(b.closeToTray, (v) => set((x) => (x.closeToTray = v)), t("Cerrar a la bandeja del sistema"), t("La X oculta la ventana; sales desde el icono de la bandeja")),
-        toggle(b.minimizeToTray, (v) => set((x) => (x.minimizeToTray = v)), t("Minimizar a la bandeja del sistema"), t("El botón «_» esconde la ventana junto al reloj en vez de dejarla en la barra de tareas")),
-        toggle(b.startMinimized, (v) => set((x) => (x.startMinimized = v)), t("Iniciar minimizado en la bandeja")),
-        toggle(b.startWithWindows, (v) => set((x) => (x.startWithWindows = v)), t("Iniciar con Windows")),
+        trayOption(toggle(b.closeToTray, (v) => set((x) => (x.closeToTray = v)), t("Cerrar a la bandeja del sistema"), t("La X oculta la ventana; sales desde el icono de la bandeja"))),
+        trayOption(toggle(b.minimizeToTray, (v) => set((x) => (x.minimizeToTray = v)), t("Minimizar a la bandeja del sistema"), t("El botón «_» esconde la ventana junto al reloj en vez de dejarla en la barra de tareas"))),
+        trayOption(toggle(b.startMinimized, (v) => set((x) => (x.startMinimized = v)), t("Iniciar minimizado en la bandeja"))),
+        toggle(b.startWithWindows, (v) => set((x) => (x.startWithWindows = v)), onWindows(t("Iniciar con Windows"), t("Iniciar con el sistema"))),
         toggle(b.restoreOpenTabs, (v) => set((x) => (x.restoreOpenTabs = v)), t("Restaurar las pestañas abiertas al iniciar")),
       ),
       group(t("Presencia"), field(t("Ponerme «Ausente» tras inactividad"), range(0, 60, 1, b.autoAwayMinutes, (v) => set((x) => (x.autoAwayMinutes = v)), (v) => (v ? `${v} min` : "nunca")))),

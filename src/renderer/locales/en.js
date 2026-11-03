@@ -4,7 +4,6 @@ export default {
   // ---------- Cuentas ----------
   "Contraseña": "Password",
   "Introduce la contraseña de {jid}": "Enter the password for {jid}",
-  "Recordar (cifrada con Windows)": "Remember (encrypted by Windows)",
   "Cancelar": "Cancel",
   "Conectar": "Connect",
   "STARTTLS obligatorio (recomendado)": "STARTTLS required (recommended)",
@@ -31,7 +30,6 @@ export default {
   "Puerto": "Port",
   "Seguridad": "Security",
   "Servidor de salas": "Room server",
-  "Recordar la contraseña (cifrada con Windows)": "Remember the password (encrypted by Windows)",
   "Desconectar las demás cuentas": "Disconnect the other accounts",
   " — y dejarán de conectarse al iniciar": " — they will stop connecting on startup",
   "Nueva cuenta": "New account",
@@ -45,7 +43,6 @@ export default {
   "Recurso": "Resource",
   "Identifica este cliente; distinto de Pidgin para poder usar ambos": "Identifies this client; keep it different from Pidgin to use both",
   "Recordar contraseña": "Remember password",
-  "(cifrada con DPAPI de Windows)": "(encrypted with Windows DPAPI)",
   "Conectar al iniciar": "Connect on startup",
   "Sincronizar marcadores de salas con el servidor": "Sync room bookmarks with the server",
   "Conexión avanzada": "Advanced connection",
@@ -646,6 +643,7 @@ export default {
   "Esto es una notificación de prueba 👋": "This is a test notification 👋",
   "Ausente (inactivo)": "Away (idle)",
   "El cifrado del sistema no está disponible; no se puede guardar la contraseña de forma segura.": "System encryption is not available; the password cannot be stored securely.",
+  "No hay un llavero del sistema para cifrar la contraseña; no se guardará.": "There is no system keyring to encrypt the password; it will not be saved.",
 
   // ---------- Conexión XMPP ----------
   "Ese apodo ya está en uso en la sala.": "That nickname is already in use in the room.",
@@ -951,4 +949,33 @@ export default {
   "{nick} ha salido": "{nick} left",
   "{nick} ha salido ({status})": "{nick} left ({status})",
   "{n} nuevos": "{n} new",
+  // Linux: llavero, bandeja y textos según el sistema
+  "Recordar ({hint})": "Remember ({hint})",
+  "Recordar la contraseña ({hint})": "Remember the password ({hint})",
+  "cifrada con Windows": "encrypted by Windows",
+  "cifrada con el llavero del sistema": "encrypted with the system keyring",
+  "no disponible: no hay ningún llavero en este sistema": "not available: this system has no keyring",
+  " — no disponible: este sistema no tiene llavero": " — not available: this system has no keyring",
+  " — Pidgin la guarda en texto plano; aquí se cifra con el llavero del sistema": " — Pidgin stores it in plain text; here it is encrypted with the system keyring",
+  "La contraseña no se ha guardado: este sistema no tiene llavero y EvEX-MPP nunca la guarda sin cifrar. Tendrás que escribirla al conectar. Para guardarla, instala un llavero (por ejemplo, sudo apt install gnome-keyring) y vuelve a abrir EvEX-MPP.":
+    "The password was not saved: this system has no keyring and EvEX-MPP never stores it unencrypted. You will have to type it when connecting. To save it, install a keyring (for example, sudo apt install gnome-keyring) and reopen EvEX-MPP.",
+  "Guardar la contraseña en el llavero": "Save the password in the keyring",
+  "Linux te pedirá ahora crear o desbloquear tu llavero (GNOME Keyring, KWallet…) para guardar la contraseña cifrada. Si cancelas, no se guarda y tendrás que escribirla al conectar.":
+    "Linux will now ask you to create or unlock your keyring (GNOME Keyring, KWallet…) to store the password encrypted. If you cancel, it is not saved and you will have to type it when connecting.",
+  "Continuar": "Continue",
+  "Automático (idioma del sistema)": "Automatic (system language)",
+  "Incluye Inter, Nunito, Rajdhani, Orbitron y todas las fuentes instaladas en el sistema": "Includes Inter, Nunito, Rajdhani, Orbitron and every font installed on the system",
+  "No disponible: este escritorio no muestra la bandeja del sistema, así que la ventana oculta no se podría volver a abrir.":
+    "Not available: this desktop does not show a system tray, so a hidden window could not be reopened.",
+  "Iniciar con el sistema": "Start with the system",
+  "Nativos del sistema (sin conexión)": "System native (offline)",
+  "Se piden a Google (fonts.gstatic.com), que ve tu IP. Desactivado: esos emojis se muestran con el estilo del sistema.":
+    "They are requested from Google (fonts.gstatic.com), which sees your IP. Off: those emoji are shown in the system style.",
+  "Predeterminada del sistema": "System default",
+  "Notificación del sistema": "System notification",
+  "No hay voces instaladas. En Linux la lectura en voz alta usa speech-dispatcher; instálalo con una voz, por ejemplo:":
+    "No voices installed. On Linux, read aloud uses speech-dispatcher; install it with a voice, for example:",
+  "Después cierra EvEX-MPP del todo y vuelve a abrirlo.": "Then quit EvEX-MPP completely and open it again.",
+  "Las voces instaladas en el sistema. No se envía nada a Internet. Suena por la salida de audio predeterminada del sistema.":
+    "The voices installed on the system. Nothing is sent to the Internet. It plays through the system's default audio output.",
 };

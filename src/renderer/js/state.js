@@ -32,6 +32,8 @@ export const S = {
   avatarOf: new Map(), // jid (o sala/nick) -> hash
   focused: true,
   version: "",
+  // Sistema y capacidades que informa el proceso principal (init.system); ver system.js.
+  system: { platform: "win32", secretStorage: "os", trayAvailable: true },
 };
 
 export const convKey = (accountId, conv) => `${accountId}|${conv}`;

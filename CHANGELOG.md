@@ -11,6 +11,21 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **Linux packages (beta):** an AppImage and a `.deb` for x64, built by GitHub Actions on Ubuntu and published with the Windows files, in the same `checksums.txt` and build provenance attestation. The `.deb` adds a menu entry (Network / Instant Messaging) and the `evex-mpp` command, recommends a keyring and Speech Dispatcher, and sets `chrome-sandbox` permissions on install. The README explains how to install and verify them and what Linux needs (FUSE 2 for the AppImage, a keyring, Speech Dispatcher for read-aloud).
 - **Alerts on Wayland:** Wayland does not let apps place their windows or keep them on top, so there EvEX-MPP shows alerts as system notifications instead of its own pop-ups (fleet pings stay until dismissed and close when you read the pings). With no notification service it falls back to its own pop-ups. Windows and X11 are unchanged.
 - The CI also builds the Linux packages on every change, so a packaging problem shows up before a release.
+- **Linux support in the app** (system integration):
+  - *Read aloud* uses the system voices (speech-dispatcher, e.g. espeak-ng).
+  - The font list shows the fonts installed on the system (fontconfig).
+  - Pidgin import and Pidgin sounds look in `~/.purple` and `/usr/share/sounds/purple`.
+  - *Start with the system* adds the app to `~/.config/autostart`.
+- **Passwords are only saved when the system can really encrypt them.** On Linux they go to the desktop keyring (GNOME Keyring or KWallet). Without a keyring the account is saved without the password, which is asked for when connecting, instead of keeping it with Chromium's fixed, publicly known key.
+- On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
+
+### Changed
+- **Linux in the interface:**
+  - Before saving a password, the app explains that Linux will ask you to create or unlock your keyring.
+  - Without a keyring, the *Remember password* boxes are disabled with the reason, and the app explains why the password was not saved.
+  - Windows-only options are hidden (taskbar flash), and texts that named Windows say "system".
+  - Without a system tray, the tray options are disabled and say why.
+  - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
 
 ## [0.6.0] - 2026-11-03
 
