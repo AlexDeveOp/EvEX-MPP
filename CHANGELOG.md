@@ -9,6 +9,18 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [0.6.0] - 2026-11-03
 
+A big feature release (sounds, backgrounds, GIFs, keyword rules, recovered and spoken fleet pings, formup countdown) that is also much lighter. Measured on the same PC with the same test profile and mock server, before and after the performance work:
+
+| | Before | 0.6.0 |
+|---|---|---|
+| CPU at idle | 47–70 % of a core | under 1 % |
+| 600-person room with traffic: CPU | 113 % | 30 % |
+| 600-person room with traffic: memory | 581 MB | 480 MB |
+| 200 older messages arriving with 1,200 on screen | almost 2 minutes | about 50 ms |
+| Page updates in 5 s with a busy room open | 15,389 | 694 |
+| Startup | 642 ms | about 600 ms |
+| Installer download | 142 MB | 125 MB |
+
 ### Added
 - More alerts with sound: message sent, connection lost, connection restored, contact comes online or goes offline, contact request and room invitation. The new ones are off or discreet by default; contacts stay silent for the first seconds after connecting so the initial burst does not ring.
 - Each sound has its own volume on top of the master volume, and you can choose the audio output device (e.g. your headset).
@@ -29,6 +41,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - *Preferences → Fleet pings* is now the settings page for everything about pings, in sections: senders, alert and sound (ping sound, repeat, popup that stays), visual cue, read aloud, formup countdown, pings that arrived while the app was closed, and using Pidgin at the same time. The ⚙ button in the *Fleet pings* view opens it. The ping repeat settings moved there from *Notifications*.
 - The refresh button in the *Fleet pings* header only redrew the pings already saved, which looked like it searched for new ones. It is now *Look for new pings*: it checks Pidgin's logs and the server archive right away and says what it found.
 - The minimize, maximize and close buttons are now drawn by the app instead of Windows: they follow the theme, are translated, and the maximize button turns into *Restore* while the window is maximized. *Close* still sends the app to the tray when *Close to tray* is on.
+- **Smaller download**: the installer goes from 142 to 125 MB and the portable version from 131 to 115 MB, and the portable version starts about half a second sooner. Only the Spanish and English language files of the built-in browser engine are included, the same two languages as the app.
 - *Do not disturb* now also lets connection lost/restored sounds through, like fleet pings.
 - Several alerts of the same kind arriving at once ring only once.
 - Fleet ping alerts show the same siren as the pings inside the app instead of an exclamation mark, in white: in the popup, in the tray and taskbar icons (a filled siren that stays readable at 16 px) and in the Windows notification. In the popup, a light warning color (Nord, Dracula...) is darkened just enough for the white siren to be readable.
