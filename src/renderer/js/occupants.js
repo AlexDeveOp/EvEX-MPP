@@ -1,6 +1,6 @@
 // Panel lateral derecho: participantes de la sala activa, agrupados por rol.
-import { S, api, on, roomState } from "./state.js";
-import { h, icon, $, clear, showMenu, toast, prompt, rafThrottle, keepHover } from "./dom.js";
+import { S, api, on, roomState, convKey } from "./state.js";
+import { h, icon, $, showMenu, toast, prompt, rafThrottle, keepHover, morphChildren } from "./dom.js";
 import { openConv } from "./convs.js";
 import { avatarEl } from "./chat.js";
 import { SHOW_LABEL } from "./state.js";
@@ -12,7 +12,9 @@ let reapplyHover = null;
 export function initOccupants() {
   reapplyHover = keepHover($("#occ-list"), ".occ-item[data-key]");
   const render = rafThrottle(renderOccupants);
-  for (const evt of ["active", "occupants", "room", "settings", "avatar"]) on(evt, render);
+  for (const evt of ["active", "occupants", "settings", "avatar"]) on(evt, render);
+  // Los cambios de otras salas no tocan la lista de la sala visible.
+  on("room", (e) => (!e?.room || convKey(e.accountId, e.room) === S.active) && render());
   $("#occ-filter").addEventListener("input", (e) => {
     filter = e.target.value.trim().toLowerCase();
     renderOccupants();
@@ -44,21 +46,21 @@ function drawOccupants() {
   const r = roomState(c.accountId, c.conv);
   $("#occ-count").textContent = r.occupants.size;
   const scroll = list.scrollTop;
-  clear(list);
+  // Se construye fuera de la página y solo se tocan las filas que cambian.
+  const next = document.createElement("div");
   if (!r.joined) {
-    list.append(h("div", { class: "sb-empty" }, r.joining ? t("Entrando en la sala…") : t("No estás en la sala")));
-    return;
+    next.append(h("div", { class: "sb-empty" }, r.joining ? t("Entrando en la sala…") : t("No estás en la sala")));
+    return morphChildren(list, next);
   }
   const occ = [...r.occupants.values()].filter((o) => !filter || o.nick.toLowerCase().includes(filter) || o.jid?.includes(filter));
   for (const [role, title] of ROLE_GROUPS) {
     const items = occ.filter((o) => (o.role === role) || (role === "participant" && !["moderator", "visitor"].includes(o.role)));
     if (!items.length) continue;
     items.sort((a, b) => (a.show ? 1 : 0) - (b.show ? 1 : 0) || a.nick.localeCompare(b.nick, undefined, { sensitivity: "base" }));
-    list.append(h("div", { class: "occ-group" }, h("span", {}, title), h("span", { class: "sb-count" }, items.length)));
-    const frag = document.createDocumentFragment();
-    for (const o of items) frag.append(occupantItem(c, r, o));
-    list.append(frag);
+    next.append(h("div", { class: "occ-group" }, h("span", {}, title), h("span", { class: "sb-count" }, items.length)));
+    for (const o of items) next.append(occupantItem(c, r, o));
   }
+  morphChildren(list, next);
   list.scrollTop = scroll;
 }
 
@@ -106,9 +108,9 @@ function occupantMenu(c, r, o) {
     o.jid ? { label: t("Copiar JID"), icon: "copy", action: () => navigator.clipboard.writeText(o.jid) } : null,
     o.jid && !o.self ? { label: t("Añadir a contactos"), icon: "user-plus", action: () => api("roster:add", c.accountId, o.jid, o.nick, []).then(() => toast(t("Solicitud enviada"), { kind: "ok" })) } : null,
     isMod && !o.self ? "-" : null,
-    isMod && !o.self ? { label: t("Expulsar…"), icon: "user-x", danger: true, action: async () => { const reason = await ask(t("Expulsar a {nick}", { nick: o.nick })); if (reason != null) mod({ nick: o.nick, role: "none", reason }, `${o.nick} expulsado`); } } : null,
+    isMod && !o.self ? { label: t("Expulsar…"), icon: "user-x", danger: true, action: async () => { const reason = await ask(t("Expulsar a {nick}", { nick: o.nick })); if (reason != null) mod({ nick: o.nick, role: "none", reason }, t("{nick} ha sido expulsado", { nick: o.nick })); } } : null,
     isMod && !o.self ? { label: o.role === "visitor" ? t("Dar voz") : t("Quitar voz"), icon: "mic-off", action: () => mod({ nick: o.nick, role: o.role === "visitor" ? "participant" : "visitor" }, t("Hecho")) } : null,
-    isAdmin && o.jid && !o.self ? { label: t("Vetar…"), icon: "ban", danger: true, action: async () => { const reason = await ask(t("Vetar a {nick}", { nick: o.nick })); if (reason != null) mod({ jid: o.jid, affiliation: "outcast", reason }, `${o.nick} vetado`); } } : null,
+    isAdmin && o.jid && !o.self ? { label: t("Vetar…"), icon: "ban", danger: true, action: async () => { const reason = await ask(t("Vetar a {nick}", { nick: o.nick })); if (reason != null) mod({ jid: o.jid, affiliation: "outcast", reason }, t("{nick} ha sido vetado", { nick: o.nick })); } } : null,
   ];
 }
 

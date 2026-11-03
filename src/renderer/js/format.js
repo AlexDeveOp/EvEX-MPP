@@ -8,7 +8,19 @@ const TOKEN_RE = /```([\s\S]*?)```|`([^`\n]+)`|\b((?:https?:\/\/|www\.)[^\s<>"']
 const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif)(\?[^#]*)?(#.*)?$/i;
 const YT_RE = /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{11})/i;
 
+// Se guardan por lista de palabras: cada mensaje pedía la misma expresión dos veces. Es global (flag g), así que
+// quien use .test() debe poner antes lastIndex a 0.
+const mentionCache = new Map();
 export function mentionRegex(words) {
+  const key = words.join("|");
+  if (mentionCache.has(key)) return mentionCache.get(key);
+  if (mentionCache.size > 200) mentionCache.clear();
+  const re = buildMentionRegex(words);
+  mentionCache.set(key, re);
+  return re;
+}
+
+function buildMentionRegex(words) {
   const list = words.filter((w) => w && w.trim().length > 1).map((w) => w.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   if (!list.length) return null;
   return new RegExp(`(?<![\\p{L}\\p{N}_])(${list.join("|")})(?![\\p{L}\\p{N}_])`, "giu");
@@ -82,7 +94,8 @@ export function formatBody(body, { mentionWords = [], rules = [] } = {}) {
   }
   if (last < body.length) html += plainToHtml(body.slice(last), { mentionRe, rules, custom });
 
-  const mention = !!mentionRe && new RegExp(mentionRe.source, "iu").test(body);
+  if (mentionRe) mentionRe.lastIndex = 0;
+  const mention = !!mentionRe && mentionRe.test(body);
   const jumbo = S.settings.jumboEmoji && isEmojiOnly(replaceShortcodes(body));
   return { html, previews, mention, jumbo };
 }
@@ -94,25 +107,32 @@ export function previewHtml(p) {
   return "";
 }
 
-// ---------- fechas ----------
+/// ---------- fechas ----------
+
+// Crear un Intl.DateTimeFormat es lo caro (toLocale*String crea uno en cada llamada): se guardan por idioma y opciones.
+const formatters = new Map();
+function formatter(opts) {
+  const key = `${locale()}|${JSON.stringify(opts)}`;
+  let f = formatters.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale(), opts);
+    formatters.set(key, f);
+  }
+  return f;
+}
 
 export function fmtTime(ts) {
   const s = S.settings;
-  return new Date(ts).toLocaleTimeString(locale(), {
-    hour: "2-digit",
-    minute: "2-digit",
-    ...(s.showSeconds ? { second: "2-digit" } : {}),
-    hour12: s.timeFormat === "12",
-  });
+  return formatter({ hour: "2-digit", minute: "2-digit", ...(s.showSeconds ? { second: "2-digit" } : {}), hour12: s.timeFormat === "12" }).format(ts);
 }
 
 // Hora EVE = UTC, siempre en 24 h como dentro del juego.
 export function fmtEve(ts, seconds = S.settings.showSeconds) {
-  return new Date(ts).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hour12: false, timeZone: "UTC" });
+  return formatter({ hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hour12: false, timeZone: "UTC" }).format(ts);
 }
 
 export function fmtEveDateTime(ts) {
-  return new Date(ts).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "medium", hour12: false, timeZone: "UTC" });
+  return formatter({ dateStyle: "medium", timeStyle: "medium", hour12: false, timeZone: "UTC" }).format(ts);
 }
 
 // Texto para tooltips: las dos horas, claramente etiquetadas.
@@ -126,11 +146,11 @@ export function fmtDay(ts) {
   const y = new Date(Date.now() - 86400e3);
   if (d.toDateString() === today.toDateString()) return t("Hoy");
   if (d.toDateString() === y.toDateString()) return t("Ayer");
-  return d.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined });
+  return formatter({ weekday: "long", day: "numeric", month: "long", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined }).format(d);
 }
 
 export function fmtDateTime(ts) {
-  return new Date(ts).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "short", hour12: S.settings.timeFormat === "12" });
+  return formatter({ dateStyle: "medium", timeStyle: "short", hour12: S.settings.timeFormat === "12" }).format(ts);
 }
 
 export function timeAgo(ts) {

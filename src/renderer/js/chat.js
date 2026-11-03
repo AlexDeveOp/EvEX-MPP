@@ -1,6 +1,6 @@
 // Vista de conversación: pestañas, cabecera, lista de mensajes, compositor y comandos.
 import { S, api, on, emit, account, roomState, contact, bestPresence, avatarUrl, nickColor, initials, updateSettings, saveRooms, conn, SHOW_LABEL } from "./state.js";
-import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, debounce } from "./dom.js";
+import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, debounce, rafThrottle } from "./dom.js";
 import { formatBody, previewHtml, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes } from "./format.js";
 import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
 import { playSound } from "./sounds.js";
@@ -18,13 +18,14 @@ import { t } from "./i18n.js";
 const panes = new Map();
 
 export function initChat() {
-  on("tabs", renderTabs);
+  // Las pestañas se pintan como mucho una vez por fotograma (antes, una vez por cada mensaje no leído).
+  on("tabs", rafThrottle(renderTabs));
   on("active", showActive);
   on("message", ({ conv, msg }) => appendMessage(conv, msg));
   on("message-updated", ({ conv, msg }) => updateMessage(conv, msg));
   on("history", ({ conv, prepended }) => {
     const p = panes.get(conv.key);
-    if (p) renderAllMessages(conv, p, prepended);
+    if (p && !skipHidden(conv, p)) renderAllMessages(conv, p, prepended);
   });
   on("accounts", () => {
     for (const [key, p] of panes) {
@@ -49,10 +50,15 @@ export function initChat() {
     if (p) applyConvBackground(S.convs.get(key), p);
   });
   on("settings", () => rerenderAll());
+  // Al cambiar un ajuste solo se repinta la pestaña visible; las demás se repintan cuando se abren.
   function rerenderAllNow() {
     for (const [key, p] of panes) {
       const c = S.convs.get(key);
       if (!c) continue;
+      if (key !== S.active) {
+        p.dirty = true;
+        continue;
+      }
       applyConvBackground(c, p);
       renderAllMessages(c, p);
       renderHeader(c, p);
@@ -149,7 +155,10 @@ function renderTabs() {
       { passive: false },
     );
   }
-  bar.querySelector(".tab.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  if (bar.dataset.shown !== (S.active || "")) {
+    bar.dataset.shown = S.active || "";
+    bar.querySelector(".tab.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
 }
 
 function tabIcon(c) {
@@ -291,9 +300,14 @@ function pane(c) {
       p.newCount = 0;
       jump.classList.add("hidden");
     } else jump.classList.remove("hidden");
-    if (scroller.scrollTop < 40 && !p.loadingMore && c.type !== "pings" && !c.exhausted) {
-      p.loadingMore = true;
-      loadHistory(c, true).finally(() => (p.loadingMore = false));
+    // Mientras se lee arriba, la memoria no recorta los mensajes antiguos (convs.js).
+    c.reading = !near;
+    if (scroller.scrollTop < 40 && !p.loadingMore && c.type !== "pings") {
+      if (p.skipped) renderAllMessages(c, p, true);
+      else if (!c.exhausted) {
+        p.loadingMore = true;
+        loadHistory(c, true).finally(() => (p.loadingMore = false));
+      }
     }
   });
   list.addEventListener("click", (e) => onListClick(c, e));
@@ -318,6 +332,13 @@ function applyConvBackground(c, p) {
   p.root.classList.toggle("has-conv-bg", !!bg);
 }
 
+// Una pestaña oculta no pinta mensajes: se marca y se repinta entera al abrirla.
+function skipHidden(c, p) {
+  if (c.key === S.active || c.type === "pings") return false;
+  p.dirty = true;
+  return true;
+}
+
 function showActive() {
   const c = S.active ? S.convs.get(S.active) : null;
   for (const [key, p] of panes) {
@@ -330,6 +351,11 @@ function showActive() {
   for (const p of panes.values()) p.root.classList.remove("active");
   if (!c) return;
   const p = pane(c);
+  if (p.dirty) {
+    p.dirty = false;
+    applyConvBackground(c, p);
+    renderAllMessages(c, p);
+  }
   p.root.classList.add("active");
   renderHeader(c, p);
   if (c.firstUnreadKey) {
@@ -489,7 +515,73 @@ function sameGroup(prev, m) {
 
 const isAction = (b) => /^\/me\s/.test(b || "");
 
+// c.messages debe ir por orden de hora; si llegaron mensajes antiguos con la pestaña cerrada, se ordena aquí.
+function ensureSorted(messages) {
+  for (let i = 1; i < messages.length; i++) {
+    if (messages[i].ts < messages[i - 1].ts) return messages.sort((a, b) => a.ts - b.ts);
+  }
+  return messages;
+}
+
+// Último índice con ts <= el dado (búsqueda binaria; la lista está ordenada).
+function indexAfter(messages, ts, end = messages.length) {
+  let lo = 0;
+  let hi = end;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (messages[mid].ts <= ts) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+const dayOf = (ts) => new Date(ts).toDateString();
+const isShown = (m) => !(m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave);
+const msgEl = (p, m) => p.list.querySelector(`.msg[data-key="${CSS.escape(m.key)}"]`);
+
+// Coloca un mensaje antiguo en su sitio, en c.messages y en la lista, con su separador de día y su agrupado.
+function insertOlder(c, p, m) {
+  const msgs = c.messages;
+  const at = msgs.lastIndexOf(m);
+  if (at >= 0) msgs.splice(at, 1);
+  const i = indexAfter(msgs, m.ts);
+  msgs.splice(i, 0, m);
+  let prev = null;
+  for (let j = i - 1; j >= 0 && !prev; j--) if (isShown(msgs[j]) && msgEl(p, msgs[j])) prev = msgs[j];
+  let next = null;
+  let nextEl = null;
+  for (let j = i + 1; j < msgs.length && !nextEl; j++) {
+    if (!isShown(msgs[j])) continue;
+    nextEl = msgEl(p, msgs[j]);
+    if (nextEl) next = msgs[j];
+  }
+  if (!nextEl) return renderAllMessages(c, p);
+  if (!prev && p.skipped) {
+    p.skipped++;
+    return;
+  }
+  p.list.querySelector(".empty-state")?.remove();
+  const day = dayOf(m.ts);
+  // Mismo día que el siguiente: va justo antes de él (su separador, si lo tiene, ya queda encima).
+  // Otro día: va antes del separador del siguiente y lleva el suyo si el anterior es de otro día.
+  let anchor = nextEl;
+  const parts = [];
+  if (day !== dayOf(next.ts)) {
+    while (anchor.previousElementSibling?.matches(".day-sep, .unread-marker")) anchor = anchor.previousElementSibling;
+    if (!prev || dayOf(prev.ts) !== day) parts.push(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
+  }
+  parts.push(messageEl(c, m, sameGroup(prev, m)));
+  anchor.before(...parts);
+  // El siguiente puede pasar a ir agrupado con este (o dejar de estarlo).
+  const cont = sameGroup(m, next);
+  if (cont !== nextEl.classList.contains("cont")) nextEl.replaceWith(messageEl(c, next, cont));
+}
+
+// Mensajes que se pintan como mucho (unos 30 nodos cada uno). Los anteriores siguen en memoria y aparecen al subir.
+const MAX_RENDERED = 1500;
+
 function renderAllMessages(c, p, prependedCount) {
+  ensureSorted(c.messages);
   const oldHeight = p.scroller.scrollHeight;
   const oldTop = p.scroller.scrollTop;
   clear(p.list);
@@ -501,14 +593,18 @@ function renderAllMessages(c, p, prependedCount) {
     p.scroller.scrollTop = 0;
     return;
   }
-  if (!c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, t("Desplázate hacia arriba para cargar más")));
-  if (c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, icon("history"), t(" Inicio del historial local")));
+  // Al cargar más historial se pinta todo lo que hay en memoria; si no, solo los últimos MAX_RENDERED.
+  const start = prependedCount ? 0 : Math.max(0, c.messages.length - MAX_RENDERED);
+  p.skipped = start;
+  if ((!c.exhausted || start) && c.messages.length) p.list.append(h("div", { class: "history-hint" }, t("Desplázate hacia arriba para cargar más")));
+  else if (c.messages.length) p.list.append(h("div", { class: "history-hint" }, icon("history"), t(" Inicio del historial local")));
   if (!c.messages.length) {
     p.list.append(h("div", { class: "empty-state" }, icon(c.type === "groupchat" ? "hash" : "message-circle"), h("p", {}, c.type === "groupchat" ? t("Aún no hay mensajes en esta sala.") : t("Escribe el primer mensaje."))));
   }
   let prev = null;
   const frag = document.createDocumentFragment();
-  for (const m of c.messages) {
+  for (let i = start; i < c.messages.length; i++) {
+    const m = c.messages[i];
     if (m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave) continue;
     if (!prev || new Date(prev.ts).toDateString() !== new Date(m.ts).toDateString()) frag.append(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
     frag.append(messageEl(c, m, sameGroup(prev, m)));
@@ -532,11 +628,10 @@ function appendMessage(c, m) {
     return;
   }
   if (m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave) return;
-  // Mensajes de historial que llegan fuera de orden: volver a pintar todo.
-  if (p.lastRendered && m.ts < p.lastRendered.ts - 1000) {
-    c.messages.sort((a, b) => a.ts - b.ts);
-    return renderAllMessages(c, p);
-  }
+  if (p.dirty || skipHidden(c, p)) return;
+  // Mensajes de historial que llegan fuera de orden (historial de la sala, archivo del servidor…): se colocan
+  // en su sitio. Antes se repintaba la sala entera por cada uno y una tanda podía colgar la ventana.
+  if (p.lastRendered && m.ts < p.lastRendered.ts - 1000) return insertOlder(c, p, m);
   p.list.querySelector(".empty-state")?.remove();
   const prev = p.lastRendered;
   if (!prev || new Date(prev.ts).toDateString() !== new Date(m.ts).toDateString()) p.list.append(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
@@ -545,22 +640,42 @@ function appendMessage(c, m) {
   p.list.append(el);
   p.lastRendered = m;
   const visible = S.active === c.key;
-  if (p.atBottom !== false || m.out) scrollToBottom(p);
+  if (p.atBottom !== false || m.out) {
+    trimTop(c, p);
+    scrollToBottom(p);
+  }
   else if (visible && !m.sys) {
     p.newCount++;
-    p.jump.querySelector(".jump-count").textContent = `${p.newCount} nuevos`;
+    p.jump.querySelector(".jump-count").textContent = t("{n} nuevos", { n: p.newCount });
     p.jump.classList.remove("hidden");
   }
   if (visible && S.focused) markRead(c.key);
 }
 
+// Con la lista abajo del todo, quita por arriba lo que pase de MAX_RENDERED (sesiones largas en salas activas).
+function trimTop(c, p) {
+  const msgs = p.list.querySelectorAll(".msg");
+  const extra = msgs.length - MAX_RENDERED;
+  if (extra < 100) return;
+  const keep = msgs[extra];
+  while (keep.previousElementSibling && !keep.previousElementSibling.matches(".history-hint")) keep.previousElementSibling.remove();
+  // El primero que queda lleva su separador de día y no va agrupado con uno que ya no se ve.
+  const m = c.messages.find((x) => x.key === keep.dataset.key);
+  const first = m && keep.classList.contains("cont") ? messageEl(c, m, false) : keep;
+  if (first !== keep) keep.replaceWith(first);
+  if (m) first.before(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
+  p.skipped = m ? c.messages.indexOf(m) : p.skipped;
+  const hint = p.list.querySelector(".history-hint");
+  if (hint && !hint.querySelector(".icon")) return;
+  hint?.replaceWith(h("div", { class: "history-hint" }, t("Desplázate hacia arriba para cargar más")));
+}
+
 function updateMessage(c, m) {
   const p = panes.get(c.key);
+  if (p?.dirty) return;
   const el = p?.list.querySelector(`.msg[data-key="${CSS.escape(m.key)}"]`);
   if (!el) return;
-  const prevEl = el.previousElementSibling;
   el.replaceWith(messageEl(c, m, el.classList.contains("cont")));
-  void prevEl;
 }
 
 function insertUnreadMarker(c, p) {
@@ -581,14 +696,15 @@ function senderJid(c, m) {
 }
 
 function messageEl(c, m, cont) {
+  const tip = fmtTimes(m.ts);
   if (m.sys) {
     return h(
       "div",
       { class: `msg sys ${m.kind || ""}`, dataset: { key: m.key } },
       icon(m.icon || "info", "sys-icon"),
       h("span", { class: "sys-text", html: formatBody(m.body).html }),
-      localTime(m.ts),
-      eveTime(m.ts),
+      localTime(m.ts, "", tip),
+      eveTime(m.ts, tip),
     );
   }
   const action = isAction(m.body);
@@ -626,14 +742,14 @@ function messageEl(c, m, cont) {
         "div",
         { class: "msg-head" },
         h("span", { class: "msg-nick", dataset: { nick: m.nick } }, m.nick),
-        localTime(m.ts, "msg-time"),
-        eveTime(m.ts),
+        localTime(m.ts, "msg-time", tip),
+        eveTime(m.ts, tip),
         m.out && c.type === "chat" ? h("span", { class: `receipt ${m.received ? "ok" : ""}`, title: m.received ? t("Entregado") : t("Enviado") }, icon(m.received ? "check-check" : "check")) : null,
       ),
       bodyEl,
       prevEl,
     ),
-    h("time", { class: "msg-time-side", title: fmtTimes(m.ts) }, S.settings.showLocalTime !== false ? fmtTime(m.ts) : null, S.settings.showEveTime !== false ? h("span", { class: "eve-side" }, fmtEve(m.ts)) : null),
+    h("time", { class: "msg-time-side", title: tip }, S.settings.showLocalTime !== false ? fmtTime(m.ts) : null, S.settings.showEveTime !== false ? h("span", { class: "eve-side" }, fmtEve(m.ts)) : null),
     h(
       "div",
       { class: "msg-actions" },
@@ -646,15 +762,16 @@ function messageEl(c, m, cont) {
 }
 
 // Hora local y hora EVE: cada una se puede ocultar en Preferencias → Mensajes → Hora.
-function localTime(ts, cls) {
+// tip: el texto del tooltip, calculado una vez por mensaje.
+function localTime(ts, cls, tip = fmtTimes(ts)) {
   if (S.settings.showLocalTime === false) return null;
-  return h("time", { class: cls, title: fmtTimes(ts) }, fmtTime(ts));
+  return h("time", { class: cls, title: tip }, fmtTime(ts));
 }
 
 // Hora EVE junto a la local, con otro estilo para distinguirlas.
-function eveTime(ts) {
+function eveTime(ts, tip = fmtTimes(ts)) {
   if (S.settings.showEveTime === false) return null;
-  return h("time", { class: "msg-eve", title: fmtTimes(ts) }, t("EVE {eve}", { eve: fmtEve(ts) }));
+  return h("time", { class: "msg-eve", title: tip }, t("EVE {eve}", { eve: fmtEve(ts) }));
 }
 
 function splitQuote(body) {

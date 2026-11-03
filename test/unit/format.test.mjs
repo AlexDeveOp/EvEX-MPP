@@ -1,7 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
-import { formatBody, mentionRegex, previewHtml, fmtEve } from "../../src/renderer/js/format.js";
+import { formatBody, mentionRegex, previewHtml, fmtEve, fmtTime } from "../../src/renderer/js/format.js";
 import { esc } from "../../src/renderer/js/dom.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
@@ -83,4 +83,22 @@ test("fmtEve da la hora EVE (UTC) en 24 h", () => {
   const ts = Date.UTC(2026, 10, 2, 21, 5, 9);
   assert.equal(fmtEve(ts, false), "21:05");
   assert.equal(fmtEve(ts, true), "21:05:09");
+});
+
+test("fmtTime sigue los ajustes de 12/24 h y segundos aunque los formateadores se guarden", () => {
+  const ts = new Date(2026, 10, 2, 21, 5, 9).getTime();
+  Object.assign(S.settings, { timeFormat: "24", showSeconds: false });
+  assert.equal(fmtTime(ts), "21:05");
+  S.settings.showSeconds = true;
+  assert.equal(fmtTime(ts), "21:05:09");
+  Object.assign(S.settings, { timeFormat: "12", showSeconds: false });
+  assert.match(fmtTime(ts), /^0?9:05\s?p\.?\s?m\.?$/i);
+  Object.assign(S.settings, { timeFormat: "24", showSeconds: false });
+  assert.equal(fmtTime(ts), "21:05", "volver a 24 h no reutiliza el formateador de 12 h");
+});
+
+test("formatBody detecta la mención en mensajes seguidos aunque la expresión se reutilice", () => {
+  assert.equal(mentionRegex(["bob", "alice"]), mentionRegex(["bob", "alice"]), "misma lista, misma expresión");
+  for (let i = 0; i < 3; i++) assert.equal(formatBody("hola bob", { mentionWords: ["bob", "alice"] }).mention, true);
+  assert.equal(formatBody("nada", { mentionWords: ["bob", "alice"] }).mention, false);
 });

@@ -11,7 +11,20 @@ const FIELD_RE = /^([A-Za-z][\w ./()'&-]{1,32}?)\s*:[\s\u200B-\u200D\u2060\uFEFF
 // p. ej. "~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00 EVE ~~~"
 const FOOTER_RE = /~~~\s*This was an?\s+(?:[\w-]+\s+)?(?:broadcast|ping)\s+from\s+(\S+)\s+to\s+(\S+)\s+at\s+(.+?)\s*~~~/i;
 
+// Cada ping se analizaba varias veces (tarjeta, filtro, grupos de la cabecera, cuenta atrás, voz): se guarda por texto.
+// El resultado no se debe modificar.
+const parsed = new Map();
 export function parsePing(body) {
+  let p = parsed.get(body);
+  if (!p) {
+    if (parsed.size > 2000) parsed.clear();
+    p = parsePingNow(body);
+    parsed.set(body, p);
+  }
+  return p;
+}
+
+function parsePingNow(body) {
   const lines = body.split("\n");
   const fields = [];
   const title = [];
