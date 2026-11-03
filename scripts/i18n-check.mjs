@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dirs = ["src/renderer/js", "src/main"];
+const dirs = ["src/renderer/js", "src/renderer/js/settings", "src/main"];
 const files = dirs.flatMap((d) => fs.readdirSync(path.join(root, d)).filter((f) => f.endsWith(".js") && f !== "i18n.js").map((f) => path.join(d, f)));
 
 // t("…") traduce; tk("…") marca textos guardados en constantes que se traducen más tarde.
