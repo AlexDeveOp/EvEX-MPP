@@ -1,6 +1,8 @@
 // Notificaciones emergentes propias: ventanitas siempre encima que suben desde la barra de tareas y se apilan.
-import { BrowserWindow, screen } from "electron";
+// En Wayland se usan las notificaciones del sistema en su lugar (ver systemPopups).
+import { BrowserWindow, Notification, app, nativeImage, screen } from "electron";
 import path from "node:path";
+import { renderIcon, renderAlertIcon } from "./icon.js";
 
 const WIDTH = 380;
 const MARGIN = 12;
@@ -34,8 +36,48 @@ function layout() {
   }
 }
 
+// ¿Usar las notificaciones del sistema en vez de la burbuja propia?
+// En Wayland una aplicación no puede elegir la posición de sus ventanas ni ponerlas por encima de las demás
+// (setBounds y setAlwaysOnTop no tienen efecto): la burbuja saldría donde decida el compositor, normalmente
+// en el centro y detrás de la ventana activa. Las notificaciones del sistema (org.freedesktop.Notifications)
+// sí aparecen en su sitio y por encima, y respetan el «No molestar» del escritorio.
+// Electron usa Wayland si hay sesión Wayland (WAYLAND_DISPLAY o XDG_SESSION_TYPE=wayland) salvo que se le fuerce
+// X11 con --ozone-platform=x11; en X11 la burbuja propia funciona. EVEX_POPUPS=custom|system lo fuerza (pruebas).
+export function systemPopups() {
+  const forced = process.env.EVEX_POPUPS;
+  if (forced === "custom") return false;
+  if (forced !== "system") {
+    if (process.platform !== "linux") return false;
+    if (app.commandLine.getSwitchValue("ozone-platform") === "x11") return false;
+    if (!process.env.WAYLAND_DISPLAY && process.env.XDG_SESSION_TYPE !== "wayland") return false;
+  }
+  return Notification.isSupported();
+}
+
+const systemNotes = new Map(); // id → { note, data }
+
+function showSystemNotification(id, data) {
+  const body = [data.text, ...(data.fields || []).map((f) => `${f.key}: ${f.value}`)].filter(Boolean).join("\n");
+  const ping = data.kind === "ping";
+  const sticky = data.sticky || (ping && options.pingSticky);
+  const note = new Notification({
+    title: data.title || "EvEX-MPP",
+    body: body.slice(0, 400),
+    silent: true, // el sonido lo pone la app
+    icon: nativeImage.createFromBuffer(ping ? renderAlertIcon(128) : renderIcon(128)),
+    urgency: ping ? "critical" : "normal",
+    timeoutType: sticky ? "never" : "default",
+  });
+  note.on("click", () => options.onClick(data));
+  note.on("close", () => systemNotes.delete(id));
+  systemNotes.set(id, { note, data });
+  note.show();
+  return id;
+}
+
 export function showPopup(data) {
   const id = nextId++;
+  if (systemPopups()) return showSystemNotification(id, data);
   const p = { id, data: { ...data, corner: options.corner }, height: 120, win: null, timer: null };
   const win = new BrowserWindow({
     width: WIDTH,
@@ -94,6 +136,11 @@ export function closePopup(id, immediate) {
 
 export function closeAllPopups(kind) {
   for (const p of [...popups]) if (!kind || p.data.kind === kind) closePopup(p.id);
+  for (const [id, { note, data }] of [...systemNotes]) {
+    if (kind && data.kind !== kind) continue;
+    note.close();
+    systemNotes.delete(id);
+  }
 }
 
 export function popupIpc(handle) {
