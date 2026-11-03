@@ -62,7 +62,16 @@ export function registerPidginIpc(handle, { logs, send, publicAccount }) {
         nick: acc?.nick || p.alias,
         rooms,
       });
-      if (importPasswords && p.password) await store.setPassword(acc.id, p.password);
+      // Sin llavero (Linux) la contraseña no se guarda: se importa la cuenta igualmente y se pide al conectar.
+      let passwordSaved = false;
+      if (importPasswords && p.password) {
+        try {
+          await store.setPassword(acc.id, p.password);
+          passwordSaved = true;
+        } catch (err) {
+          if (err.code !== "NO_KEYRING") throw err;
+        }
+      }
       let logResult = null;
       if (doLogs) {
         const cfg = store.get();
@@ -79,7 +88,7 @@ export function registerPidginIpc(handle, { logs, send, publicAccount }) {
         store.save();
         logResult = { conversations: logResult.conversations, messages: logResult.messages };
       }
-      results.push({ jid: p.jid, accountId: acc.id, rooms: p.rooms.length, logs: logResult, password: importPasswords && !!p.password });
+      results.push({ jid: p.jid, accountId: acc.id, rooms: p.rooms.length, logs: logResult, password: passwordSaved, ...(importPasswords && p.password && !passwordSaved ? { passwordNotSaved: "no-keyring" } : {}) });
     }
     store.flush();
     return { results, accounts: store.get().accounts.map(publicAccount) };

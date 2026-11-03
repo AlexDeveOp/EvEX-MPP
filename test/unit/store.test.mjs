@@ -80,14 +80,16 @@ test("upsertAccount añade o sustituye por id, y removeAccount la quita", () => 
 });
 
 test("las contraseñas nunca se guardan sin cifrar", async () => {
+  store.resetSecretStorageProbe();
   // Sin cifrado del sistema, guardar falla y no escribe nada.
   await assert.rejects(store.setPassword("acc", "secreta"));
   assert.ok(!fs.existsSync(path.join(dir, "secrets.json")));
   assert.equal(store.hasPassword("acc"), false);
 
-  // Con cifrado, lo guardado no contiene la contraseña y se recupera.
-  safeStorage.encryptStringAsync = async (s) => Buffer.from(`cifrado:${[...s].reverse().join("")}`);
-  safeStorage.decryptStringAsync = async (b) => ({ result: [...b.toString().slice(8)].reverse().join(""), shouldReEncrypt: false });
+  // Con cifrado, lo guardado no contiene la contraseña y se recupera. El cifrado falso empieza por "v11" como el de
+  // Chromium con la clave del llavero: en Linux es lo que distingue un llavero real de la clave fija ("v10").
+  safeStorage.encryptStringAsync = async (s) => Buffer.from(`v11${[...s].reverse().join("")}`);
+  safeStorage.decryptStringAsync = async (b) => ({ result: [...b.toString().slice(3)].reverse().join(""), shouldReEncrypt: false });
   try {
     await store.setPassword("acc", "secreta");
     assert.ok(!fs.readFileSync(path.join(dir, "secrets.json"), "utf8").includes("secreta"));
@@ -98,5 +100,18 @@ test("las contraseñas nunca se guardan sin cifrar", async () => {
   } finally {
     delete safeStorage.encryptStringAsync;
     delete safeStorage.decryptStringAsync;
+  }
+});
+
+// En Linux sin llavero, Chromium cifra con una clave fija y pública ("v10"): eso no cuenta como cifrado y no se guarda.
+test("en Linux, sin llavero (cifrado v10) la contraseña no se guarda", { skip: process.platform !== "linux" && "solo en Linux" }, async () => {
+  store.resetSecretStorageProbe();
+  safeStorage.encryptStringAsync = async (s) => Buffer.from(`v10${s}`);
+  try {
+    await assert.rejects(store.setPassword("otra", "secreta"), (e) => e.code === "NO_KEYRING");
+    assert.equal(store.hasPassword("otra"), false);
+  } finally {
+    delete safeStorage.encryptStringAsync;
+    store.resetSecretStorageProbe();
   }
 });

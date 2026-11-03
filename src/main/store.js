@@ -1,5 +1,7 @@
-// Persistencia de configuración (JSON en userData) y contraseñas cifradas con safeStorage (DPAPI en Windows).
+// Persistencia de configuración (JSON en userData) y contraseñas cifradas con safeStorage (DPAPI en Windows, el llavero
+// del escritorio en Linux).
 import { app, safeStorage } from "electron";
+import { linuxStorageKind, hasSecureStorage } from "./platform.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -222,9 +224,46 @@ export function getAccount(id) {
 
 // ---- contraseñas ----
 
+// Dónde cifra el sistema: "os" en Windows y macOS; en Linux, "keyring" o "basic_text" (sin llavero), según el prefijo
+// de un texto cifrado de prueba (ver linuxStorageKind). Se comprueba una vez, con la app ya lista.
+// La prueba puede abrir la ventana del escritorio para desbloquear el llavero: un fallo o una cancelación no se recuerda,
+// para volver a intentarlo la próxima vez.
+let storageProbe = null;
+export function secretStorage() {
+  if (process.platform !== "linux") return Promise.resolve("os");
+  storageProbe ||= safeStorage.encryptStringAsync("evex").then(
+    (buf) => linuxStorageKind(buf.subarray(0, 3).toString()),
+    () => {
+      storageProbe = null;
+      return "basic_text";
+    },
+  );
+  return storageProbe;
+}
+
+// Para los tests: la próxima consulta vuelve a comprobar el llavero.
+export function resetSecretStorageProbe() {
+  storageProbe = null;
+}
+
+// Para la interfaz al arrancar: no espera a que el usuario conteste a la ventana del llavero. Si no hay respuesta
+// enseguida devuelve "unknown"; la comprobación sigue y se usa al guardar una contraseña.
+export function secretStorageSoon(ms = 1500) {
+  return Promise.race([secretStorage(), new Promise((r) => setTimeout(() => r("unknown"), ms))]);
+}
+
+export class NoKeyringError extends Error {
+  constructor() {
+    super(t("No hay un llavero del sistema para cifrar la contraseña; no se guardará."));
+    this.code = "NO_KEYRING";
+  }
+}
+
 export async function setPassword(accountId, password) {
   let enc = null;
   if (password) {
+    // Sin llavero (Linux sin GNOME Keyring ni KWallet), Chromium solo ofusca la contraseña con una clave fija: no se guarda.
+    if (!hasSecureStorage(await secretStorage())) throw new NoKeyringError();
     try {
       enc = (await safeStorage.encryptStringAsync(password)).toString("base64");
     } catch {
