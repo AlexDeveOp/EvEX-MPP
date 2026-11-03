@@ -965,3 +965,18 @@ body.resizing {
   font-weight: 600;
   color: var(--text2);
 }
+
+/* Qué ofrece el servidor de la cuenta (ficha de la cuenta → Conexión avanzada). */
+.server-info {
+  margin-top: 8px;
+}
+.server-info p {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0;
+}
+.server-info .icon {
+  flex: none;
+  margin-top: 2px;
+}

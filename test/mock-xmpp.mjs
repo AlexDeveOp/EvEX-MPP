@@ -2,6 +2,8 @@
 // Uso: node test/mock-xmpp.mjs  → cuenta usuario@test.local, servidor 127.0.0.1:5299 (o MOCK_PORT), seguridad «TLS si está disponible».
 // Ofrece roster, salas MUC (general, operaciones, entrenamiento y "secret" con contraseña "pw"), historial, marcadores
 // y un ping de pingbot@test.local en cada conexión (añade «pingbot» a los remitentes de pings).
+// Con MOCK_MAM=1 anuncia archivo de mensajes (XEP-0313) y guarda en él un ping de hace 40 minutos que nunca se entregó,
+// como si hubiera llegado con la app cerrada.
 import net from "node:net";
 import Parser from "@xmpp/xml/lib/Parser.js";
 import xml from "@xmpp/xml";
@@ -16,6 +18,10 @@ const ROOMS = {
   secret: { name: "secret", subject: "", occupants: [], password: "pw" },
 };
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+const MAM = "urn:xmpp:mam:2";
+const ARCHIVE = process.env.MOCK_MAM
+  ? [{ id: "arch-1", from: `pingbot@${DOMAIN}/bot`, ts: Date.now() - 40 * 60e3, body: "Fleet up in 20 minutes\nFC Name: Bob FC\nFormup Location: Amarr\nDoctrine: Ferox\n\n~~~ This was a coord broadcast from bob to all ~~~" }]
+  : [];
 
 net
   .createServer((sock) => {
@@ -112,8 +118,26 @@ net
           ),
         );
       }
+      // El archivo de mensajes se anuncia en la dirección del usuario, no en la del servidor (como Prosody o ejabberd).
+      if (ns === "http://jabber.org/protocol/disco#info" && to === `${user}@${DOMAIN}`)
+        return result(st, xml("query", { xmlns: ns }, xml("identity", { category: "account", type: "registered" }), process.env.MOCK_MAM ? xml("feature", { var: MAM }) : null));
       if (ns === "http://jabber.org/protocol/disco#info")
         return result(st, xml("query", { xmlns: ns }, xml("identity", { category: "server", type: "im" }), xml("feature", { var: "urn:xmpp:carbons:2" })));
+      if (ns === MAM && st.attrs.type === "set" && process.env.MOCK_MAM) {
+        const fields = Object.fromEntries(q.getChild("x")?.getChildren("field").map((f) => [f.attrs.var, f.getChildText("value")]) || []);
+        const start = fields.start ? Date.parse(fields.start) : 0;
+        const found = ARCHIVE.filter((m) => (!fields.with || m.from.startsWith(fields.with)) && m.ts >= start);
+        log("archivo: with", fields.with, "desde", fields.start, "→", found.length);
+        for (const m of found)
+          send(
+            xml(
+              "message",
+              { to: jid },
+              xml("result", { xmlns: MAM, queryid: q.attrs.queryid, id: m.id }, xml("forwarded", { xmlns: "urn:xmpp:forward:0" }, xml("delay", { xmlns: "urn:xmpp:delay", stamp: new Date(m.ts).toISOString() }), xml("message", { from: m.from, to: jid, type: "chat" }, xml("body", {}, m.body)))),
+            ),
+          );
+        return result(st, xml("fin", { xmlns: MAM, complete: "true" }, xml("set", { xmlns: "http://jabber.org/protocol/rsm" }, found.length ? xml("last", {}, found.at(-1).id) : null)));
+      }
       if (ns === "jabber:iq:private" && st.attrs.type === "set") {
         log("marcadores guardados:", q.getChild("storage").getChildren("conference").map((x) => `${x.attrs.jid.split("@")[0]}${x.attrs.autojoin === "true" ? "⚡" : ""}`).join(", "));
         return result(st);

@@ -11,6 +11,7 @@ import { pingCard, pingMatches, pingGroups } from "./pings.js";
 import { matchRule, highlightRules } from "./keywords.js";
 import { openBackgroundEditor } from "./settings.js";
 import { openSearch } from "./search.js";
+import { searchMissedPings } from "./ping-recovery.js";
 
 import { t } from "./i18n.js";
 const panes = new Map();
@@ -385,10 +386,8 @@ function renderHeader(c, p) {
         h("option", { value: "" }, t("Todos los grupos")),
         groups.map((g) => h("option", { value: g, selected: g === p.filter.group }, g)),
       ),
-      iconButton("refresh-cw", t("Recargar"), () => {
-        c.loaded = false;
-        loadHistory(c);
-      }),
+      // Busca pings que llegaron con la app cerrada (registros de Pidgin y archivo del servidor), no solo redibuja.
+      iconButton("refresh-cw", t("Buscar pings nuevos (en Pidgin y en el servidor)"), (e) => searchMissedPings(e.currentTarget)),
     );
     return;
   }

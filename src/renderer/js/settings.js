@@ -513,6 +513,13 @@ const RENDER = {
           t("Los pings se envían a tu cuenta, no a una sala. Si tienes Pidgin y EvEX-MPP conectados a la vez, el servidor los entrega al cliente con mayor prioridad. Sube la prioridad de esta cuenta (Cuentas → Conexión avanzada) para recibirlos aquí."),
         ),
       ),
+      // Pings que llegaron con la app cerrada (src/main/ping-recovery.js). Ambos activados por defecto.
+      group(
+        t("Pings que llegaron con la app cerrada"),
+        toggle(s.pingRecovery?.pidgin !== false, (v) => look((x) => (x.pingRecovery = { ...x.pingRecovery, pidgin: v })), t("Recuperarlos de Pidgin en este PC"), t("Lee solo las conversaciones con los remitentes de pings en los registros de Pidgin, al iniciar y cada 2 minutos. No se envía nada.")),
+        toggle(s.pingRecovery?.server !== false, (v) => look((x) => (x.pingRecovery = { ...x.pingRecovery, server: v })), t("Pedirlos al servidor al conectar"), t("Solo si el servidor guarda archivo de mensajes (XEP-0313); lo indica la ficha de la cuenta. Se piden los mensajes de los remitentes de pings de los últimos 7 días como mucho.")),
+        h("p", { class: "muted small" }, t("También puedes buscarlos al momento con el botón de la cabecera de «Pings de flota». Los recuperados no suenan, porque ya pasaron.")),
+      ),
     );
   },
 

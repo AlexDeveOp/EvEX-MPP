@@ -28,6 +28,7 @@ const NS = {
   VERSION: "jabber:iq:version",
   PING: "urn:xmpp:ping",
   RSM: "http://jabber.org/protocol/rsm",
+  MAM: "urn:xmpp:mam:2",
   DATA: "jabber:x:data",
   OOB: "jabber:x:oob",
   STANZAS: "urn:ietf:params:xml:ns:xmpp-stanzas",
@@ -86,6 +87,9 @@ export class XmppAccount extends EventEmitter {
     this.presences = new Map(); // jid -> Map(recurso -> presencia), para reconstruir la interfaz
     this.rooms = new Map();
     this.serverFeatures = new Set();
+    this.mamQueries = new Map(); // queryid -> resultados del archivo de mensajes que van llegando
+    this.mam = false;
+    this.serverInfo = null;
     this.avatarHash = "";
     this.avatarQueue = [];
     this.avatarPending = new Set();
@@ -270,7 +274,45 @@ export class XmppAccount extends EventEmitter {
       await this.xmpp.iqCaller.set(xml("enable", NS.CARBONS)).catch(() => {});
       this.carbons = true;
     }
-    this.event("server-info", { features: [...this.serverFeatures], carbons: !!this.carbons });
+    // El archivo de mensajes de cada usuario (XEP-0313) se anuncia en su propia dirección, no en la del servidor.
+    const own = await this.xmpp.iqCaller.get(xml("query", NS.DISCO_INFO), bare(this.ownJid)).catch(() => null);
+    const ownFeatures = new Set(own?.getChildren("feature").map((f) => f.attrs.var) || []);
+    this.mam = ownFeatures.has(NS.MAM) || this.serverFeatures.has(NS.MAM);
+    this.serverInfo = { carbons: !!this.carbons, mam: this.mam };
+    this.event("server-info", { features: [...this.serverFeatures, ...ownFeatures], ...this.serverInfo });
+  }
+
+  // Mensajes de `withJid` guardados en el archivo del servidor desde `start` (ms), como mucho `max`. Devuelve
+  // [{ ts, body, id }] de los que envió esa dirección. Lanza un error si el servidor no tiene archivo.
+  async fetchArchive(withJid, start, { max = 300, pageSize = 100 } = {}) {
+    if (!this.online || !this.mam) throw new Error(t("El servidor no guarda archivo de mensajes."));
+    const out = [];
+    let after = null;
+    for (let page = 0; page < Math.ceil(max / pageSize); page++) {
+      const queryid = crypto.randomUUID();
+      const items = [];
+      this.mamQueries.set(queryid, items);
+      let fin;
+      try {
+        const form = xml(
+          "x",
+          { xmlns: NS.DATA, type: "submit" },
+          xml("field", { var: "FORM_TYPE", type: "hidden" }, xml("value", {}, NS.MAM)),
+          xml("field", { var: "with" }, xml("value", {}, withJid)),
+          xml("field", { var: "start" }, xml("value", {}, new Date(start).toISOString())),
+        );
+        const rsm = xml("set", { xmlns: NS.RSM }, xml("max", {}, String(pageSize)), after ? xml("after", {}, after) : null);
+        // La respuesta trae <fin>, no la misma <query>: se pide el iq entero.
+        const res = await this.xmpp.iqCaller.request(xml("iq", { type: "set" }, xml("query", { xmlns: NS.MAM, queryid }, form, rsm)), 30000);
+        fin = res.getChild("fin", NS.MAM);
+      } finally {
+        this.mamQueries.delete(queryid);
+      }
+      for (const m of items) if (bare(m.from) === bare(withJid) && m.body) out.push(m);
+      after = fin?.getChild("set", NS.RSM)?.getChildText("last");
+      if (fin?.attrs?.complete === "true" || !after || !items.length) break;
+    }
+    return out.slice(0, max);
   }
 
   // ---------- presencia ----------
@@ -462,6 +504,16 @@ export class XmppAccount extends EventEmitter {
   }
 
   onMessage(st) {
+    // Resultados del archivo de mensajes: se recogen para quien los pidió y no se tratan como mensajes nuevos.
+    const mamResult = st.getChild("result", NS.MAM);
+    if (mamResult) {
+      const items = this.mamQueries.get(mamResult.attrs.queryid);
+      if (!items || (st.attrs.from && bare(st.attrs.from) !== bare(this.ownJid))) return;
+      const fwd = mamResult.getChild("forwarded", NS.FORWARD);
+      const m = fwd?.getChild("message");
+      if (m) items.push({ from: m.attrs.from || "", body: m.getChildText("body"), id: mamResult.attrs.id || "", ts: parseStamp(fwd) || parseStamp(m) || Date.now() });
+      return;
+    }
     const type = st.attrs.type || "normal";
     let from = st.attrs.from || "";
     let msg = st;

@@ -3,8 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse } from "ltx";
 
+// EVEX_PURPLE_DIR permite probar con un perfil de Pidgin de mentira sin tocar el real.
 export function purpleDir() {
-  return path.join(process.env.APPDATA || "", ".purple");
+  return process.env.EVEX_PURPLE_DIR || path.join(process.env.APPDATA || "", ".purple");
 }
 
 function readXml(file) {

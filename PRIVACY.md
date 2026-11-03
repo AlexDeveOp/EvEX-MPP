@@ -37,6 +37,8 @@ Images that other people send are loaded only through link previews (above) or y
 
 The Pidgin importer reads your local Pidgin profile (`%APPDATA%\.purple`). Nothing is uploaded: accounts, rooms and logs are copied into EvEX-MPP's own folder. Passwords are imported only if you tick that option, and are then encrypted as described above.
 
+To recover fleet pings that arrived while EvEX-MPP was closed, the app also reads, at startup and every 2 minutes, **only the conversations with your ping senders** in those same local logs (*Preferences → Fleet pings → Recover them from Pidgin on this PC*, on by default). Nothing is sent anywhere. If your XMPP server keeps a message archive (XEP-0313), the app asks it for the messages of your ping senders from the last 7 days at most when connecting (*Ask the server for them when connecting*); that request goes only to your own server.
+
 ## Changes
 
 Any change to this policy is listed in [CHANGELOG.md](CHANGELOG.md). Questions: [GitHub Issues](https://github.com/AlexDeveOp/EvEX-MPP/issues).
@@ -81,6 +83,8 @@ Las imágenes que envían otras personas solo se cargan mediante la vista previa
 ## Importar desde Pidgin
 
 El importador lee tu perfil local de Pidgin (`%APPDATA%\.purple`). No se sube nada: las cuentas, salas y registros se copian a la carpeta de EvEX-MPP. Las contraseñas solo se importan si marcas esa opción, y se cifran como se explica arriba.
+
+Para recuperar los pings de flota que llegaron con EvEX-MPP cerrado, la app también lee, al iniciar y cada 2 minutos, **solo las conversaciones con tus remitentes de pings** en esos mismos registros locales (*Preferencias → Pings de flota → Recuperarlos de Pidgin en este PC*, activado por defecto). No se envía nada a ningún sitio. Si tu servidor XMPP guarda archivo de mensajes (XEP-0313), al conectar la app le pide los mensajes de tus remitentes de pings de los últimos 7 días como mucho (*Pedirlos al servidor al conectar*); esa petición solo va a tu propio servidor.
 
 ## Cambios
 

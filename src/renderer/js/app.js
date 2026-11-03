@@ -6,6 +6,7 @@ import { initChat, markReceipt, focusComposer } from "./chat.js";
 import { initSidebar } from "./sidebar.js";
 import { initOccupants } from "./occupants.js";
 import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, markRead, updateBadge, pingsConv } from "./convs.js";
+import { showRecoveredPings } from "./ping-recovery.js";
 import { openSettings } from "./settings.js";
 import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } from "./accounts.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
@@ -41,6 +42,7 @@ async function boot() {
   });
   onMain("switch-account", openSwitchAccount);
   onMain("update-available", showUpdate);
+  onMain("pings-recovered", (ev) => showRecoveredPings(ev?.count).catch(console.error));
   onMain("window-focus", (f) => {
     S.focused = f;
     if (f) stopPingRepeat();
@@ -66,7 +68,7 @@ async function boot() {
 
 function applySnapshot(id, snap) {
   const st = conn(id);
-  Object.assign(st, { state: snap.state, show: snap.show || "", statusText: snap.statusText || "", jid: snap.jid });
+  Object.assign(st, { state: snap.state, show: snap.show || "", statusText: snap.statusText || "", jid: snap.jid, server: snap.server || null });
   for (const item of snap.roster || []) Object.assign(contact(id, item.jid), item, { inRoster: true });
   for (const p of snap.presences || []) {
     contact(id, p.jid).resources.set(p.resource, { show: p.show, status: p.status, priority: p.priority });
@@ -114,6 +116,10 @@ function handleEvent(ev) {
 }
 
 const HANDLERS = {
+  // Qué ofrece el servidor: copias entre clientes (XEP-0280) y archivo de mensajes (XEP-0313).
+  "server-info"(id, ev) {
+    conn(id).server = { carbons: !!ev.carbons, mam: !!ev.mam };
+  },
   status(id, ev) {
     const st = conn(id);
     const was = st.state;

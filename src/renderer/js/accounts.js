@@ -192,6 +192,18 @@ export function openSwitchAccount() {
   pass.addEventListener("keydown", (e) => e.key === "Enter" && connectNew(m.close));
 }
 
+// Qué ofrece el servidor de una cuenta conectada, en palabras: decide si se pueden recuperar los pings perdidos.
+function serverInfo(a) {
+  const info = a && conn(a.id).state === "online" ? conn(a.id).server : null;
+  if (!info) return h("p", { class: "muted small server-info" }, icon("server"), t("Conecta la cuenta para ver qué ofrece su servidor."));
+  return h(
+    "div",
+    { class: "server-info" },
+    h("p", { class: "small" }, icon(info.mam ? "check" : "x"), info.mam ? t("Guarda archivo de mensajes: al conectar se recuperan los pings que llegaron con la app cerrada.") : t("No guarda archivo de mensajes: los pings que lleguen con la app cerrada solo se recuperan de Pidgin, si lo usas en este PC.")),
+    h("p", { class: "small" }, icon(info.carbons ? "check" : "x"), info.carbons ? t("Envía copias entre tus clientes conectados.") : t("No envía copias entre clientes: con Pidgin conectado a la vez, los pings van solo al de mayor prioridad.")),
+  );
+}
+
 export function openAccounts(focusId) {
   let current = focusId || S.accounts[0]?.id || null;
   const listEl = h("div", { class: "acc-list" });
@@ -281,6 +293,7 @@ export function openAccounts(focusId) {
           field(t("Seguridad"), select(SECURITY, v.security, (x) => (v.security = x))),
           field(t("Prioridad"), inp("priority", { type: "number" }), t("Si usas Pidgin a la vez, la mayor prioridad recibe los mensajes directos (pings)")),
         ),
+        serverInfo(a),
       );
       formEl.append(
         h(
