@@ -93,7 +93,8 @@ test("si la notificación del sistema falla (sin servicio de notificaciones), sa
   showPopup({ kind: "ping", title: "Ping" });
   assert.equal(BrowserWindow.created.length, 0, "primero se intenta la notificación del sistema");
   Notification.created.at(-1).handlers.failed();
-  assert.equal(BrowserWindow.created.length, 1, "y al fallar, la burbuja propia");
+  Notification.created.at(-1).handlers.failed(); // libnotify puede avisar varias veces
+  assert.equal(BrowserWindow.created.length, 1, "y al fallar, la burbuja propia (una sola)");
   assert.match(BrowserWindow.created[0].url, /^app:\/\/evex\/popup\.html\?id=\d+$/);
   closeAllPopups();
 });

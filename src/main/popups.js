@@ -73,8 +73,12 @@ function showSystemNotification(id, data) {
   });
   note.on("click", () => options.onClick(data));
   note.on("close", () => systemNotes.delete(id));
-  // Sin servicio de notificaciones (p. ej. un escritorio mínimo) no se pierde el aviso: sale la burbuja propia.
+  // Sin servicio de notificaciones (p. ej. un escritorio mínimo) no se pierde el aviso: sale la burbuja propia,
+  // una sola vez aunque libnotify reintente y avise de varios fallos.
+  let fellBack = false;
   note.on("failed", () => {
+    if (fellBack) return;
+    fellBack = true;
     systemNotes.delete(id);
     showCustomPopup(id, data);
   });
