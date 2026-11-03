@@ -980,3 +980,19 @@ body.resizing {
   flex: none;
   margin-top: 2px;
 }
+
+/* Lectura en voz alta de los pings: el botón de detener solo se ve mientras se lee. */
+.icon-btn.tts-stop {
+  display: none;
+}
+body.tts-speaking .icon-btn.tts-stop {
+  display: inline-flex;
+  color: var(--accent);
+}
+/* Opciones de la voz atenuadas mientras la lectura está desactivada (se pueden ajustar igualmente). */
+.voice-options.off {
+  opacity: 0.55;
+}
+.voice-preview {
+  font-style: italic;
+}

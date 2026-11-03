@@ -9,6 +9,7 @@ import { themeColors } from "./themes.js";
 import { replaceShortcodes } from "./emoji.js";
 
 import { t } from "./i18n.js";
+import { speakPing } from "./tts.js";
 export function getConv(accountId, conv, type) {
   const key = convKey(accountId, conv);
   let c = S.convs.get(key);
@@ -365,6 +366,8 @@ function maybeNotify(c, msg, rule) {
 }
 
 function notifyPing(m, rule) {
+  // La lectura en voz alta tiene sus propios ajustes (Preferencias → Pings de flota): no depende de las notificaciones.
+  speakPing(m);
   const n = S.settings.notifications;
   const forced = rule && rule.notify !== "never";
   if (!n.enabled || !(n.pings || (forced && rule.notify === "always"))) return;

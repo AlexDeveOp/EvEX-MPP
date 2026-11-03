@@ -16,6 +16,7 @@ import { openAccounts, openPidginImport } from "./accounts.js";
 import { repairPidginHistory } from "./pidgin-repair.js";
 
 import { t, tk, LANGUAGES, setLanguagePreference } from "./i18n.js";
+import { VOICE_DEFAULTS, TEMPLATE_FIELDS, voiceSettings, listVoices, pingSpeech, speak, stopSpeaking, speechAvailable } from "./tts.js";
 // Cambios solo visuales: se aplican al momento sin repintar mensajes.
 function look(fn) {
   fn(S.settings);
@@ -61,6 +62,141 @@ export function openSettings(tab = "appearance") {
 }
 
 const group = (title, ...children) => h("section", { class: "settings-group" }, h("h3", {}, title), ...children);
+
+// Una fila por tipo de aviso: lista de sonidos (o archivo propio), volumen propio, prueba y elegir archivo.
+function soundRow(kind, label) {
+  const set = (fn) => look((x) => fn(x.notifications));
+  const cur = () => S.settings.notifications.sounds[kind];
+  const sel = select([...Object.entries(SOUNDS).map(([k, v]) => [k, t(v.name)]), ["custom", t("Archivo propio…")]], cur().preset, async (v) => {
+    if (v === "custom" && !cur().file) {
+      const url = await api("file:pick", "sound");
+      if (!url) return (sel.value = cur().preset);
+      set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: "custom", file: url }));
+    } else set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: v }));
+    previewSound(cur());
+  });
+  const pick = iconButton("folder-open", t("Elegir otro archivo de sonido"), async () => {
+    const url = await api("file:pick", "sound");
+    if (!url) return;
+    set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: "custom", file: url }));
+    sel.value = "custom";
+    previewSound(cur());
+  });
+  const vol = range(0, 1, 0.05, cur().volume ?? 1, (v) => set((x) => (x.sounds[kind] = { ...x.sounds[kind], volume: v })), (v) => `${Math.round(v * 100)}%`);
+  vol.classList.add("sound-volume");
+  vol.title = t("Volumen de este sonido");
+  return field(t(label), h("div", { class: "row sound-row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cur())), pick, vol));
+}
+
+// «Pings de flota» → Aviso y sonido: lo mismo que en Notificaciones, reunido aquí con lo demás de los pings.
+function pingAlertGroup() {
+  const n = S.settings.notifications;
+  const set = (fn) => look((x) => fn(x.notifications));
+  const r = { enabled: false, interval: 30, times: 5, ...n.pingRepeat };
+  return group(
+    t("Aviso y sonido"),
+    toggle(n.pings, (v) => set((x) => (x.pings = v)), t("Avisar de los pings de flota"), t("Sonido y burbuja al llegar un ping, también con «No molestar»")),
+    soundRow("ping", t("Sonido del ping")),
+    toggle(r.enabled, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, enabled: v })), t("Repetir el sonido del ping hasta que mires la ventana"), t("Para no perderte un ping si estás lejos del ordenador")),
+    field(t("Repetir cada"), range(10, 120, 5, r.interval, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, interval: v })), (v) => `${v} s`)),
+    field(t("Máximo de repeticiones"), range(1, 20, 1, r.times, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, times: v })), (v) => `${v}`)),
+    toggle(n.pingSticky, (v) => set((x) => (x.pingSticky = v)), t("Los pings se quedan en pantalla hasta cerrarlos"), t("Si no, desaparecen como los mensajes")),
+    h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => (api("notify:test", "ping", popupTestColors()), previewSound(S.settings.notifications.sounds.ping)) }, icon("siren"), t("Probar aviso de ping"))),
+  );
+}
+
+// Ping de ejemplo para probar la lectura en voz alta.
+const SAMPLE_PING = "Capital fleet up now!!\nFC Name: Bob FC\nFormup Location: Jita\nPAP Type: Strategic\nComms: Op 1\nDoctrine: Typhoons\n\n~~~ This was a coord broadcast from bob to all ~~~";
+
+// «Pings de flota» → Lectura en voz alta (src/renderer/js/tts.js).
+function voiceGroup() {
+  const v = voiceSettings();
+  const set = (patch) => look((x) => (x.pingVoice = { ...VOICE_DEFAULTS, ...x.pingVoice, ...patch }));
+  const body = h("div", { class: `voice-options ${v.enabled ? "" : "off"}` });
+  const voiceSel = select([["", t("Automática (una voz en inglés, si está instalada)")]], v.voice, (x) => set({ voice: x }));
+  listVoices().then((list) => {
+    for (const voice of list) voiceSel.append(h("option", { value: voice.name }, `${voice.name} (${voice.lang})`));
+    voiceSel.value = list.some((x) => x.name === v.voice) ? v.voice : "";
+    if (!list.length) voiceSel.after(h("p", { class: "muted small" }, t("Windows no tiene voces instaladas: añádelas en Configuración → Hora e idioma → Voz.")));
+  });
+  const template = h("textarea", { class: "input", rows: 2 });
+  template.value = v.template;
+  const preview = h("p", { class: "muted small voice-preview" });
+  const showPreview = () => (preview.textContent = t("Se leería: «{text}»", { text: pingSpeech(SAMPLE_PING, voiceSettings()) }));
+  const refresh = (patch) => (set(patch), showPreview());
+  template.addEventListener("change", () => refresh({ template: template.value.trim() || VOICE_DEFAULTS.template }));
+  const templateField = field(t("Plantilla"), template, t("Campos: {fields}. Las frases con un campo vacío no se leen.", { fields: TEMPLATE_FIELDS.map((f) => `{${f}}`).join(" ") }));
+  templateField.classList.toggle("hidden", v.content !== "template");
+  showPreview();
+  const groups = h("input", { class: "input", placeholder: t("Todos los grupos") });
+  groups.value = v.groups;
+  groups.addEventListener("change", () => set({ groups: groups.value.trim() }));
+  body.append(
+    field(t("Voz"), voiceSel, t("Las voces instaladas en Windows. No se envía nada a Internet. Suena por la salida de audio predeterminada de Windows.")),
+    field(t("Velocidad"), range(0.5, 2, 0.05, v.rate, (x) => set({ rate: x }), (x) => `${x.toFixed(2)}×`)),
+    field(t("Tono"), range(0.5, 1.5, 0.05, v.pitch, (x) => set({ pitch: x }), (x) => x.toFixed(2))),
+    field(t("Volumen de la voz"), range(0, 1, 0.05, v.volume, (x) => set({ volume: x }), (x) => `${Math.round(x * 100)}%`)),
+    field(
+      t("Qué leer"),
+      select(
+        [
+          ["summary", t("Resumen: título, FC, formup y doctrina")],
+          ["title", t("Solo el título")],
+          ["full", t("Todo el ping")],
+          ["template", t("Plantilla propia…")],
+        ],
+        v.content,
+        (x) => (refresh({ content: x }), templateField.classList.toggle("hidden", x !== "template")),
+      ),
+    ),
+    templateField,
+    preview,
+    field(t("Longitud máxima"), range(100, 1000, 50, v.maxChars, (x) => refresh({ maxChars: x }), (x) => t("{n} caracteres", { n: x }))),
+    field(
+      t("Cuándo leer"),
+      select(
+        [
+          ["always", t("Siempre")],
+          ["unfocused", t("Solo si no estás mirando la ventana de EvEX-MPP")],
+        ],
+        v.when,
+        (x) => set({ when: x }),
+      ),
+    ),
+    toggle(v.dnd, (x) => set({ dnd: x }), t("Leer también con «No molestar»")),
+    toggle(v.stopOnFocus, (x) => set({ stopOnFocus: x }), t("Dejar de leer al volver a la ventana")),
+    field(t("Solo estos grupos"), groups, t("Destinatarios del pie del ping (p. ej. «all, caps»), separados por comas. Vacío = todos.")),
+    field(t("Esperar tras el sonido"), range(0, 5, 0.5, v.delay, (x) => set({ delay: x }), (x) => `${x} s`)),
+    field(
+      t("Veces que se lee"),
+      select(
+        [
+          ["1", t("Una vez")],
+          ["2", t("Dos veces")],
+          ["3", t("Tres veces")],
+        ],
+        String(v.repeat),
+        (x) => set({ repeat: Number(x) }),
+      ),
+    ),
+    h(
+      "div",
+      { class: "row" },
+      h("button", { class: "btn", type: "button", onclick: () => (stopSpeaking(), speak(pingSpeech(SAMPLE_PING, voiceSettings()), voiceSettings())) }, icon("volume-2"), t("Probar con un ping de ejemplo")),
+      h("button", { class: "btn", type: "button", onclick: stopSpeaking }, icon("volume-x"), t("Detener")),
+    ),
+  );
+  return group(
+    t("Lectura en voz alta"),
+    toggle(
+      v.enabled,
+      (x) => (set({ enabled: x }), body.classList.toggle("off", !x)),
+      t("Leer los pings en voz alta"),
+      speechAvailable() ? t("Al llegar un ping se lee tras su sonido, aunque las notificaciones estén desactivadas") : t("Este sistema no tiene síntesis de voz"),
+    ),
+    body,
+  );
+}
 
 const RENDER = {
   appearance() {
@@ -366,36 +502,12 @@ const RENDER = {
     const kw = h("textarea", { class: "input", rows: 2, placeholder: t("Una palabra o frase por línea (p. ej. «cyno», «titan», tu nombre de personaje)"), value: (n.keywords || []).join("\n") });
     kw.value = (n.keywords || []).join("\n");
     kw.addEventListener("change", () => full((x) => (x.notifications.keywords = kw.value.split("\n").map((s) => s.trim()).filter(Boolean))));
-    // Una fila por tipo de aviso: lista de sonidos (o archivo propio), volumen propio, prueba y elegir archivo.
-    const soundRow = (kind, label) => {
-      const cur = () => S.settings.notifications.sounds[kind];
-      const sel = select([...Object.entries(SOUNDS).map(([k, v]) => [k, t(v.name)]), ["custom", t("Archivo propio…")]], cur().preset, async (v) => {
-        if (v === "custom" && !cur().file) {
-          const url = await api("file:pick", "sound");
-          if (!url) return (sel.value = cur().preset);
-          set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: "custom", file: url }));
-        } else set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: v }));
-        previewSound(cur());
-      });
-      const pick = iconButton("folder-open", t("Elegir otro archivo de sonido"), async () => {
-        const url = await api("file:pick", "sound");
-        if (!url) return;
-        set((x) => (x.sounds[kind] = { ...x.sounds[kind], preset: "custom", file: url }));
-        sel.value = "custom";
-        previewSound(cur());
-      });
-      const vol = range(0, 1, 0.05, cur().volume ?? 1, (v) => set((x) => (x.sounds[kind] = { ...x.sounds[kind], volume: v })), (v) => `${Math.round(v * 100)}%`);
-      vol.classList.add("sound-volume");
-      vol.title = t("Volumen de este sonido");
-      return field(t(label), h("div", { class: "row sound-row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cur())), pick, vol));
-    };
     // Salida de audio: se rellena al abrir (la lista depende de los dispositivos conectados).
     const device = select([["", t("Predeterminada de Windows")]], n.outputDevice || "", (v) => (set((x) => (x.outputDevice = v)), previewSound(S.settings.notifications.sounds.private)));
     outputDevices().then((list) => {
       for (const d of list) device.append(h("option", { value: d.id }, d.label));
       device.value = list.some((d) => d.id === n.outputDevice) ? n.outputDevice : "";
     });
-    const r = n.pingRepeat || { enabled: false, interval: 30, times: 5 };
     return h(
       "div",
       {},
@@ -464,13 +576,7 @@ const RENDER = {
         group(
           t("Sonidos: {group}", { group: t(name) }),
           kinds.map(([kind, label]) => soundRow(kind, label)),
-          name === "Flota"
-            ? [
-                toggle(r.enabled, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, enabled: v })), t("Repetir el sonido del ping hasta que mires la ventana"), t("Para no perderte un ping si estás lejos del ordenador")),
-                field(t("Repetir cada"), range(10, 120, 5, r.interval, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, interval: v })), (v) => `${v} s`)),
-                field(t("Máximo de repeticiones"), range(1, 20, 1, r.times, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, times: v })), (v) => `${v}`)),
-              ]
-            : null,
+          name === "Flota" ? h("div", { class: "row" }, h("button", { class: "btn small", type: "button", onclick: () => document.querySelector('.settings-tab[data-tab="pings"]')?.click() }, icon("siren"), t("Todos los ajustes de los pings: «Pings de flota»"))) : null,
         ),
       ),
     );
@@ -489,6 +595,7 @@ const RENDER = {
         h("p", { class: "muted small" }, t("Los mensajes de estas direcciones aparecen como tarjetas en «Pings de flota», con alarma propia y notificación prioritaria.")),
         field(t("Direcciones (una por línea)"), senders),
       ),
+      pingAlertGroup(),
       group(
         t("Aviso visual"),
         field(
@@ -509,6 +616,15 @@ const RENDER = {
           t("Con «hasta que vuelvas a abrir los pings» solo laten los que han llegado desde la última vez que saliste de la vista de pings. Si desactivas las animaciones (Apariencia), no late nunca."),
         ),
       ),
+      voiceGroup(),
+      formupGroup(),
+      // Pings que llegaron con la app cerrada (src/main/ping-recovery.js). Ambos activados por defecto.
+      group(
+        t("Pings que llegaron con la app cerrada"),
+        toggle(s.pingRecovery?.pidgin !== false, (v) => look((x) => (x.pingRecovery = { ...x.pingRecovery, pidgin: v })), t("Recuperarlos de Pidgin en este PC"), t("Lee solo las conversaciones con los remitentes de pings en los registros de Pidgin, al iniciar y cada 2 minutos. No se envía nada.")),
+        toggle(s.pingRecovery?.server !== false, (v) => look((x) => (x.pingRecovery = { ...x.pingRecovery, server: v })), t("Pedirlos al servidor al conectar"), t("Solo si el servidor guarda archivo de mensajes (XEP-0313); lo indica la ficha de la cuenta. Se piden los mensajes de los remitentes de pings de los últimos 7 días como mucho.")),
+        h("p", { class: "muted small" }, t("También puedes buscarlos al momento con el botón de la cabecera de «Pings de flota». Los recuperados no suenan, porque ya pasaron.")),
+      ),
       group(
         t("Importante si usas Pidgin a la vez"),
         h(
@@ -516,13 +632,6 @@ const RENDER = {
           { class: "muted" },
           t("Los pings se envían a tu cuenta, no a una sala. Si tienes Pidgin y EvEX-MPP conectados a la vez, el servidor los entrega al cliente con mayor prioridad. Sube la prioridad de esta cuenta (Cuentas → Conexión avanzada) para recibirlos aquí."),
         ),
-      ),
-      // Pings que llegaron con la app cerrada (src/main/ping-recovery.js). Ambos activados por defecto.
-      group(
-        t("Pings que llegaron con la app cerrada"),
-        toggle(s.pingRecovery?.pidgin !== false, (v) => look((x) => (x.pingRecovery = { ...x.pingRecovery, pidgin: v })), t("Recuperarlos de Pidgin en este PC"), t("Lee solo las conversaciones con los remitentes de pings en los registros de Pidgin, al iniciar y cada 2 minutos. No se envía nada.")),
-        toggle(s.pingRecovery?.server !== false, (v) => look((x) => (x.pingRecovery = { ...x.pingRecovery, server: v })), t("Pedirlos al servidor al conectar"), t("Solo si el servidor guarda archivo de mensajes (XEP-0313); lo indica la ficha de la cuenta. Se piden los mensajes de los remitentes de pings de los últimos 7 días como mucho.")),
-        h("p", { class: "muted small" }, t("También puedes buscarlos al momento con el botón de la cabecera de «Pings de flota». Los recuperados no suenan, porque ya pasaron.")),
       ),
     );
   },
@@ -1252,6 +1361,7 @@ function gifsGroup() {
     ),
   );
 }
+
 
 // ---------- cuenta atrás del formup (Preferencias → Pings de flota) ----------
 

@@ -8,6 +8,7 @@ import { initOccupants } from "./occupants.js";
 import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, markRead, updateBadge, pingsConv } from "./convs.js";
 import { showRecoveredPings } from "./ping-recovery.js";
 import { startFormupWatch } from "./formup.js";
+import { windowFocused as ttsWindowFocused } from "./tts.js";
 import { openSettings } from "./settings.js";
 import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } from "./accounts.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
@@ -48,6 +49,7 @@ async function boot() {
   onMain("window-focus", (f) => {
     S.focused = f;
     if (f) stopPingRepeat();
+    if (f) ttsWindowFocused();
     if (f && S.active) markRead(S.active);
   });
 

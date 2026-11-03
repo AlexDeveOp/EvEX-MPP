@@ -9,7 +9,8 @@ import { activate, closeConv, openConv, convTitle, markRead, loadHistory, system
 import { applyBackgroundLayer } from "./themes.js";
 import { pingCard, pingMatches, pingGroups } from "./pings.js";
 import { matchRule, highlightRules } from "./keywords.js";
-import { openBackgroundEditor } from "./settings.js";
+import { openBackgroundEditor, openSettings } from "./settings.js";
+import { stopSpeaking } from "./tts.js";
 import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
 
@@ -388,6 +389,9 @@ function renderHeader(c, p) {
       ),
       // Busca pings que llegaron con la app cerrada (registros de Pidgin y archivo del servidor), no solo redibuja.
       iconButton("refresh-cw", t("Buscar pings nuevos (en Pidgin y en el servidor)"), (e) => searchMissedPings(e.currentTarget)),
+      // Solo se ve mientras se lee un ping en voz alta (clase tts-speaking en body).
+      iconButton("volume-x", t("Dejar de leer el ping"), stopSpeaking, "tts-stop"),
+      iconButton("settings", t("Configurar los pings de flota"), () => openSettings("pings")),
     );
     return;
   }
