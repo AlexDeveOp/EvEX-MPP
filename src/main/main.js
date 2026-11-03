@@ -18,7 +18,7 @@ import { userData, mediaDir, avatarDir } from "./paths.js";
 import { autostartFile, autostartExec, desktopEntry } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
-import { startBridge, testProxy, normalizeProxy } from "./proxy.js";
+import { startBridge, testProxy, normalizeProxy, openTunnel } from "./proxy.js";
 import { globalProxy, accountProxy } from "./proxy-settings.js";
 
 import { t, setLanguage, currentLang } from "./i18n.js";
@@ -350,11 +350,19 @@ async function applyGlobalProxy() {
   await ses.closeAllConnections().catch(() => {});
 }
 
-// Reconecta las cuentas conectadas a las que afecta un cambio de proxy.
+// Reconecta las cuentas conectadas a las que afecta un cambio de proxy. Las reconexiones de una misma cuenta van en
+// cola: con dos cambios seguidos, la segunda cortaba a la primera a medio abrir. Cada conexión lee el proxy al
+// conectar, así que la última usa siempre la configuración más reciente.
+const proxyReconnects = new Map(); // id -> promesa de la última reconexión
 function reconnectWithNewProxy(filter) {
   for (const [id, x] of accounts) {
     if (!x.wantOnline || !filter(x.acc)) continue;
-    x.disconnect(true).then(() => connectAccount(id)).catch((e) => sendXmpp({ accountId: id, type: "error", message: e.message }));
+    const next = (proxyReconnects.get(id) || Promise.resolve())
+      .then(() => x.disconnect(true))
+      .then(() => connectAccount(id))
+      .catch((e) => sendXmpp({ accountId: id, type: "error", message: e.message }));
+    proxyReconnects.set(id, next);
+    next.finally(() => proxyReconnects.get(id) === next && proxyReconnects.delete(id));
   }
 }
 
@@ -566,11 +574,26 @@ function registerIpc() {
   });
 
   // Botón «Probar»: abre un túnel hasta un sitio conocido. Sin contraseña nueva, se usa la guardada.
-  handle("proxy:test", async ({ proxy, password, accountId, global } = {}) => {
+  // Botón «Probar»: sin «target», abre un túnel hasta un sitio conocido. Con «target» (el servidor XMPP de una cuenta),
+  // el túnel va hasta ese servidor: si el proxy responde pero no llega a él, se dice (target.ok = false) sin fallar.
+  // Sin contraseña nueva, se usa la guardada.
+  handle("proxy:test", async ({ proxy, password, accountId, global, target } = {}) => {
     const p = normalizeProxy(proxy || {});
     if (!p.host) throw new Error(t("Falta el servidor del proxy"));
     const saved = password === undefined && p.username ? await proxyPassword(global ? store.GLOBAL_PROXY : accountId) : null;
-    return testProxy({ ...p, password: password ?? saved ?? "" });
+    const full = { ...p, password: password ?? saved ?? "" };
+    const host = String(target?.host || "").trim();
+    if (!host) return testProxy(full);
+    const start = Date.now();
+    try {
+      const tunnel = await openTunnel(full, host, Number(target.port) || 5222);
+      tunnel.destroy();
+      const ms = Date.now() - start;
+      return { ms, target: { ok: true, ms } };
+    } catch (err) {
+      if (err.code !== "PROXY_TARGET") throw err; // el fallo es del propio proxy
+      return { ms: Date.now() - start, target: { ok: false, error: err.message } };
+    }
   });
   handle("account:disconnect", (id) => accounts.get(id)?.disconnect());
   handle("account:snapshot", (id) => accountSnapshot(id));

@@ -61,6 +61,51 @@ test("un proxy apagado da error y no conecta directo", async (t) => {
   assert.notEqual(acc.state, "online");
 });
 
+// Espera a que se cumpla una condición, mirando cada 100 ms.
+async function until(pred, ms = 10000) {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise((r) => setTimeout(r, 100))) if (pred()) return;
+  throw new Error("tiempo agotado");
+}
+
+test("si el proxy se cae, la cuenta sigue reintentando y vuelve cuando el proxy vuelve", async (t) => {
+  const first = await startFakeProxy({ type: "socks5" });
+  let current = { type: "socks5", host: "127.0.0.1", port: first.port };
+  const acc = account(t, async () => current);
+  const later = {}; // el segundo proxy, cuando exista
+  t.after(async () => {
+    await acc.disconnect(true);
+    await later.second?.close();
+  });
+  await acc.connect("test");
+  // Que respondan las consultas de la conexión (roster…): una perdida en el corte espera 30 s y alarga el proceso.
+  await new Promise((r) => setTimeout(r, 1000));
+  // El proxy se cae (se cortan sus conexiones) y, mientras, no hay ninguno escuchando en ese puerto.
+  first.close();
+  await until(() => acc.state === "reconnecting");
+  await new Promise((r) => setTimeout(r, 2500)); // varios intentos fallidos contra el proxy caído
+  assert.ok(["reconnecting", "connecting"].includes(acc.state), `sigue intentándolo, sin error definitivo (${acc.state})`);
+  const second = (later.second = await startFakeProxy({ type: "socks5" }));
+  current = { ...current, port: second.port };
+  await until(() => acc.state === "online", 15000);
+  assert.ok(second.targets.includes(`localhost:${PORT}`));
+  // Que respondan las consultas que lanza la cuenta al volver (si no, su espera de 30 s retrasa el final del proceso).
+  await new Promise((r) => setTimeout(r, 1500));
+});
+
+test("un usuario rechazado por el proxy es un error definitivo (no reintenta sin fin)", async (t) => {
+  const proxy = await startFakeProxy({ type: "http", auth: { username: "u", password: "p" } });
+  const acc = account(t, async () => ({ type: "http", host: "127.0.0.1", port: proxy.port, username: "u", password: "mal" }));
+  t.after(async () => {
+    await acc.disconnect(true);
+    await proxy.close();
+  });
+  await assert.rejects(acc.connect("test"), /usuario o la contraseña/);
+  assert.equal(acc.state, "error");
+  const tries = proxy.targets.length;
+  await new Promise((r) => setTimeout(r, 2500));
+  assert.equal(proxy.targets.length, tries, "no vuelve a intentarlo");
+});
+
 test("sin proxy (getProxy devuelve null) conecta directo", async (t) => {
   const acc = account(t, async () => null);
   await acc.connect("test");

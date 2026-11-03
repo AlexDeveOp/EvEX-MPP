@@ -101,14 +101,39 @@ export function useProxy(xmpp, getProxy) {
   const direct = xmpp.connect;
   // También vale para las reconexiones: xmpp.js vuelve a llamar a connect() con el servicio original.
   xmpp.connect = async function connect(service) {
-    const proxy = await getProxy();
-    if (!proxy) return direct.call(this, service);
-    const url = new URL(service);
-    const host = url.hostname.replace(/^\[(.*)\]$/, "$1");
-    const fwd = await createForwarder(proxy, host, Number(url.port), { timeout: 20000 });
+    let fwd;
+    let host;
+    let proxy;
+    try {
+      proxy = await getProxy();
+      if (!proxy) return direct.call(this, service);
+    } catch (err) {
+      err.fatal = true; // proxy mal configurado (PROXY_CONFIG)
+      this.emit("error", err);
+      throw err;
+    }
+    // Como hace xmpp.js al conectar: si no, tras un corte el estado sigue en «disconnect» y el aviso de abajo no se
+    // emitiría (_status ignora un estado repetido).
+    this._status("connecting", service);
+    try {
+      const url = new URL(service);
+      host = url.hostname.replace(/^\[(.*)\]$/, "$1");
+      fwd = await createForwarder(proxy, host, Number(url.port), { timeout: 20000 });
+      service = `${url.protocol}//127.0.0.1:${fwd.port}`;
+    } catch (err) {
+      // Sin socket, xmpp.js no recibe «disconnect» y una reconexión no volvería a intentarlo nunca: se avisa a mano.
+      // Un usuario rechazado por el proxy no se arregla reintentando: error definitivo, como una contraseña mala.
+      if (err.code === "PROXY_AUTH") {
+        err.fatal = true;
+        this.emit("error", err);
+      } else {
+        this._status("disconnect", { clean: false, reason: err });
+      }
+      throw err;
+    }
     tlsNames.set(fwd.port, host);
     try {
-      return await direct.call(this, `${url.protocol}//127.0.0.1:${fwd.port}`);
+      return await direct.call(this, service);
     } catch (err) {
       fwd.close();
       throw err;
