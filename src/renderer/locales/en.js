@@ -941,4 +941,12 @@ export default {
   "Formup en {n} min": "Formup in {n} min",
   "¡Hora del formup!": "Formup time!",
   "Hora del formup: {eve} EVE · {local} local": "Formup time: {eve} EVE · {local} local",
+  // Mensajes de sistema de las salas
+  " por {actor}": " by {actor}",
+  "{nick} ha sido vetado": "{nick} has been banned",
+  "{nick} ha sido expulsado": "{nick} has been kicked",
+  "{nick} ha entrado": "{nick} joined",
+  "{nick} ha salido": "{nick} left",
+  "{nick} ha salido ({status})": "{nick} left ({status})",
+  "{n} nuevos": "{n} new",
 };

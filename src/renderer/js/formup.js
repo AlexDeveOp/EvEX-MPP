@@ -117,6 +117,7 @@ function markFired(id) {
 
 const cache = new Map(); // clave del ping → hora del formup (o null)
 function formupOf(m) {
+  if (cache.size > 2000) cache.clear();
   if (!cache.has(m.key)) cache.set(m.key, parseFormup(parsePing(m.body), m.ts));
   return cache.get(m.key);
 }

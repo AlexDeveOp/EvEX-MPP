@@ -108,9 +108,9 @@ function occupantMenu(c, r, o) {
     o.jid ? { label: t("Copiar JID"), icon: "copy", action: () => navigator.clipboard.writeText(o.jid) } : null,
     o.jid && !o.self ? { label: t("Añadir a contactos"), icon: "user-plus", action: () => api("roster:add", c.accountId, o.jid, o.nick, []).then(() => toast(t("Solicitud enviada"), { kind: "ok" })) } : null,
     isMod && !o.self ? "-" : null,
-    isMod && !o.self ? { label: t("Expulsar…"), icon: "user-x", danger: true, action: async () => { const reason = await ask(t("Expulsar a {nick}", { nick: o.nick })); if (reason != null) mod({ nick: o.nick, role: "none", reason }, `${o.nick} expulsado`); } } : null,
+    isMod && !o.self ? { label: t("Expulsar…"), icon: "user-x", danger: true, action: async () => { const reason = await ask(t("Expulsar a {nick}", { nick: o.nick })); if (reason != null) mod({ nick: o.nick, role: "none", reason }, t("{nick} ha sido expulsado", { nick: o.nick })); } } : null,
     isMod && !o.self ? { label: o.role === "visitor" ? t("Dar voz") : t("Quitar voz"), icon: "mic-off", action: () => mod({ nick: o.nick, role: o.role === "visitor" ? "participant" : "visitor" }, t("Hecho")) } : null,
-    isAdmin && o.jid && !o.self ? { label: t("Vetar…"), icon: "ban", danger: true, action: async () => { const reason = await ask(t("Vetar a {nick}", { nick: o.nick })); if (reason != null) mod({ jid: o.jid, affiliation: "outcast", reason }, `${o.nick} vetado`); } } : null,
+    isAdmin && o.jid && !o.self ? { label: t("Vetar…"), icon: "ban", danger: true, action: async () => { const reason = await ask(t("Vetar a {nick}", { nick: o.nick })); if (reason != null) mod({ jid: o.jid, affiliation: "outcast", reason }, t("{nick} ha sido vetado", { nick: o.nick })); } } : null,
   ];
 }
 

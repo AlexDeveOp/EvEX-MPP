@@ -17,7 +17,7 @@ import { showUpdate } from "./updates.js";
 import { offerPidginRepair } from "./pidgin-repair.js";
 import { playSound, stopPingRepeat } from "./sounds.js";
 
-import { t, setLanguagePreference, translateStatic } from "./i18n.js";
+import { t, locale, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
   const init = await api("init");
   // Si el idioma elegido no es el que se está mostrando (p. ej. primera vez tras cambiarlo), recargar una vez.
@@ -247,7 +247,7 @@ const HANDLERS = {
     const c = S.convs.get(convKey(id, ev.room));
     if (c && (ev.kicked || ev.banned || ev.shutdown)) {
       const what = ev.banned ? t("Has sido vetado de la sala") : ev.kicked ? t("Has sido expulsado de la sala") : t("La sala se ha cerrado");
-      systemMessage(c, `${what}${ev.actor ? ` por ${ev.actor}` : ""}${ev.reason ? `: ${ev.reason}` : ""}`, { icon: "user-x" });
+      systemMessage(c, `${what}${ev.actor ? t(" por {actor}", { actor: ev.actor }) : ""}${ev.reason ? `: ${ev.reason}` : ""}`, { icon: "user-x" });
       toast(`${what} ${displayName(id, ev.room)}`, { kind: "warn" });
     }
     emit("room", { accountId: id, room: ev.room });
@@ -283,9 +283,9 @@ const HANDLERS = {
     else r.occupants.delete(o.nick);
     if (o.avatar) S.avatarOf.set(`${ev.room}/${o.nick}`, o.avatar);
     if (c && r.joined && !ev.initial) {
-      if (ev.kicked || ev.banned) systemMessage(c, `${o.nick} ha sido ${ev.banned ? "vetado" : "expulsado"}`, { icon: "user-x" });
-      else if (o.available && !had) systemMessage(c, `${o.nick} ha entrado`, { icon: "log-in", joinLeave: true, kind: "join" });
-      else if (!o.available && had) systemMessage(c, `${o.nick} ha salido${o.status ? ` (${o.status})` : ""}`, { icon: "log-out", joinLeave: true, kind: "leave" });
+      if (ev.kicked || ev.banned) systemMessage(c, ev.banned ? t("{nick} ha sido vetado", { nick: o.nick }) : t("{nick} ha sido expulsado", { nick: o.nick }), { icon: "user-x" });
+      else if (o.available && !had) systemMessage(c, t("{nick} ha entrado", { nick: o.nick }), { icon: "log-in", joinLeave: true, kind: "join" });
+      else if (!o.available && had) systemMessage(c, o.status ? t("{nick} ha salido ({status})", { nick: o.nick, status: o.status }) : t("{nick} ha salido", { nick: o.nick }), { icon: "log-out", joinLeave: true, kind: "leave" });
       if (!o.available) c.typing.delete(o.nick);
     }
     emitRoomSoon(id, ev.room);
@@ -374,7 +374,7 @@ function startEveClock() {
   const out = $("#tb-eve-time");
   const tick = () => {
     box.classList.toggle("hidden", S.settings.showEveClock === false);
-    out.textContent = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" });
+    out.textContent = new Date().toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" });
   };
   tick();
   setInterval(tick, 1000);

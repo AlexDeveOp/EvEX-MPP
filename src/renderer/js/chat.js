@@ -646,7 +646,7 @@ function appendMessage(c, m) {
   }
   else if (visible && !m.sys) {
     p.newCount++;
-    p.jump.querySelector(".jump-count").textContent = `${p.newCount} nuevos`;
+    p.jump.querySelector(".jump-count").textContent = t("{n} nuevos", { n: p.newCount });
     p.jump.classList.remove("hidden");
   }
   if (visible && S.focused) markRead(c.key);
@@ -675,9 +675,7 @@ function updateMessage(c, m) {
   if (p?.dirty) return;
   const el = p?.list.querySelector(`.msg[data-key="${CSS.escape(m.key)}"]`);
   if (!el) return;
-  const prevEl = el.previousElementSibling;
   el.replaceWith(messageEl(c, m, el.classList.contains("cont")));
-  void prevEl;
 }
 
 function insertUnreadMarker(c, p) {
