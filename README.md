@@ -15,9 +15,41 @@ A Windows desktop XMPP (Jabber) client built for EVE Online communities and alli
 | `EvEX-MPP-Setup-<version>.exe` | **Installer.** Installs for your user only, no administrator rights needed. You can choose the folder; it creates desktop and Start menu shortcuts and can be pinned to the taskbar. Uninstall it from "Installed apps"; your data is kept. |
 | `EvEX-MPP-<version>-portable.exe` | **Portable.** Nothing to install. It keeps its data in an `EvEX-MPP-datos` folder next to the `.exe`, so you can carry it on a USB stick. |
 
-The executables are not code-signed yet, so the first time Windows SmartScreen will warn you: "More info" → "Run anyway". See the [code signing policy](#code-signing-policy).
+The executables are not code-signed yet, so Windows SmartScreen will warn you the first time. Before running them, you can check that they are exactly what GitHub built from this repository: see [How to verify your download](#how-to-verify-your-download). [CHANGELOG.md](CHANGELOG.md) lists what changed in each version.
 
-**Verify your download.** Releases are built by GitHub Actions from the tagged source code and include a `checksums.txt` file with the SHA-256 of each executable. Compare it with `Get-FileHash <file> -Algorithm SHA256` in PowerShell. See [SECURITY.md](SECURITY.md) for details and for how to report a vulnerability, and [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+## How to verify your download
+
+*Español: [Cómo verificar la descarga](README.es.md#cómo-verificar-la-descarga).*
+
+Every release is built by GitHub Actions from a signed tag of this repository ([release.yml](.github/workflows/release.yml)); nobody uploads executables by hand. Each release also includes `checksums.txt` and an `EvEX-MPP-v<version>.intoto.jsonl` attestation. Download the executables only from [Releases](../../releases), then use either check below (or both).
+
+**1. SHA-256 checksum.** Download `checksums.txt` from the same release, put it next to the `.exe` and run this in PowerShell, in that folder:
+
+```powershell
+$file = "EvEX-MPP-Setup-<version>.exe"   # or EvEX-MPP-<version>-portable.exe
+$expected = ((Get-Content checksums.txt) -match [regex]::Escape($file) -split '\s+')[0]
+if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $expected) { "OK: the checksum matches" } else { "DOES NOT MATCH: do not run it" }
+```
+
+To compare by eye instead, `Get-FileHash <file> -Algorithm SHA256` prints the hash, which must equal the line for that file in `checksums.txt`. On Linux, macOS or Git Bash: `sha256sum -c --ignore-missing checksums.txt`.
+
+**2. Build provenance (GitHub attestation).** With the [GitHub CLI](https://cli.github.com/) installed:
+
+```powershell
+gh attestation verify EvEX-MPP-Setup-<version>.exe --repo AlexDeveOp/EvEX-MPP
+```
+
+It succeeds only if the file was built by a GitHub Actions workflow of this repository; it also shows the tag and commit it was built from. To also require the release workflow, add `--signer-workflow AlexDeveOp/EvEX-MPP/.github/workflows/release.yml`. Without an Internet connection, pass the attestation file from the release: `--bundle EvEX-MPP-v<version>.intoto.jsonl`. A modified file fails the check.
+
+**3. Windows SmartScreen.** The first time you run the installer or the portable, Windows may show *"Windows protected your PC"*. It appears because the executables are **not code-signed yet**, so Windows does not know the publisher and the files have not built up download reputation. It does not mean that anything harmful was found. If the checks above passed, click **More info** → **Run anyway**. This will go away once releases are signed; see the [code signing policy](#code-signing-policy).
+
+**4. VirusTotal.** Each release is scanned on [VirusTotal](https://www.virustotal.com/), and the reports are linked here and in the release notes. A few engines sometimes flag unsigned installers by heuristics; a clean checksum and attestation tell you the file is the one GitHub built.
+
+| Version | Installer | Portable |
+|---|---|---|
+| 0.6.0 | *(added after the release)* | *(added after the release)* |
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## First steps
 

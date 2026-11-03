@@ -15,9 +15,41 @@ En [Releases](../../releases) hay dos ejecutables:
 | `EvEX-MPP-Setup-<versión>.exe` | **Instalador.** Se instala solo para tu usuario, sin permisos de administrador. Deja elegir carpeta, crea accesos en el escritorio y en el menú Inicio, y se puede anclar a la barra de tareas. Se desinstala desde «Aplicaciones instaladas» y conserva tus datos. |
 | `EvEX-MPP-<versión>-portable.exe` | **Portable.** No se instala. Guarda sus datos en `EvEX-MPP-datos`, junto al `.exe`, así que se puede llevar en un USB. |
 
-Los ejecutables aún no están firmados, así que la primera vez Windows SmartScreen avisará: «Más información» → «Ejecutar de todas formas». Consulta la [política de firma de código](#política-de-firma-de-código-code-signing-policy).
+Los ejecutables aún no están firmados, así que la primera vez avisará Windows SmartScreen. Antes de abrirlos puedes comprobar que son exactamente los que compiló GitHub a partir de este repositorio: lo explica [Cómo verificar la descarga](#cómo-verificar-la-descarga). En [CHANGELOG.md](CHANGELOG.md) están los cambios de cada versión.
 
-**Verifica la descarga.** Las versiones las compila GitHub Actions a partir del código de la etiqueta e incluyen un archivo `checksums.txt` con el SHA-256 de cada ejecutable. Compáralo con `Get-FileHash <archivo> -Algorithm SHA256` en PowerShell. En [SECURITY.md](SECURITY.md) (en inglés) está el detalle y cómo avisar de un fallo de seguridad, y en [CHANGELOG.md](CHANGELOG.md) los cambios de cada versión.
+## Cómo verificar la descarga
+
+*English: [How to verify your download](README.md#how-to-verify-your-download).*
+
+Cada versión la compila GitHub Actions a partir de una etiqueta firmada de este repositorio ([release.yml](.github/workflows/release.yml)); nadie sube los ejecutables a mano. Cada versión incluye además `checksums.txt` y la atestación `EvEX-MPP-v<versión>.intoto.jsonl`. Descarga los ejecutables solo desde [Releases](../../releases) y usa cualquiera de estas comprobaciones (o las dos).
+
+**1. Suma SHA-256.** Descarga `checksums.txt` de la misma versión, ponlo junto al `.exe` y ejecuta esto en PowerShell, en esa carpeta:
+
+```powershell
+$file = "EvEX-MPP-Setup-<versión>.exe"   # o EvEX-MPP-<versión>-portable.exe
+$expected = ((Get-Content checksums.txt) -match [regex]::Escape($file) -split '\s+')[0]
+if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $expected) { "OK: la suma coincide" } else { "NO COINCIDE: no lo ejecutes" }
+```
+
+Si prefieres compararlo a ojo, `Get-FileHash <archivo> -Algorithm SHA256` muestra la suma, que debe ser igual a la línea de ese archivo en `checksums.txt`. En Linux, macOS o Git Bash: `sha256sum -c --ignore-missing checksums.txt`.
+
+**2. Origen de la compilación (atestación de GitHub).** Con la [CLI de GitHub](https://cli.github.com/) instalada:
+
+```powershell
+gh attestation verify EvEX-MPP-Setup-<versión>.exe --repo AlexDeveOp/EvEX-MPP
+```
+
+Solo da el visto bueno si el archivo lo compiló un workflow de GitHub Actions de este repositorio, y además muestra la etiqueta y el commit de los que salió. Para exigir también que sea el workflow de las versiones, añade `--signer-workflow AlexDeveOp/EvEX-MPP/.github/workflows/release.yml`. Sin conexión a Internet, pásale el archivo de atestación de la versión: `--bundle EvEX-MPP-v<versión>.intoto.jsonl`. Un archivo modificado no pasa la comprobación.
+
+**3. Windows SmartScreen.** La primera vez que abras el instalador o el portable, Windows puede mostrar *«Windows protegió su PC»*. Sale porque los ejecutables **aún no están firmados**: Windows no conoce al editor y los archivos todavía no tienen reputación de descargas. No significa que haya encontrado nada dañino. Si las comprobaciones anteriores salieron bien, pulsa **Más información** → **Ejecutar de todas formas**. Dejará de salir cuando las versiones estén firmadas; consulta la [política de firma de código](#política-de-firma-de-código-code-signing-policy).
+
+**4. VirusTotal.** Cada versión se analiza en [VirusTotal](https://www.virustotal.com/), y los informes se enlazan aquí y en las notas de la versión. Algunos antivirus a veces marcan por heurística los instaladores sin firmar; una suma y una atestación correctas indican que el archivo es el que compiló GitHub.
+
+| Versión | Instalador | Portable |
+|---|---|---|
+| 0.6.0 | *(se añade tras publicarla)* | *(se añade tras publicarla)* |
+
+Para avisar de un fallo de seguridad, consulta [SECURITY.md](SECURITY.md) (en inglés).
 
 ## Primer uso
 
