@@ -85,19 +85,31 @@ function stanzaErrorText(el) {
 
 // Con proxy, xmpp.js se conecta a un puerto local de un solo uso que reenvía por el túnel del proxy (ver proxy.js).
 // Así el socket sigue siendo un net.Socket normal (STARTTLS funciona) y el nombre del servidor lo resuelve el proxy.
-// Con TLS directo, el certificado se comprueba contra el nombre real del servidor, no contra 127.0.0.1.
-const tlsNames = new Map(); // puerto local -> nombre del servidor
+// Con TLS directo (XEP-0368), el certificado se comprueba contra el dominio de la cuenta, como con STARTTLS: no contra
+// 127.0.0.1 (el reenvío local) ni contra el servidor de conexión, que puede ser otro nombre o un .onion.
+// xmpp.js llama a socketParameters() sin la cuenta, así que el dominio se deja aquí justo antes de conectar.
+const tlsNames = new Map(); // servicio («xmpps://host:puerto») -> dominio de la cuenta
 
-class ProxiedTLS extends ConnectionTLS {
+class DomainTLS extends ConnectionTLS {
   socketParameters(service) {
     const params = super.socketParameters(service);
-    const name = params && tlsNames.get(Number(params.port));
+    const name = params && tlsNames.get(service);
     return name ? { ...params, servername: name } : params;
   }
 }
 
+// connect() de xmpp.js calcula los parámetros del socket de forma síncrona: basta con dejar el dominio durante la llamada.
+function connectWithDomain(entity, direct, service) {
+  tlsNames.set(service, entity.options.domain);
+  try {
+    return direct.call(entity, service);
+  } finally {
+    tlsNames.delete(service);
+  }
+}
+
 export function useProxy(xmpp, getProxy) {
-  xmpp.transports = xmpp.transports.map((T) => (T === ConnectionTLS ? ProxiedTLS : T));
+  xmpp.transports = xmpp.transports.map((T) => (T === ConnectionTLS ? DomainTLS : T));
   const direct = xmpp.connect;
   // También vale para las reconexiones: xmpp.js vuelve a llamar a connect() con el servicio original.
   xmpp.connect = async function connect(service) {
@@ -106,7 +118,7 @@ export function useProxy(xmpp, getProxy) {
     let proxy;
     try {
       proxy = await getProxy();
-      if (!proxy) return direct.call(this, service);
+      if (!proxy) return connectWithDomain(this, direct, service);
     } catch (err) {
       err.fatal = true; // proxy mal configurado (PROXY_CONFIG)
       this.emit("error", err);
@@ -131,14 +143,11 @@ export function useProxy(xmpp, getProxy) {
       }
       throw err;
     }
-    tlsNames.set(fwd.port, host);
     try {
-      return await direct.call(this, service);
+      return await connectWithDomain(this, direct, service);
     } catch (err) {
       fwd.close();
       throw err;
-    } finally {
-      tlsNames.delete(fwd.port);
     }
   };
 }
@@ -228,7 +237,7 @@ export class XmppAccount extends EventEmitter {
       },
     });
     this.xmpp = xmpp;
-    if (this.getProxy) useProxy(xmpp, this.getProxy);
+    useProxy(xmpp, this.getProxy || (async () => null));
 
     xmpp.iqCallee.get(NS.VERSION, "query", () =>
       xml("query", { xmlns: NS.VERSION }, xml("name", {}, "EvEX-MPP"), xml("version", {}, this.version), xml("os", {}, process.platform)),

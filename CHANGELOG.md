@@ -29,6 +29,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
 
 ### Changed
+- **Direct TLS checks the account's domain:** with *Direct TLS*, the server certificate is now checked against the domain of your address, as STARTTLS already did, instead of the connection server name. This is what XEP-0368 expects, and it lets you connect through a different host name or a Tor `.onion` address.
 - **Linux in the interface:**
   - Before saving a password, the app explains that Linux will ask you to create or unlock your keyring.
   - Without a keyring, the *Remember password* boxes are disabled with the reason, and the app explains why the password was not saved.

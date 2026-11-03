@@ -111,3 +111,35 @@ test("sin proxy (getProxy devuelve null) conecta directo", async (t) => {
   await acc.connect("test");
   assert.equal(acc.state, "online");
 });
+
+test("con TLS directo el certificado se comprueba contra el dominio de la cuenta (también por proxy y con .onion)", async (t) => {
+  const { useProxy } = await import("../../src/main/xmpp-account.js");
+  const { default: ConnectionTLS } = await import("@xmpp/tls/lib/Connection.js");
+  const net = await import("node:net");
+  // Entidad mínima: connect() devuelve los parámetros que recibiría el socket TLS (y abre la conexión, para el reenvío).
+  const entity = (getProxy) => {
+    const e = {
+      transports: [ConnectionTLS],
+      options: { domain: "ejemplo.com" },
+      _status() {},
+      emit() {},
+      async connect(service) {
+        const params = this.transports[0].prototype.socketParameters(service);
+        await new Promise((resolve) => net.connect(params.port, "127.0.0.1", function () { this.destroy(); resolve(); }).on("error", resolve));
+        return params;
+      },
+    };
+    useProxy(e, getProxy);
+    return e;
+  };
+  // Sin proxy: se conecta al host de conexión, pero el nombre del certificado es el dominio.
+  const direct = await entity(async () => null).connect("xmpps://servidor.onion:1");
+  assert.equal(direct.host, "servidor.onion");
+  assert.equal(direct.servername, "ejemplo.com");
+  // Con proxy: se conecta al reenvío local y el nombre sigue siendo el dominio, no 127.0.0.1 ni el .onion.
+  const proxy = await startFakeProxy({ type: "socks5" });
+  t.after(() => proxy.close());
+  const viaProxy = await entity(async () => ({ type: "socks5", host: "127.0.0.1", port: proxy.port })).connect(`xmpps://localhost:${PORT}`);
+  assert.equal(viaProxy.host, "127.0.0.1");
+  assert.equal(viaProxy.servername, "ejemplo.com");
+});
