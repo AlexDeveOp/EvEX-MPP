@@ -15,12 +15,31 @@ export const PROXY_TYPES = [
 export const DEFAULT_PORTS = { socks5: 1080, http: 8080, https: 443 };
 export const PROXY_DEFAULTS = { type: "socks5", host: "", port: 1080, username: "" };
 
+// Servidor XMPP al que conecta una cuenta: su «Servidor de conexión» o, si está vacío, el dominio de la dirección.
+export function xmppTarget(account) {
+  const domain = String(account?.jid || "").trim().split("@")[1] || "";
+  const host = String(account?.host || "").trim() || domain;
+  return host ? { host, port: Number(account?.port) || 5222 } : null;
+}
+
+// Texto del resultado de proxy:test. Con target, dice también si se llegó al servidor XMPP a través del proxy;
+// si el proceso principal no lo comprueba (respuesta sin target), solo informa del proxy.
+export function testResultText(r, target) {
+  const proxy = t("Proxy: responde ({ms} ms)", { ms: Math.round(r?.ms ?? 0) });
+  if (!target || !r?.target) return { kind: "good", text: proxy };
+  const server = `${target.host}:${target.port}`;
+  if (r.target.ok) return { kind: "good", text: `${proxy} · ${t("Servidor XMPP {server}: se llega ({ms} ms)", { server, ms: Math.round(r.target.ms ?? 0) })}` };
+  return { kind: "bad", text: `${proxy} · ${t("Servidor XMPP {server}: no se llega ({error})", { server, error: r.target.error || t("error desconocido") })}` };
+}
+
 // Campos de un proxy: tipo, servidor, puerto, usuario, contraseña (con ojo) y «Probar».
 // - value: { type, host, port, username }, se modifica en el sitio y se avisa con onChange(value).
 // - hasPassword: si ya hay una contraseña guardada (el campo lo dice en el placeholder y se puede borrar).
 // - testTarget: { accountId } o { global: true }, para que el proceso principal use la guardada si no se escribe otra.
+// - target(): servidor XMPP { host, port } al que «Probar» intenta llegar a través del proxy (o null: solo el proxy).
+// - extra: elemento que va junto al botón (p. ej. el selector de cuenta de la pestaña general).
 // Devuelve { el, password() }: password() da undefined (no tocar), "" (borrar) o el texto escrito.
-export function proxyFields({ value, hasPassword, onChange = () => {}, testTarget = {} }) {
+export function proxyFields({ value, hasPassword, onChange = () => {}, testTarget = {}, target = () => null, extra = null }) {
   // El puerto sigue al tipo mientras el usuario no lo haya cambiado a mano.
   let portTouched = Number(value.port) !== DEFAULT_PORTS[value.type || "socks5"];
   let clearSaved = false;
@@ -66,8 +85,10 @@ export function proxyFields({ value, hasPassword, onChange = () => {}, testTarge
     btn.disabled = true;
     showStatus("", t("Probando…"));
     try {
-      const r = await api("proxy:test", { proxy: { type: value.type, host: value.host, port: Number(value.port), username: value.username }, password: pass.value || undefined, ...testTarget });
-      showStatus("good", t("Funciona ({ms} ms)", { ms: Math.round(r?.ms ?? 0) }));
+      const dest = target();
+      const r = await api("proxy:test", { proxy: { type: value.type, host: value.host, port: Number(value.port), username: value.username }, password: pass.value || undefined, ...testTarget, ...(dest ? { target: dest } : {}) });
+      const res = testResultText(r, dest);
+      showStatus(res.kind, res.text);
     } catch (e) {
       showStatus("bad", e.message);
     } finally {
@@ -92,6 +113,7 @@ export function proxyFields({ value, hasPassword, onChange = () => {}, testTarge
       field(t("Usuario"), user),
       field(t("Contraseña del proxy"), h("div", { class: "input-group" }, pass, eye, forget), noKeyring() ? passwordStoreHint() : null),
     ),
+    extra,
     h("div", { class: "row proxy-test" }, testBtn, status),
   );
   return {
@@ -113,7 +135,21 @@ export const networkTabs = {
     const p = globalProxy();
     const save = (value) => look((x) => (x.proxy = { ...globalProxy(), ...value }));
     const body = h("div", { class: `proxy-options ${p.enabled ? "" : "off"}` });
-    const fields = proxyFields({ value: { type: p.type, host: p.host, port: p.port, username: p.username }, hasPassword: !!S.system.hasProxyPassword, onChange: save, testTarget: { global: true } });
+    let probeId = S.accounts[0]?.id || "";
+    const probe = S.accounts.length
+      ? field(
+          t("Al probar, comprobar también el servidor de"),
+          select([["", t("Ninguna cuenta (solo el proxy)")], ...S.accounts.map((a) => [a.id, `${a.alias || a.jid} (${xmppTarget(a)?.host || a.jid})`])], probeId, (v) => (probeId = v)),
+        )
+      : null;
+    const fields = proxyFields({
+      value: { type: p.type, host: p.host, port: p.port, username: p.username },
+      hasPassword: !!S.system.hasProxyPassword,
+      onChange: save,
+      testTarget: { global: true },
+      target: () => xmppTarget(S.accounts.find((a) => a.id === probeId)),
+      extra: probe,
+    });
     const savePw = h(
       "button",
       {

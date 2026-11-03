@@ -3,7 +3,7 @@ import { S, api, emit, account, conn, onMain } from "./state.js";
 import { h, icon, iconButton, modal, field, toast, clear, confirmDialog, select } from "./dom.js";
 import { closeConv } from "./convs.js";
 import { onWindows, noKeyring, passwordStoreHint, mayRememberPassword, afterAccountSave } from "./system.js";
-import { proxyFields, PROXY_DEFAULTS, globalProxySummary } from "./settings/network.js";
+import { proxyFields, PROXY_DEFAULTS, globalProxySummary, xmppTarget } from "./settings/network.js";
 
 import { t, locale } from "./i18n.js";
 export async function connectWithPrompt(accountId) {
@@ -271,7 +271,7 @@ export function openAccounts(focusId) {
         v.proxy.mode,
         (x) => ((v.proxy.mode = x), renderProxy()),
       );
-      proxyEditor = v.proxy.mode === "custom" ? proxyFields({ value: v.proxy, hasPassword: !!a?.hasProxyPassword, testTarget: a ? { accountId: a.id } : {} }) : null;
+      proxyEditor = v.proxy.mode === "custom" ? proxyFields({ value: v.proxy, hasPassword: !!a?.hasProxyPassword, testTarget: a ? { accountId: a.id } : {}, target: () => xmppTarget(v) }) : null;
       clear(proxyBox).append(
         h("summary", {}, t("Proxy")),
         field(t("Conexión a través de un proxy"), mode, t("El proxy general se configura en Preferencias → Red y proxy")),
