@@ -99,6 +99,8 @@ export const DEFAULT_SETTINGS = {
     groupMessagesMinutes: 5,
     autoAwayMinutes: 10,
   },
+  // Proxy general: lo usan las cuentas en modo «global» y todo el tráfico web de la app. La contraseña va en secrets.json.
+  proxy: { enabled: false, type: "socks5", host: "", port: 1080, username: "" },
   layout: { sidebarWidth: 290, occupantsWidth: 230, showOccupants: true, compactSidebar: false },
   openTabs: [],
 };
@@ -158,6 +160,7 @@ export function flush() {
 
 export function setSettings(settings) {
   get().settings = deepMerge(DEFAULT_SETTINGS, settings);
+  config.settings.proxy = { enabled: !!config.settings.proxy.enabled, ...normalizeProxySettings(config.settings.proxy) };
   save();
   return config.settings;
 }
@@ -183,10 +186,27 @@ export function normalizeAccount(a) {
     conferenceServer: a.conferenceServer || (jid.includes("@") ? `conference.${jid.split("@")[1]}` : ""),
     syncBookmarks: a.syncBookmarks !== false,
     color: a.color || "",
+    proxy: normalizeAccountProxy(a.proxy),
     rooms: (a.rooms || []).map(normalizeRoom),
     // Salas quitadas a mano: no se vuelven a añadir aunque sigan en los marcadores del servidor.
     dismissedRooms: [...new Set((a.dismissedRooms || []).map((j) => String(j).toLowerCase()))],
   };
+}
+
+const PROXY_TYPES = ["socks5", "http", "https"];
+const PROXY_PORTS = { socks5: 1080, http: 8080, https: 443 };
+
+// Datos del proxy sin contraseña: tipo válido, host sin espacios y puerto por defecto según el tipo.
+export function normalizeProxySettings(p = {}) {
+  const type = PROXY_TYPES.includes(p.type) ? p.type : "socks5";
+  const port = Number(p.port);
+  return { type, host: String(p.host || "").trim(), port: Number.isInteger(port) && port > 0 && port < 65536 ? port : PROXY_PORTS[type], username: String(p.username || "") };
+}
+
+// Proxy de una cuenta: «global» (el de Preferencias), «none» (directo) o «custom» (el suyo).
+export function normalizeAccountProxy(p = {}) {
+  const mode = ["global", "none", "custom"].includes(p?.mode) ? p.mode : "global";
+  return { mode, ...normalizeProxySettings(p || {}) };
 }
 
 export function normalizeRoom(r) {
@@ -215,6 +235,7 @@ export function upsertAccount(a) {
 export function removeAccount(id) {
   config.accounts = get().accounts.filter((a) => a.id !== id);
   setPassword(id, null).catch(() => {});
+  setPassword(proxySecretKey(id), null).catch(() => {});
   save();
 }
 
@@ -257,6 +278,12 @@ export class NoKeyringError extends Error {
     super(t("No hay un llavero del sistema para cifrar la contraseña; no se guardará."));
     this.code = "NO_KEYRING";
   }
+}
+
+// Las contraseñas de proxy se guardan junto a las de las cuentas, con su propia clave.
+export const GLOBAL_PROXY = "global";
+export function proxySecretKey(accountId) {
+  return `proxy:${accountId}`;
 }
 
 export async function setPassword(accountId, password) {

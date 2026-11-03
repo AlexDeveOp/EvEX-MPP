@@ -18,6 +18,9 @@ import { userData, mediaDir, avatarDir } from "./paths.js";
 import { autostartFile, autostartExec, desktopEntry } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
+import { startBridge, testProxy, normalizeProxy, openTunnel } from "./proxy.js";
+import { globalProxy, accountProxy } from "./proxy-settings.js";
+import { createNetFetch } from "./net-fetch.js";
 
 import { t, setLanguage, currentLang } from "./i18n.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -75,7 +78,7 @@ const updateNotified = new Set();
 
 function checkLatest() {
   if (!REPO) throw new Error(t("No se conoce el repositorio de la app."));
-  return checkForUpdates({ currentVersion: app.getVersion(), repo: REPO, fetchImpl: (url, opts) => net.fetch(url, opts) });
+  return checkForUpdates({ currentVersion: app.getVersion(), repo: REPO, fetchImpl: netFetch });
 }
 
 // Comprobación automática: avisa una sola vez por versión.
@@ -309,7 +312,81 @@ function nativeContextMenu(params) {
 // ---------- cuentas ----------
 
 function publicAccount(a) {
-  return { ...a, rooms: a.rooms.map(({ password, ...r }) => ({ ...r, hasPassword: !!password })), hasPassword: store.hasPassword(a.id) };
+  return { ...a, rooms: a.rooms.map(({ password, ...r }) => ({ ...r, hasPassword: !!password })), hasPassword: store.hasPassword(a.id), hasProxyPassword: store.hasPassword(store.proxySecretKey(a.id)) };
+}
+
+// ---------- proxy ----------
+
+const proxyPassword = (id) => store.getPassword(store.proxySecretKey(id));
+let bridge = null;
+let bridgeProxy = null; // proxy general con contraseña, ya descifrada, para el puente
+
+// Todo el tráfico web de la app (Chromium y net.fetch) va por un proxy HTTP local que reenvía al proxy general.
+// Así valen SOCKS5 con usuario (Chromium no lo admite) y las contraseñas no salen del proceso principal. El puente
+// pide un usuario y una contraseña aleatorios (ver startBridge), que la app da con «login» y con netFetch.
+// Si el proxy general está activado pero falla o está incompleto, el puente responde 502: nunca se va directo.
+async function applyGlobalProxy() {
+  const s = store.get().settings;
+  try {
+    bridgeProxy = await globalProxy(s, proxyPassword);
+  } catch {
+    bridgeProxy = null; // incompleto: el puente responde 502
+  }
+  const ses = session.defaultSession;
+  if (s.proxy.enabled) {
+    try {
+      bridge ||= await startBridge(() => bridgeProxy);
+    } catch {
+      bridge = null;
+    }
+    // Sin puente, un proxy local que no existe (puerto 9, «discard»): todo falla en vez de salir directo.
+    await ses.setProxy({ proxyRules: bridge ? `http://127.0.0.1:${bridge.port}` : "http://127.0.0.1:9" });
+  } else {
+    await ses.setProxy({ mode: "direct" });
+    // Sin proxy general, el puente no se queda escuchando.
+    bridge?.close();
+    bridge = null;
+  }
+  // Las conexiones abiertas con la configuración anterior no deben seguir usándose.
+  await ses.closeAllConnections().catch(() => {});
+}
+
+// Credenciales del puente local: solo para él (127.0.0.1 y su puerto), nunca para otro proxy ni para un servidor web.
+function bridgeAuth(info) {
+  if (!bridge || !info?.isProxy || Number(info.port) !== bridge.port || !["127.0.0.1", "localhost"].includes(info.host)) return null;
+  return { username: bridge.username, password: bridge.password };
+}
+
+// Ventanas y burbujas: Chromium pide las credenciales del proxy con este evento.
+function onLogin(event, _wc, _details, authInfo, callback) {
+  const auth = bridgeAuth(authInfo);
+  if (!auth) return;
+  event.preventDefault();
+  callback(auth.username, auth.password);
+}
+
+// Descargas del proceso principal (actualizaciones, GIFs): net.fetch no da credenciales al proxy; esto sí.
+const netFetch = createNetFetch(bridgeAuth);
+
+// Reconecta las cuentas conectadas a las que afecta un cambio de proxy. Las reconexiones de una misma cuenta van en
+// cola: con dos cambios seguidos, la segunda cortaba a la primera a medio abrir. Cada conexión lee el proxy al
+// conectar, así que la última usa siempre la configuración más reciente.
+const proxyReconnects = new Map(); // id -> promesa de la última reconexión
+function reconnectWithNewProxy(filter) {
+  for (const [id, x] of accounts) {
+    if (!x.wantOnline || !filter(x.acc)) continue;
+    const next = (proxyReconnects.get(id) || Promise.resolve())
+      .then(() => x.disconnect(true))
+      .then(() => connectAccount(id))
+      .catch((e) => sendXmpp({ accountId: id, type: "error", message: e.message }));
+    proxyReconnects.set(id, next);
+    next.finally(() => proxyReconnects.get(id) === next && proxyReconnects.delete(id));
+  }
+}
+
+async function saveProxyPassword(key, password) {
+  if (password === undefined) return;
+  await store.setPassword(store.proxySecretKey(key), password || null);
 }
 
 function accountSnapshot(id) {
@@ -341,7 +418,7 @@ function getConn(id) {
   const acc = store.getAccount(id);
   if (!acc) throw new Error(t("Cuenta no encontrada"));
   if (!x) {
-    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion() });
+    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion(), getProxy: () => accountProxy(x.acc, store.get().settings, proxyPassword) });
     x.historyOptions = (roomJid) => historyOptions(id, roomJid);
     x.on("event", (ev) => onAccountEvent(x, ev));
     accounts.set(id, x);
@@ -432,7 +509,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable },
+      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, hasProxyPassword: store.hasPassword(store.proxySecretKey(store.GLOBAL_PROXY)) },
     };
   });
 
@@ -456,9 +533,14 @@ function registerIpc() {
   // Comprobación pedida a mano (botón «Comprobar ahora»): la interfaz muestra el resultado.
   handle("updates:check", () => checkLatest());
 
-  handle("settings:set", (settings) => {
+  handle("settings:set", async (settings) => {
     const before = currentLang();
+    const proxyBefore = JSON.stringify(store.get().settings.proxy);
     const s = store.setSettings(settings);
+    if (JSON.stringify(s.proxy) !== proxyBefore) {
+      await applyGlobalProxy();
+      reconnectWithNewProxy((acc) => acc.proxy?.mode === "global");
+    }
     setLanguage(s.language);
     applySystemSettings(s);
     // El menú de la bandeja se construye con textos traducidos: rehacerlo si cambia el idioma.
@@ -466,8 +548,9 @@ function registerIpc() {
     return s;
   });
 
-  handle("account:save", async ({ account, password }) => {
+  handle("account:save", async ({ account, password, proxyPassword: newProxyPassword }) => {
     const prev = account.id ? store.getAccount(account.id) : null;
+    const proxyBefore = JSON.stringify(prev?.proxy);
     const merged = prev ? { ...prev, ...account, rooms: account.rooms ? account.rooms.map((r) => ({ ...r, password: r.password ?? prev.rooms.find((p) => p.jid === r.jid)?.password })) : prev.rooms } : account;
     const acc = store.upsertAccount(merged);
     let passwordNotSaved;
@@ -479,8 +562,15 @@ function registerIpc() {
       passwordNotSaved = "no-keyring";
     }
     if (!acc.savePassword) await store.setPassword(acc.id, null);
+    try {
+      await saveProxyPassword(acc.id, newProxyPassword);
+    } catch (err) {
+      if (err.code !== "NO_KEYRING") throw err;
+      passwordNotSaved = "no-keyring";
+    }
     const x = accounts.get(acc.id);
     if (x) x.acc = acc;
+    if (prev && (JSON.stringify(acc.proxy) !== proxyBefore || newProxyPassword !== undefined)) reconnectWithNewProxy((a) => a.id === acc.id);
     return { ...publicAccount(acc), ...(passwordNotSaved ? { passwordNotSaved } : {}) };
   });
 
@@ -492,6 +582,37 @@ function registerIpc() {
   });
 
   handle("account:connect", (id, password) => connectAccount(id, password));
+
+  // Contraseña del proxy general: "" la borra.
+  handle("proxy:password", async (password) => {
+    await saveProxyPassword(store.GLOBAL_PROXY, password ?? "");
+    await applyGlobalProxy();
+    reconnectWithNewProxy((acc) => acc.proxy?.mode === "global");
+    return { hasProxyPassword: store.hasPassword(store.proxySecretKey(store.GLOBAL_PROXY)) };
+  });
+
+  // Botón «Probar»: abre un túnel hasta un sitio conocido. Sin contraseña nueva, se usa la guardada.
+  // Botón «Probar»: sin «target», abre un túnel hasta un sitio conocido. Con «target» (el servidor XMPP de una cuenta),
+  // el túnel va hasta ese servidor: si el proxy responde pero no llega a él, se dice (target.ok = false) sin fallar.
+  // Sin contraseña nueva, se usa la guardada.
+  handle("proxy:test", async ({ proxy, password, accountId, global, target } = {}) => {
+    const p = normalizeProxy(proxy || {});
+    if (!p.host) throw new Error(t("Falta el servidor del proxy"));
+    const saved = password === undefined && p.username ? await proxyPassword(global ? store.GLOBAL_PROXY : accountId) : null;
+    const full = { ...p, password: password ?? saved ?? "" };
+    const host = String(target?.host || "").trim();
+    if (!host) return testProxy(full);
+    const start = Date.now();
+    try {
+      const tunnel = await openTunnel(full, host, Number(target.port) || 5222);
+      tunnel.destroy();
+      const ms = Date.now() - start;
+      return { ms, target: { ok: true, ms } };
+    } catch (err) {
+      if (err.code !== "PROXY_TARGET") throw err; // el fallo es del propio proxy
+      return { ms: Date.now() - start, target: { ok: false, error: err.message } };
+    }
+  });
   handle("account:disconnect", (id) => accounts.get(id)?.disconnect());
   handle("account:snapshot", (id) => accountSnapshot(id));
 
@@ -549,7 +670,7 @@ function registerIpc() {
   handle("logs:search", (id, opts) => logs.search(id, opts));
   handle("logs:list", (id) => logs.listConversations(id));
 
-  registerMediaIpc(handle, { getWin: () => win, getConn });
+  registerMediaIpc(handle, { getWin: () => win, getConn, fetchImpl: netFetch });
   registerPidginIpc(handle, { logs, send, publicAccount });
 
   // Burbuja propia, notificación de Windows o ambas, según Preferencias → Notificaciones.
@@ -674,6 +795,8 @@ app.whenReady().then(async () => {
   registerIpc();
   popupIpc(handle);
   applySystemSettings(store.get().settings);
+  app.on("login", onLogin);
+  await applyGlobalProxy().catch(() => {});
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(["notifications", "clipboard-sanitized-write", "clipboard-read", "media", "fullscreen"].includes(permission)));
   // Las imágenes externas (vistas previas, emojis animados) no deben enviar cookies ni referer.
@@ -709,6 +832,7 @@ app.on("before-quit", () => {
 });
 
 app.on("will-quit", (e) => {
+  bridge?.close();
   if (accounts.size && !app.__disconnected) {
     e.preventDefault();
     app.__disconnected = true;

@@ -54,7 +54,13 @@ net
     reset();
     sock.on("data", (d) => {
       if (process.env.MOCK_VERBOSE) log("C>", d.toString().slice(0, 300));
-      parser.write(d.toString());
+      // XML mal formado (p. ej. un cierre de flujo sin apertura): se corta ese cliente, no se cae el servidor.
+      try {
+        parser.write(d.toString());
+      } catch (err) {
+        log("XML no válido, se cierra la conexión:", err.message);
+        sock.destroy();
+      }
     });
     sock.on("error", () => {});
     sock.on("close", () => log("desconectado", jid));

@@ -6,6 +6,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { t, tk } from "./i18n.js";
+import ConnectionTLS from "@xmpp/tls/lib/Connection.js";
+import { createForwarder } from "./proxy.js";
 const NS = {
   ROSTER: "jabber:iq:roster",
   DISCO_INFO: "http://jabber.org/protocol/disco#info",
@@ -79,9 +81,81 @@ function stanzaErrorText(el) {
   return { condition: cond?.name || "undefined-condition", text: text || "" };
 }
 
+// ---------- proxy ----------
+
+// Con proxy, xmpp.js se conecta a un puerto local de un solo uso que reenvía por el túnel del proxy (ver proxy.js).
+// Así el socket sigue siendo un net.Socket normal (STARTTLS funciona) y el nombre del servidor lo resuelve el proxy.
+// Con TLS directo (XEP-0368), el certificado se comprueba contra el dominio de la cuenta, como con STARTTLS: no contra
+// 127.0.0.1 (el reenvío local) ni contra el servidor de conexión, que puede ser otro nombre o un .onion.
+// xmpp.js llama a socketParameters() sin la cuenta, así que el dominio se deja aquí justo antes de conectar.
+const tlsNames = new Map(); // servicio («xmpps://host:puerto») -> dominio de la cuenta
+
+class DomainTLS extends ConnectionTLS {
+  socketParameters(service) {
+    const params = super.socketParameters(service);
+    const name = params && tlsNames.get(service);
+    return name ? { ...params, servername: name } : params;
+  }
+}
+
+// connect() de xmpp.js calcula los parámetros del socket de forma síncrona: basta con dejar el dominio durante la llamada.
+function connectWithDomain(entity, direct, service) {
+  tlsNames.set(service, entity.options.domain);
+  try {
+    return direct.call(entity, service);
+  } finally {
+    tlsNames.delete(service);
+  }
+}
+
+export function useProxy(xmpp, getProxy) {
+  xmpp.transports = xmpp.transports.map((T) => (T === ConnectionTLS ? DomainTLS : T));
+  const direct = xmpp.connect;
+  // También vale para las reconexiones: xmpp.js vuelve a llamar a connect() con el servicio original.
+  xmpp.connect = async function connect(service) {
+    let fwd;
+    let host;
+    let proxy;
+    try {
+      proxy = await getProxy();
+      if (!proxy) return connectWithDomain(this, direct, service);
+    } catch (err) {
+      err.fatal = true; // proxy mal configurado (PROXY_CONFIG)
+      this.emit("error", err);
+      throw err;
+    }
+    // Como hace xmpp.js al conectar: si no, tras un corte el estado sigue en «disconnect» y el aviso de abajo no se
+    // emitiría (_status ignora un estado repetido).
+    this._status("connecting", service);
+    try {
+      const url = new URL(service);
+      host = url.hostname.replace(/^\[(.*)\]$/, "$1");
+      fwd = await createForwarder(proxy, host, Number(url.port), { timeout: 20000 });
+      service = `${url.protocol}//127.0.0.1:${fwd.port}`;
+    } catch (err) {
+      // Sin socket, xmpp.js no recibe «disconnect» y una reconexión no volvería a intentarlo nunca: se avisa a mano.
+      // Un usuario rechazado por el proxy no se arregla reintentando: error definitivo, como una contraseña mala.
+      if (err.code === "PROXY_AUTH") {
+        err.fatal = true;
+        this.emit("error", err);
+      } else {
+        this._status("disconnect", { clean: false, reason: err });
+      }
+      throw err;
+    }
+    try {
+      return await connectWithDomain(this, direct, service);
+    } catch (err) {
+      fwd.close();
+      throw err;
+    }
+  };
+}
+
 export class XmppAccount extends EventEmitter {
-  constructor(acc, { avatarDir, version = "" }) {
+  constructor(acc, { avatarDir, version = "", getProxy = null }) {
     super();
+    this.getProxy = getProxy; // async () => proxy con contraseña, o null para conectar directo
     this.acc = acc;
     this.avatarDir = avatarDir;
     this.version = version; // se responde a las consultas de versión (XEP-0092)
@@ -163,6 +237,7 @@ export class XmppAccount extends EventEmitter {
       },
     });
     this.xmpp = xmpp;
+    useProxy(xmpp, this.getProxy || (async () => null));
 
     xmpp.iqCallee.get(NS.VERSION, "query", () =>
       xml("query", { xmlns: NS.VERSION }, xml("name", {}, "EvEX-MPP"), xml("version", {}, this.version), xml("os", {}, process.platform)),

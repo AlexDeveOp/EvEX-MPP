@@ -1,6 +1,6 @@
 // Ficheros del usuario: elegir ficheros, imágenes para los fondos (arrastradas, pegadas o descargadas), emojis propios,
 // temas, avatar, GIFs guardados, sonidos de Pidgin y fuentes del sistema. Todo se copia a userData/media.
-import { dialog, nativeImage, net } from "electron";
+import { dialog, nativeImage } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
@@ -60,15 +60,15 @@ function listSystemFonts() {
   });
 }
 
-export function registerMediaIpc(handle, { getWin, getConn }) {
+export function registerMediaIpc(handle, { getWin, getConn, fetchImpl }) {
   // Sonidos de Pidgin: se buscan en el Pidgin instalado y se copian a la carpeta de la app (no se incluyen con EvEX-MPP).
   // GIFs: búsqueda con la clave del usuario y copias locales de «Mis GIFs» (solo para la miniatura).
   handle("gifs:search", ({ query, page }) => {
     const g = store.get().settings.gifs;
-    return searchGifs({ provider: g.provider, key: g.keys?.[g.provider], query, page, rating: g.rating, lang: currentLang(), fetchImpl: (url, opts) => net.fetch(url, opts) });
+    return searchGifs({ provider: g.provider, key: g.keys?.[g.provider], query, page, rating: g.rating, lang: currentLang(), fetchImpl });
   });
   handle("gifs:save", async (url) => {
-    const { buffer, ext } = await downloadGif(url, { fetchImpl: (u, opts) => net.fetch(u, opts) });
+    const { buffer, ext } = await downloadGif(url, { fetchImpl });
     const name = `${crypto.createHash("sha1").update(buffer).digest("hex").slice(0, 20)}.${ext}`;
     fs.mkdirSync(mediaDir("gifs"), { recursive: true });
     fs.writeFileSync(mediaDir("gifs", name), buffer);
@@ -130,7 +130,7 @@ export function registerMediaIpc(handle, { getWin, getConn }) {
     return saveImageBuffer(buffer, ext);
   });
   handle("image:importUrl", async (url) => {
-    const { buffer, ext } = await downloadGif(String(url || "").trim(), { fetchImpl: (u, opts) => net.fetch(u, opts), maxBytes: MAX_IMAGE });
+    const { buffer, ext } = await downloadGif(String(url || "").trim(), { fetchImpl, maxBytes: MAX_IMAGE });
     return saveImageBuffer(buffer, ext);
   });
 

@@ -3,6 +3,7 @@ import { S, api, emit, account, conn, onMain } from "./state.js";
 import { h, icon, iconButton, modal, field, toast, clear, confirmDialog, select } from "./dom.js";
 import { closeConv } from "./convs.js";
 import { onWindows, noKeyring, passwordStoreHint, mayRememberPassword, afterAccountSave } from "./system.js";
+import { proxyFields, PROXY_DEFAULTS, globalProxySummary, xmppTarget } from "./settings/network.js";
 
 import { t, locale } from "./i18n.js";
 export async function connectWithPrompt(accountId) {
@@ -242,6 +243,8 @@ export function openAccounts(focusId) {
     const a = current ? account(current) : null;
     const d = a || { jid: "", alias: "", nick: "", resource: "EvEX-MPP", host: "", port: 5222, security: "starttls", autoLogin: true, savePassword: true, priority: 1, conferenceServer: "", syncBookmarks: true };
     const v = { ...d };
+    // Proxy de la cuenta: el general (por defecto), ninguno o uno propio.
+    v.proxy = { mode: "global", ...PROXY_DEFAULTS, ...(d.proxy || {}) };
     const inp = (key, attrs = {}) => h("input", { class: "input", value: v[key] ?? "", oninput: (e) => (v[key] = attrs.type === "number" ? Number(e.target.value) : e.target.value), ...attrs });
     const chk = (key, label, hint) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: !!v[key], onchange: (e) => (v[key] = e.target.checked) }), label, hint ? h("small", { class: "muted" }, ` ${hint}`) : null);
     const pass = h("input", { class: "input", type: "password", placeholder: a?.hasPassword ? t("•••••••• (guardada — escribe para cambiarla)") : t("Contraseña") });
@@ -255,13 +258,37 @@ export function openAccounts(focusId) {
       renderFormValues();
     });
     const advanced = h("details", { class: "advanced", open: !!(a && (a.host || a.port !== 5222)) });
+    const proxyBox = h("details", { class: "advanced proxy-box", open: v.proxy.mode !== "global" });
+    let proxyEditor = null;
+    function renderProxy() {
+      const general = globalProxySummary();
+      const mode = select(
+        [
+          ["global", general ? t("Usar el proxy general ({proxy})", { proxy: general }) : t("Usar el proxy general (ahora desactivado: conexión directa)")],
+          ["none", t("Sin proxy (conexión directa)")],
+          ["custom", t("Proxy propio")],
+        ],
+        v.proxy.mode,
+        (x) => ((v.proxy.mode = x), renderProxy()),
+      );
+      proxyEditor = v.proxy.mode === "custom" ? proxyFields({ value: v.proxy, hasPassword: !!a?.hasProxyPassword, testTarget: a ? { accountId: a.id } : {}, target: () => xmppTarget(v) }) : null;
+      clear(proxyBox).append(
+        h("summary", {}, t("Proxy")),
+        field(t("Conexión a través de un proxy"), mode, t("El proxy general se configura en Preferencias → Red y proxy")),
+        proxyEditor?.el,
+        h("p", { class: "proxy-note small" }, icon("shield"), t("La conexión con el servidor sigue cifrada de extremo a extremo con TLS, y el nombre del servidor se resuelve a través del proxy.")),
+      );
+    }
 
     const save = async (connect) => {
       if (!/^[^@\s]+@[^@\s]+$/.test(v.jid.trim())) return toast(t("La dirección debe tener el formato usuario@servidor"), { kind: "error" });
+      if (v.proxy.mode === "custom" && !v.proxy.host) return toast(t("Falta el servidor del proxy"), { kind: "error" });
       try {
         // En Linux, la contraseña solo se manda a guardar si hay llavero y el usuario acepta el aviso.
         const keep = pass.value && v.savePassword && (await mayRememberPassword());
-        const saved = afterAccountSave(await api("account:save", { account: { ...v, savePassword: v.savePassword && !noKeyring(), id: a?.id, jid: v.jid.trim().toLowerCase() }, password: keep ? pass.value : undefined }));
+        const proxy = { mode: v.proxy.mode, type: v.proxy.type, host: v.proxy.host, port: Number(v.proxy.port) || 0, username: v.proxy.username };
+        const proxyPassword = v.proxy.mode === "custom" ? proxyEditor?.password() : undefined;
+        const saved = afterAccountSave(await api("account:save", { account: { ...v, proxy, savePassword: v.savePassword && !noKeyring(), id: a?.id, jid: v.jid.trim().toLowerCase() }, password: keep ? pass.value : undefined, proxyPassword }));
         const i = S.accounts.findIndex((x) => x.id === saved.id);
         if (i >= 0) S.accounts[i] = saved;
         else S.accounts.push(saved);
@@ -308,6 +335,8 @@ export function openAccounts(focusId) {
         ),
         serverInfo(a),
       );
+      formEl.append(proxyBox);
+      renderProxy();
       formEl.append(
         h(
           "div",

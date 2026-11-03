@@ -8,6 +8,15 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Proxy support (SOCKS5, HTTP and HTTPS),** with optional username and password:
+  - *Preferences → Network and proxy* sets a general proxy, used by accounts set to *Use the general proxy* (the default) and by all of the app's web traffic: update checks, GIF search, downloaded emoji, link previews and spell-check dictionaries.
+  - Each account can use the general proxy, no proxy, or its own one (in the account's *Proxy* section).
+  - The server name is resolved by the proxy, not on your computer, and the connection to the XMPP server is still encrypted end to end with TLS (STARTTLS or direct TLS).
+  - An HTTPS proxy's certificate is checked against the public authorities and the ones installed on the system, so a company proxy with its own authority works; self-signed certificates are still rejected.
+  - If the proxy fails or is incomplete, the app shows the error and never connects directly. A dropped proxy is retried until it comes back; a rejected proxy username stops retrying, like a wrong password.
+  - *Test proxy* checks the proxy and, optionally, that the account's XMPP server can be reached through it.
+  - Proxy passwords are encrypted like account passwords. Changing the proxy reconnects only the affected accounts.
+  - The app's web traffic goes through a local helper that only listens on this computer and requires a random password known only to the app, so other programs cannot use your proxy.
 - **Linux packages (beta):** an AppImage and a `.deb` for x64, built by GitHub Actions on Ubuntu and published with the Windows files, in the same `checksums.txt` and build provenance attestation. The `.deb` adds a menu entry (Network / Instant Messaging) and the `evex-mpp` command, recommends a keyring and Speech Dispatcher, and sets `chrome-sandbox` permissions on install. The README explains how to install and verify them and what Linux needs (FUSE 2 for the AppImage, a keyring, Speech Dispatcher for read-aloud).
 - **Alerts on Wayland:** Wayland does not let apps place their windows or keep them on top, so there EvEX-MPP shows alerts as system notifications instead of its own pop-ups (fleet pings stay until dismissed and close when you read the pings). With no notification service it falls back to its own pop-ups. Windows and X11 are unchanged.
 - The CI also builds the Linux packages on every change, so a packaging problem shows up before a release.
@@ -20,6 +29,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
 
 ### Changed
+- **Direct TLS checks the account's domain:** with *Direct TLS*, the server certificate is now checked against the domain of your address, as STARTTLS already did, instead of the connection server name. This is what XEP-0368 expects, and it lets you connect through a different host name or a Tor `.onion` address.
 - **Linux in the interface:**
   - Before saving a password, the app explains that Linux will ask you to create or unlock your keyring.
   - Without a keyring, the *Remember password* boxes are disabled with the reason, and the app explains why the password was not saved.
