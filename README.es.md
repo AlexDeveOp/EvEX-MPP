@@ -133,14 +133,22 @@ Si usas Pidgin a la vez, los pings se entregan al cliente con **mayor prioridad*
 
 ## Política de firma de código (Code signing policy)
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). (Firma de código gratuita de SignPath.io, con certificado de SignPath Foundation.) *La solicitud está enviada; las versiones todavía no van firmadas. Esta sección lo indicará cuando lo estén.*
+**Los ejecutables aún no están firmados.** Solicitamos la firma de código gratuita que [SignPath Foundation](https://signpath.org) ofrece a proyectos de código abierto. La solicitud se denegó porque el proyecto todavía es nuevo y aún no tiene suficiente tracción pública (estrellas, forks, contribuidores y menciones externas); no fue un juicio sobre el código. La volveremos a solicitar cuando la app tenga más tracción y, mientras tanto, estamos explorando otras opciones, como la Microsoft Store. Hasta entonces, verifica la descarga como se explica en [Cómo verificar la descarga](#cómo-verificar-la-descarga).
 
-- **Autores y revisores (committers and reviewers):** [AlexDeveOp](https://github.com/AlexDeveOp)
-- **Aprobadores (approvers):** [AlexDeveOp](https://github.com/AlexDeveOp)
-- Solo se envían a firmar los ejecutables que compila GitHub Actions en sus propios servidores a partir de una etiqueta de versión firmada de este repositorio ([release.yml](.github/workflows/release.yml)). Cada firma se aprueba a mano.
-- Los cambios de personas que no son autores (pull requests) se revisan antes de aceptarlos. Los commits de `main` tienen que ir firmados, y `main` no se puede sobrescribir ni borrar.
-- Todo el equipo usa verificación en dos pasos en GitHub y en SignPath.
-- **Privacidad:** el programa no envía ningún dato al desarrollador. Solo se conecta a los servidores XMPP que configures y a las fuentes de emojis, vistas previas y diccionarios del corrector que se indican en la [política de privacidad](PRIVACY.md#política-de-privacidad). Todas se pueden desactivar.
+Lo que ya se cumple en todas las versiones:
+
+- Los ejecutables solo los compila GitHub Actions en sus propios servidores, a partir de una etiqueta de versión firmada de este repositorio ([release.yml](.github/workflows/release.yml)), y se publican con sumas SHA-256 y una atestación del origen de la compilación.
+- Todo cambio llega a `main` mediante un pull request que tiene que pasar la CI (tests, ESLint, traducciones y auditoría de dependencias, en Windows y Linux). Los commits de `main` tienen que ir firmados, y `main` no se puede sobrescribir ni borrar. Los cambios de personas que no mantienen el proyecto se revisan antes de aceptarlos.
+- Quienes mantienen el proyecto usan verificación en dos pasos en GitHub.
+
+Cuando las versiones vayan firmadas (y para una futura solicitud), se aplicarán además estas reglas:
+
+- **Autores, revisores y aprobadores (committers, reviewers and approvers):** [AlexDeveOp](https://github.com/AlexDeveOp).
+- Solo se envían a firmar los ejecutables compilados como se explica arriba, y cada firma se aprueba a mano.
+- También se usa verificación en dos pasos en el servicio de firma.
+- Esta sección indicará qué versiones van firmadas y por quién.
+
+**Privacidad:** el programa no envía ningún dato al desarrollador. Solo se conecta a los servidores XMPP que configures y a las fuentes de emojis, vistas previas y diccionarios del corrector que se indican en la [política de privacidad](PRIVACY.md#política-de-privacidad). Todas se pueden desactivar.
 
 ## Desarrollo
 
