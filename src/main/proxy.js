@@ -405,7 +405,9 @@ export async function startBridge(getProxy) {
     // Sin host ni puerto en las opciones, por si acaso, para que no haya destino al que ir que no sea el túnel.
     const out = http.request({ method: req.method, path: `${url.pathname}${url.search}`, headers, createConnection: () => tunnel });
     out.on("response", (up) => {
-      res.writeHead(up.statusCode, up.statusMessage, up.headers);
+      // La lista original [nombre, valor, …] y no up.headers: los nombres vienen del servidor remoto y así no pasan
+      // por las propiedades de un objeto (p. ej. «__proto__»); además se conservan las cabeceras repetidas.
+      res.writeHead(up.statusCode, up.statusMessage, up.rawHeaders);
       up.pipe(res);
     });
     out.on("error", () => {
