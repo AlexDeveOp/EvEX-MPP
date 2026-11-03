@@ -23,7 +23,7 @@ export const VOICE_DEFAULTS = {
 export const TEMPLATE_FIELDS = ["title", "fc", "formup", "doctrine", "comms", "pap", "group", "from", "text"];
 
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
-const FIELD_KEYS = { fc: /^fc\b|fleet commander/i, formup: /formup|location|staging/i, doctrine: /doctrine|ships|comp/i, comms: /comms|voice|mumble|discord/i, pap: /pap/i };
+const FIELD_KEYS = { fc: /^(?:fc\b|fleet commander)/i, formup: /formup|location|staging/i, doctrine: /doctrine|ships|comp/i, comms: /comms|voice|mumble|discord/i, pap: /pap/i };
 
 export function voiceSettings() {
   return { ...VOICE_DEFAULTS, ...(S.settings?.pingVoice || {}) };

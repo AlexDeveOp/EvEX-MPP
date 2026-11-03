@@ -18,7 +18,7 @@ const ROOMS = {
   secret: { name: "secret", subject: "", occupants: [], password: "pw" },
 };
 // Lo que se registra puede venir del cliente: se quitan los saltos de línea para que no pueda fingir líneas del registro.
-const clean = (v) => (typeof v === "string" ? v.replace(/[\r\n]/g, " ") : v);
+const clean = (v) => (typeof v === "string" ? v.replace(/\n|\r/g, "") : v);
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a.map(clean));
 const MAM = "urn:xmpp:mam:2";
 const ARCHIVE = process.env.MOCK_MAM
@@ -129,7 +129,7 @@ net
         const fields = Object.fromEntries(q.getChild("x")?.getChildren("field").map((f) => [f.attrs.var, f.getChildText("value")]) || []);
         const start = fields.start ? Date.parse(fields.start) : 0;
         const found = ARCHIVE.filter((m) => (!fields.with || m.from.startsWith(fields.with)) && m.ts >= start);
-        log("archivo: with", fields.with, "desde", fields.start, "→", found.length);
+        log("archivo: with", String(fields.with).replace(/\n|\r/g, ""), "desde", String(fields.start).replace(/\n|\r/g, ""), "→", found.length);
         for (const m of found)
           send(
             xml(
