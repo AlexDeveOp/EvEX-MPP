@@ -1,6 +1,7 @@
 // Emojis: estilos de dibujo, atajos :código:, emoticonos clásicos, emojis personalizados y selector.
 import { EMOJI, EMOJI_GROUPS } from "./data/emoji.js";
 import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
+import { BUNDLED_FLAGS } from "./data/emoji-flags.js";
 import { S, updateSettings } from "./state.js";
 import { h, icon, esc } from "./dom.js";
 
@@ -9,7 +10,7 @@ import { t, currentLang } from "./i18n.js";
 // Nombre del emoji y de su grupo en el idioma de la interfaz.
 const label = (e) => (currentLang() === "es" ? e[1] : e[7]);
 const groupName = (g) => (currentLang() === "es" ? g.name : g.nameEn);
-export const EMOJI_RE = /(\p{RI}\p{RI}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{EMod})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{EMod})?)*)/gu;
+export const EMOJI_RE = /(\p{RI}\p{RI}|\u{1F3F4}[\u{E0020}-\u{E007E}]+\u{E007F}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{EMod})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{EMod})?)*)/gu;
 
 export const SHORTCODES = new Map();
 const BY_EMOJI = new Map();
@@ -50,7 +51,13 @@ const mayDownload = () => !!S.settings?.downloadEmoji;
 // URL de la imagen del emoji, o null si debe mostrarse el emoji de Windows.
 // «Noto animados» usa los que vienen con la app y, solo si el usuario lo permite, descarga el resto de Google.
 // «Noto estáticos» y «Twemoji» se descargan siempre: el usuario los elige sabiendo que vienen de Internet.
+// Las banderas no tienen versión animada y Windows no las dibuja (muestra las letras del país): con cualquier estilo
+// salvo Twemoji, que trae las suyas, se usan las estáticas de Noto que vienen con la app.
 export function emojiImageUrl(emoji, style = S.settings.emojiStyle) {
+  if (style !== "twemoji") {
+    const flag = codepoints(emoji, "_");
+    if (BUNDLED_FLAGS.has(flag)) return `assets/emoji-flags/${flag}.webp`;
+  }
   if (style === "noto-animated") {
     const key = notoKey(emoji);
     if (BUNDLED_ANIMATED.has(key)) return `assets/emoji-anim/${key}.webp`;
@@ -66,8 +73,8 @@ const TEXT_SYMBOLS = new Set(["©", "®", "™", "‼", "⁉", "↔", "↕", "�
 
 const nativeSpan = (e) => `<span class="emoji-native">${e}</span>`;
 
+// Con el estilo «native» emojiImageUrl solo da imagen a las banderas; el resto queda como emoji de Windows.
 export function emojifyHtml(escaped, style = S.settings.emojiStyle) {
-  if (style === "native") return escaped.replace(EMOJI_RE, (e) => (TEXT_SYMBOLS.has(e) ? e : nativeSpan(e)));
   return escaped.replace(EMOJI_RE, (e) => {
     if (TEXT_SYMBOLS.has(e)) return e;
     const url = emojiImageUrl(e, style);
@@ -131,7 +138,7 @@ export function closePicker() {
 // En el selector, «Noto animados» muestra quieto lo que no viene con la app (Noto estático de Google solo si se permite
 // descargar; si no, el emoji de Windows). Así abrir el selector no pide cientos de imágenes a Internet.
 function pickerImage(u, style) {
-  let src = null;
+  let src;
   let dataStyle = style;
   if (style === "noto-animated") {
     src = emojiImageUrl(u, "noto-animated");
@@ -139,7 +146,7 @@ function pickerImage(u, style) {
       src = emojiImageUrl(u, "noto");
       dataStyle = "noto";
     }
-  } else if (style !== "native") src = emojiImageUrl(u, style);
+  } else src = emojiImageUrl(u, style);
   if (!src) return h("span", { class: "emoji-native" }, u);
   return h("img", { class: "emoji", src, alt: u, loading: "lazy", "data-style": dataStyle });
 }

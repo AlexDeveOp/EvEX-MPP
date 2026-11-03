@@ -17,6 +17,7 @@
     "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\"",
     "lint": "eslint .",
     "assets:emoji": "node scripts/build-anim-emoji.mjs",
+    "assets:flags": "node scripts/build-flag-emoji.mjs",
     "license-pages": "node scripts/build-license-pages.mjs"
   },
   "author": "AlexDeveOp",

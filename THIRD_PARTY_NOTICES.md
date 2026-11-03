@@ -14,10 +14,15 @@ EvEX-MPP itself is licensed under the [MIT License](LICENSE). It includes the fo
 | [Emojibase](https://emojibase.dev/) data (`src/renderer/js/data/emoji.js`, generated from `emojibase-data`) | Emoji names and shortcodes | MIT |
 | "Powered by GIPHY" attribution mark (`src/renderer/assets/gifs/`) | Shown in the GIF search panel when GIPHY is the chosen service, as GIPHY requires | GIPHY's official attribution mark, used as GIPHY instructs |
 | **Animated Noto Emoji** by Google (`src/renderer/assets/emoji-anim/`) | The most used animated emoji, shown without an Internet connection | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode) |
+| **Noto Emoji** flags by Google (`src/renderer/assets/emoji-flags/`) | Flag emoji, which have no animated version and which Windows shows as letters | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) (flag designs from [region-flags](https://github.com/behdad/region-flags), public domain) |
 
 ### Animated Noto Emoji attribution
 
 The animated emoji in `src/renderer/assets/emoji-anim/` are from [Animated Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/) © Google, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). **Changes:** resized from 512 px to 72 px and re-encoded as animated WebP by `scripts/build-anim-emoji.mjs`. Google does not endorse this project.
+
+### Noto Emoji flags attribution
+
+The flag emoji in `src/renderer/assets/emoji-flags/` are from [Noto Emoji](https://github.com/googlefonts/noto-emoji) © Google, licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0); the flag designs come from [region-flags](https://github.com/behdad/region-flags) and are in the public domain. **Changes:** resized from 512 px to 72 px and re-encoded as WebP by `scripts/build-flag-emoji.mjs`.
 
 ## Loaded only when you choose them (not included)
 
