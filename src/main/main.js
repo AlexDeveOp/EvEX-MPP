@@ -7,7 +7,7 @@ import * as store from "./store.js";
 import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
-import { showPopup, configurePopups, popupIpc } from "./popups.js";
+import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
 import { createTray, buildTrayMenu, refreshTray, setUnread } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { registerMediaIpc } from "./media-ipc.js";
@@ -526,7 +526,8 @@ function registerIpc() {
     const n = store.get().settings.notifications;
     const style = n.popupStyle || "custom";
     if (style === "custom" || style === "both") showPopup(data);
-    if ((style === "windows" || style === "both") && Notification.isSupported()) {
+    // En Wayland showPopup ya muestra una notificación del sistema: con «ambas» no se repite.
+    if ((style === "windows" || (style === "both" && !systemPopups())) && Notification.isSupported()) {
       const body = [data.text, ...(data.fields || []).map((f) => `${f.key}: ${f.value}`)].filter(Boolean).join("\n");
       const toast = new Notification({ title: data.title, body: body.slice(0, 400), silent: true, icon: nativeImage.createFromBuffer(data.kind === "ping" ? renderAlertIcon(128) : renderIcon(128)), urgency: data.kind === "ping" ? "critical" : "normal" });
       toast.on("click", () => openFromNotification(data));

@@ -45,6 +45,7 @@
     "sharp": "^0.35.5"
   },
   "productName": "EvEX-MPP",
+  "desktopName": "evex-mpp.desktop",
   "build": {
     "appId": "com.evex.mpp",
     "productName": "EvEX-MPP",
@@ -127,17 +128,15 @@
       ],
       "icon": "build/icon.png",
       "executableName": "evex-mpp",
-      "category": "Network",
+      "category": "Network;InstantMessaging;Chat;",
       "synopsis": "Desktop XMPP (Jabber) client for EVE Online communities",
-      "description": "Modern, customizable XMPP (Jabber) client for EVE Online communities: rooms with auto-join, fleet pings as cards, pop-up alerts, EVE time and themes. Interface in English and Spanish.",
+      "description": "XMPP (Jabber) client for EVE Online communities: fleet pings as cards, pop-up alerts, EVE time and themes. English and Spanish.",
       "maintainer": "AlexDeveOp <351246578+AlexDeveOp@users.noreply.github.com>",
       "vendor": "AlexDeveOp",
+      "syncDesktopName": true,
       "desktop": {
         "entry": {
-          "Name": "EvEX-MPP",
           "GenericName": "XMPP Client",
-          "Comment": "XMPP (Jabber) client for EVE Online communities",
-          "Categories": "Network;InstantMessaging;Chat;",
           "Keywords": "xmpp;jabber;chat;eve;fleet;ping;"
         }
       }
@@ -149,8 +148,7 @@
       "artifactName": "evex-mpp_${version}_amd64.${ext}",
       "recommends": [
         "gnome-keyring | kwalletmanager",
-        "speech-dispatcher",
-        "libnotify4"
+        "speech-dispatcher"
       ]
     },
     "electronFuses": {
