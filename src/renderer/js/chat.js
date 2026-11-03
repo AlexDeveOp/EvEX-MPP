@@ -489,7 +489,66 @@ function sameGroup(prev, m) {
 
 const isAction = (b) => /^\/me\s/.test(b || "");
 
+// c.messages debe ir por orden de hora; si llegaron mensajes antiguos con la pestaña cerrada, se ordena aquí.
+function ensureSorted(messages) {
+  for (let i = 1; i < messages.length; i++) {
+    if (messages[i].ts < messages[i - 1].ts) return messages.sort((a, b) => a.ts - b.ts);
+  }
+  return messages;
+}
+
+// Último índice con ts <= el dado (búsqueda binaria; la lista está ordenada).
+function indexAfter(messages, ts, end = messages.length) {
+  let lo = 0;
+  let hi = end;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (messages[mid].ts <= ts) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+const dayOf = (ts) => new Date(ts).toDateString();
+const isShown = (m) => !(m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave);
+const msgEl = (p, m) => p.list.querySelector(`.msg[data-key="${CSS.escape(m.key)}"]`);
+
+// Coloca un mensaje antiguo en su sitio, en c.messages y en la lista, con su separador de día y su agrupado.
+function insertOlder(c, p, m) {
+  const msgs = c.messages;
+  const at = msgs.lastIndexOf(m);
+  if (at >= 0) msgs.splice(at, 1);
+  const i = indexAfter(msgs, m.ts);
+  msgs.splice(i, 0, m);
+  let prev = null;
+  for (let j = i - 1; j >= 0 && !prev; j--) if (isShown(msgs[j]) && msgEl(p, msgs[j])) prev = msgs[j];
+  let next = null;
+  let nextEl = null;
+  for (let j = i + 1; j < msgs.length && !nextEl; j++) {
+    if (!isShown(msgs[j])) continue;
+    nextEl = msgEl(p, msgs[j]);
+    if (nextEl) next = msgs[j];
+  }
+  if (!nextEl) return renderAllMessages(c, p);
+  p.list.querySelector(".empty-state")?.remove();
+  const day = dayOf(m.ts);
+  // Mismo día que el siguiente: va justo antes de él (su separador, si lo tiene, ya queda encima).
+  // Otro día: va antes del separador del siguiente y lleva el suyo si el anterior es de otro día.
+  let anchor = nextEl;
+  const parts = [];
+  if (day !== dayOf(next.ts)) {
+    while (anchor.previousElementSibling?.matches(".day-sep, .unread-marker")) anchor = anchor.previousElementSibling;
+    if (!prev || dayOf(prev.ts) !== day) parts.push(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
+  }
+  parts.push(messageEl(c, m, sameGroup(prev, m)));
+  anchor.before(...parts);
+  // El siguiente puede pasar a ir agrupado con este (o dejar de estarlo).
+  const cont = sameGroup(m, next);
+  if (cont !== nextEl.classList.contains("cont")) nextEl.replaceWith(messageEl(c, next, cont));
+}
+
 function renderAllMessages(c, p, prependedCount) {
+  ensureSorted(c.messages);
   const oldHeight = p.scroller.scrollHeight;
   const oldTop = p.scroller.scrollTop;
   clear(p.list);
@@ -532,11 +591,9 @@ function appendMessage(c, m) {
     return;
   }
   if (m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave) return;
-  // Mensajes de historial que llegan fuera de orden: volver a pintar todo.
-  if (p.lastRendered && m.ts < p.lastRendered.ts - 1000) {
-    c.messages.sort((a, b) => a.ts - b.ts);
-    return renderAllMessages(c, p);
-  }
+  // Mensajes de historial que llegan fuera de orden (historial de la sala, archivo del servidor…): se colocan
+  // en su sitio. Antes se repintaba la sala entera por cada uno y una tanda podía colgar la ventana.
+  if (p.lastRendered && m.ts < p.lastRendered.ts - 1000) return insertOlder(c, p, m);
   p.list.querySelector(".empty-state")?.remove();
   const prev = p.lastRendered;
   if (!prev || new Date(prev.ts).toDateString() !== new Date(m.ts).toDateString()) p.list.append(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
