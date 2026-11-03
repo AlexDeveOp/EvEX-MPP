@@ -95,6 +95,10 @@ body {
 .card.msg .badge {
   color: #fff;
 }
+.badge svg {
+  width: 18px;
+  height: 18px;
+}
 .title {
   flex: 1;
   min-width: 0;

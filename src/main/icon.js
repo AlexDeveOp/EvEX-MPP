@@ -42,23 +42,40 @@ function sdRoundRect(x, y, cx, cy, hw, hh, r) {
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
 }
 
-// Icono de aviso de ping: círculo ámbar con una exclamación blanca, pensado para verse a 16 px en la bandeja.
-export function renderAlertIcon(size = 64, color = "#f59e0b") {
+function sdSegment(x, y, ax, ay, bx, by, r) {
+  const pax = x - ax;
+  const pay = y - ay;
+  const bax = bx - ax;
+  const bay = by - ay;
+  const h = clamp((pax * bax + pay * bay) / (bax * bax + bay * bay));
+  return Math.hypot(pax - bax * h, pay - bay * h) - r;
+}
+
+// Icono de aviso de ping: la sirena de los pings, rellena y oscura sobre un círculo ámbar.
+// Va rellena y con solo tres rayos porque la sirena de trazo fino de la app no se distingue a 16 px en la bandeja;
+// oscura porque el blanco sobre ámbar apenas contrasta (2,2:1).
+export function renderAlertIcon(size = 64, color = "#f59e0b", glyph = "#1a1205") {
   const buf = Buffer.alloc(size * size * 4);
   const c = hex(color);
+  const g = hex(glyph);
   const s = size / 64;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const px = x + 0.5;
       const py = y + 0.5;
       const aCircle = clamp(0.5 - (Math.hypot(px - 32 * s, py - 32 * s) - 31 * s));
-      const aBar = clamp(0.5 - sdRoundRect(px, py, 32 * s, 25 * s, 5.5 * s, 15 * s, 5 * s));
-      const aDot = clamp(0.5 - (Math.hypot(px - 32 * s, py - 50 * s) - 6 * s));
-      const white = Math.max(aBar, aDot);
+      const dDome = Math.min(Math.hypot(px - 32 * s, py - 31 * s) - 12 * s, sdRoundRect(px, py, 32 * s, 37.5 * s, 12 * s, 6.5 * s, 0.5 * s));
+      const dBase = sdRoundRect(px, py, 32 * s, 49 * s, 17 * s, 4 * s, 2 * s);
+      const dRays = Math.min(
+        sdSegment(px, py, 32 * s, 6 * s, 32 * s, 11 * s, 3.2 * s),
+        sdSegment(px, py, 13 * s, 15 * s, 17 * s, 19 * s, 3.2 * s),
+        sdSegment(px, py, 51 * s, 15 * s, 47 * s, 19 * s, 3.2 * s),
+      );
+      const a = clamp(0.5 - Math.min(dDome, dBase, dRays));
       const i = (y * size + x) * 4;
-      buf[i] = c[0] + (255 - c[0]) * white;
-      buf[i + 1] = c[1] + (255 - c[1]) * white;
-      buf[i + 2] = c[2] + (255 - c[2]) * white;
+      buf[i] = c[0] + (g[0] - c[0]) * a;
+      buf[i + 1] = c[1] + (g[1] - c[1]) * a;
+      buf[i + 2] = c[2] + (g[2] - c[2]) * a;
       buf[i + 3] = aCircle * 255;
     }
   }
