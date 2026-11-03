@@ -308,7 +308,8 @@ export function ingestMessage(ev) {
   }
 
   c.messages.push(msg);
-  if (c.messages.length > 3000) c.messages.splice(0, c.messages.length - 2500);
+  // Tope de memoria por conversación, salvo mientras se están leyendo los antiguos (chat.js marca c.reading).
+  if (c.messages.length > 3000 && !c.reading) c.messages.splice(0, c.messages.length - 2500);
   if (c.typing.delete(msg.nick) || (type === "chat" && c.typing.size)) {
     if (type === "chat") c.typing.clear();
     emit("typing", { key: c.key });

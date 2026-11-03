@@ -300,9 +300,14 @@ function pane(c) {
       p.newCount = 0;
       jump.classList.add("hidden");
     } else jump.classList.remove("hidden");
-    if (scroller.scrollTop < 40 && !p.loadingMore && c.type !== "pings" && !c.exhausted) {
-      p.loadingMore = true;
-      loadHistory(c, true).finally(() => (p.loadingMore = false));
+    // Mientras se lee arriba, la memoria no recorta los mensajes antiguos (convs.js).
+    c.reading = !near;
+    if (scroller.scrollTop < 40 && !p.loadingMore && c.type !== "pings") {
+      if (p.skipped) renderAllMessages(c, p, true);
+      else if (!c.exhausted) {
+        p.loadingMore = true;
+        loadHistory(c, true).finally(() => (p.loadingMore = false));
+      }
     }
   });
   list.addEventListener("click", (e) => onListClick(c, e));
@@ -551,6 +556,10 @@ function insertOlder(c, p, m) {
     if (nextEl) next = msgs[j];
   }
   if (!nextEl) return renderAllMessages(c, p);
+  if (!prev && p.skipped) {
+    p.skipped++;
+    return;
+  }
   p.list.querySelector(".empty-state")?.remove();
   const day = dayOf(m.ts);
   // Mismo día que el siguiente: va justo antes de él (su separador, si lo tiene, ya queda encima).
@@ -568,6 +577,9 @@ function insertOlder(c, p, m) {
   if (cont !== nextEl.classList.contains("cont")) nextEl.replaceWith(messageEl(c, next, cont));
 }
 
+// Mensajes que se pintan como mucho (unos 30 nodos cada uno). Los anteriores siguen en memoria y aparecen al subir.
+const MAX_RENDERED = 1500;
+
 function renderAllMessages(c, p, prependedCount) {
   ensureSorted(c.messages);
   const oldHeight = p.scroller.scrollHeight;
@@ -581,14 +593,18 @@ function renderAllMessages(c, p, prependedCount) {
     p.scroller.scrollTop = 0;
     return;
   }
-  if (!c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, t("Desplázate hacia arriba para cargar más")));
-  if (c.exhausted && c.messages.length) p.list.append(h("div", { class: "history-hint" }, icon("history"), t(" Inicio del historial local")));
+  // Al cargar más historial se pinta todo lo que hay en memoria; si no, solo los últimos MAX_RENDERED.
+  const start = prependedCount ? 0 : Math.max(0, c.messages.length - MAX_RENDERED);
+  p.skipped = start;
+  if ((!c.exhausted || start) && c.messages.length) p.list.append(h("div", { class: "history-hint" }, t("Desplázate hacia arriba para cargar más")));
+  else if (c.messages.length) p.list.append(h("div", { class: "history-hint" }, icon("history"), t(" Inicio del historial local")));
   if (!c.messages.length) {
     p.list.append(h("div", { class: "empty-state" }, icon(c.type === "groupchat" ? "hash" : "message-circle"), h("p", {}, c.type === "groupchat" ? t("Aún no hay mensajes en esta sala.") : t("Escribe el primer mensaje."))));
   }
   let prev = null;
   const frag = document.createDocumentFragment();
-  for (const m of c.messages) {
+  for (let i = start; i < c.messages.length; i++) {
+    const m = c.messages[i];
     if (m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave) continue;
     if (!prev || new Date(prev.ts).toDateString() !== new Date(m.ts).toDateString()) frag.append(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
     frag.append(messageEl(c, m, sameGroup(prev, m)));
@@ -624,13 +640,34 @@ function appendMessage(c, m) {
   p.list.append(el);
   p.lastRendered = m;
   const visible = S.active === c.key;
-  if (p.atBottom !== false || m.out) scrollToBottom(p);
+  if (p.atBottom !== false || m.out) {
+    trimTop(c, p);
+    scrollToBottom(p);
+  }
   else if (visible && !m.sys) {
     p.newCount++;
     p.jump.querySelector(".jump-count").textContent = `${p.newCount} nuevos`;
     p.jump.classList.remove("hidden");
   }
   if (visible && S.focused) markRead(c.key);
+}
+
+// Con la lista abajo del todo, quita por arriba lo que pase de MAX_RENDERED (sesiones largas en salas activas).
+function trimTop(c, p) {
+  const msgs = p.list.querySelectorAll(".msg");
+  const extra = msgs.length - MAX_RENDERED;
+  if (extra < 100) return;
+  const keep = msgs[extra];
+  while (keep.previousElementSibling && !keep.previousElementSibling.matches(".history-hint")) keep.previousElementSibling.remove();
+  // El primero que queda lleva su separador de día y no va agrupado con uno que ya no se ve.
+  const m = c.messages.find((x) => x.key === keep.dataset.key);
+  const first = m && keep.classList.contains("cont") ? messageEl(c, m, false) : keep;
+  if (first !== keep) keep.replaceWith(first);
+  if (m) first.before(h("div", { class: "day-sep" }, h("span", {}, fmtDay(m.ts))));
+  p.skipped = m ? c.messages.indexOf(m) : p.skipped;
+  const hint = p.list.querySelector(".history-hint");
+  if (hint && !hint.querySelector(".icon")) return;
+  hint?.replaceWith(h("div", { class: "history-hint" }, t("Desplázate hacia arriba para cargar más")));
 }
 
 function updateMessage(c, m) {
