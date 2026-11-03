@@ -342,6 +342,8 @@ export async function createForwarder(proxy, host, port, opts = {}) {
 
 // Nombre de cabecera HTTP válido (token de RFC 9110).
 const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+// Cabeceras que no se reenvían: las del proxy y las de un solo salto (RFC 9110, 7.6.1).
+const HOP_BY_HOP = new Set(["proxy-authorization", "proxy-connection", "connection", "keep-alive", "transfer-encoding", "te", "trailer", "upgrade"]);
 
 // Proxy HTTP local para Chromium (session.setProxy): atiende CONNECT y peticiones http:// con URI absoluta y las
 // manda por el proxy que devuelva getProxy() en ese momento. Si no hay proxy o falla, responde 502: nunca conecta directo.
@@ -401,29 +403,27 @@ export async function startBridge(getProxy) {
       return res.end();
     }
     track(tunnel);
-    const headers = { ...req.headers, connection: "close" };
-    delete headers["proxy-authorization"];
-    delete headers["proxy-connection"];
-    // Sin «agent»: con agent:false Node crea un agente propio que ignora createConnection y conectaría DIRECTO.
-    // Sin host ni puerto en las opciones, por si acaso, para que no haya destino al que ir que no sea el túnel.
-    const out = http.request({ method: req.method, path: `${url.pathname}${url.search}`, headers, createConnection: () => tunnel });
-    out.on("response", (up) => {
-      // Los nombres vienen del servidor remoto: se reenvía la lista [nombre, valor, …] (sin pasar por las propiedades de
-      // un objeto, y conservando las repetidas) y solo con nombres válidos según HTTP (token de RFC 9110).
-      const back = [];
-      for (let i = 0; i + 1 < up.rawHeaders.length; i += 2) {
-        const name = up.rawHeaders[i];
-        if (HEADER_NAME.test(name)) back.push(name, up.rawHeaders[i + 1]);
-      }
-      res.writeHead(up.statusCode, up.statusMessage, back);
-      up.pipe(res);
-    });
-    out.on("error", () => {
-      if (!res.headersSent) res.writeHead(502, { Connection: "close" });
-      res.end();
-      tunnel.destroy();
-    });
-    req.pipe(out);
+    // La petición se reescribe en forma de origen, sin las cabeceras del proxy ni las de un solo salto, y con
+    // «Connection: close». La respuesta NO se interpreta: sus bytes vuelven tal cual por el socket del cliente, como en
+    // un CONNECT. Así el puente nunca escribe cabeceras que vengan del servidor remoto.
+    const chunked = req.headers["transfer-encoding"] !== undefined;
+    const head = [`${req.method} ${url.pathname}${url.search} HTTP/1.1`];
+    for (let i = 0; i + 1 < req.rawHeaders.length; i += 2) {
+      const name = req.rawHeaders[i];
+      if (HEADER_NAME.test(name) && !HOP_BY_HOP.has(name.toLowerCase())) head.push(`${name}: ${req.rawHeaders[i + 1]}`);
+    }
+    if (chunked) head.push("Transfer-Encoding: chunked");
+    head.push("Connection: close", "", "");
+    const client = req.socket;
+    client.on("error", () => {});
+    tunnel.write(head.join("\r\n"));
+    // Node ya ha quitado el troceado del cuerpo; se vuelve a trocear si venía así.
+    req.on("data", (d) => tunnel.write(chunked ? Buffer.concat([Buffer.from(`${d.length.toString(16)}\r\n`), d, Buffer.from("\r\n")]) : d));
+    req.on("end", () => chunked && tunnel.write("0\r\n\r\n"));
+    tunnel.pipe(client);
+    tunnel.on("error", () => client.destroy());
+    tunnel.on("close", () => client.destroy());
+    client.on("close", () => tunnel.destroy());
   });
 
   server.on("connect", async (req, sock, head) => {

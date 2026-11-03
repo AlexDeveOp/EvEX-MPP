@@ -26,8 +26,13 @@ before(async () => {
   echoPort = echo.address().port;
   // Web de destino: responde con el método, la ruta y las cabeceras que le llegaron.
   web = http.createServer((req, res) => {
-    res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify({ method: req.method, url: req.url, headers: req.headers }));
+    let body = "";
+    req.on("data", (d) => (body += d));
+    req.on("end", () => {
+      res.setHeader("content-type", "application/json");
+      res.setHeader("set-cookie", ["a=1", "b=2"]); // cabeceras repetidas: el puente debe dejarlas tal cual
+      res.end(JSON.stringify({ method: req.method, url: req.url, headers: req.headers, body }));
+    });
   });
   web.listen(0, "127.0.0.1");
   await once(web, "listening");
@@ -259,6 +264,18 @@ test("puente para Chromium: exige sus credenciales; CONNECT y GET absoluto por e
   assert.equal(body.headers["proxy-connection"], undefined);
   g.s.destroy();
   assert.deepEqual(fp.targets, [`localhost:${echoPort}`, `localhost:${webPort}`]);
+  // La respuesta llega tal cual, sin reinterpretar: las cabeceras repetidas siguen ahí.
+  assert.match(g.text, /set-cookie: a=1\r\nset-cookie: b=2/i);
+
+  // Cuerpos: con longitud fija y troceado (chunked), que el puente vuelve a trocear hacia el servidor.
+  const post = await rawRequest(bridge.port, `POST http://localhost:${webPort}/p HTTP/1.1\r\nHost: localhost:${webPort}\r\n${auth}Content-Length: 5\r\n\r\nhola!`);
+  assert.equal(JSON.parse(post.text.slice(post.text.indexOf("{"))).body, "hola!");
+  post.s.destroy();
+  const ch = await rawRequest(bridge.port, `POST http://localhost:${webPort}/c HTTP/1.1\r\nHost: localhost:${webPort}\r\n${auth}Transfer-Encoding: chunked\r\n\r\n4\r\nhola\r\n6\r\n mundo\r\n0\r\n\r\n`);
+  const chBody = JSON.parse(ch.text.slice(ch.text.indexOf("{")));
+  assert.equal(chBody.body, "hola mundo");
+  assert.equal(chBody.headers["transfer-encoding"], "chunked");
+  ch.s.destroy();
 
   // Sin proxy configurado: 502 y nunca conexión directa.
   current = null;
