@@ -290,6 +290,10 @@ const HANDLERS = {
     }
     emitRoomSoon(id, ev.room);
   },
+  // Lote de cambios de participantes (el proceso principal los agrupa cada ~120 ms).
+  occupants(id, ev) {
+    for (const o of ev.events) HANDLERS.occupant(id, o);
+  },
   "occupant-nick"(id, ev) {
     const r = roomState(id, ev.room);
     const o = r.occupants.get(ev.old);

@@ -1,6 +1,6 @@
 // Barra lateral: cuentas y estado, pings, salas (favoritas / abiertas) y contactos.
 import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
-import { h, icon, iconButton, $, clear, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle, keepHover } from "./dom.js";
+import { h, icon, iconButton, $, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle, keepHover, morphChildren } from "./dom.js";
 import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
 import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
@@ -40,7 +40,7 @@ function section(id, title, count, actions, content) {
   const isCollapsed = collapsed.has(id);
   return h(
     "section",
-    { class: `sb-section ${isCollapsed ? "collapsed" : ""}` },
+    { class: `sb-section ${isCollapsed ? "collapsed" : ""}`, dataset: { morph: id } },
     h(
       "header",
       {
@@ -58,18 +58,21 @@ function section(id, title, count, actions, content) {
       h("span", { class: "spacer" }),
       actions,
     ),
-    isCollapsed ? null : h("div", { class: "sb-items" }, content),
+    isCollapsed ? null : h("div", { class: "sb-items", dataset: { morph: "items" } }, content),
   );
 }
 
 const matches = (...texts) => !filter || texts.some((s) => String(s || "").toLowerCase().includes(filter));
 
 function renderSidebar() {
-  const root = $("#sidebar-content");
-  const scroll = root.scrollTop;
-  clear(root);
-
-  clear($("#sidebar-accounts")).append(accountCards());
+  // Se construye fuera de la página y solo se tocan las filas que cambian (antes se rehacía entera con cada
+  // presencia, mensaje no leído o cambio de pestaña).
+  const target = $("#sidebar-content");
+  const scroll = target.scrollTop;
+  const root = document.createElement("div");
+  const accounts = document.createElement("div");
+  accounts.append(accountCards());
+  morphChildren($("#sidebar-accounts"), accounts);
 
   const pc = pingsConv();
   root.append(
@@ -91,7 +94,8 @@ function renderSidebar() {
   if (!S.accounts.length) {
     root.append(h("div", { class: "empty-state small" }, icon("user-plus"), h("p", {}, t("No hay cuentas configuradas.")), h("button", { class: "btn primary", onclick: () => openAccounts() }, t("Añadir cuenta"))));
   }
-  root.scrollTop = scroll;
+  morphChildren(target, root);
+  target.scrollTop = scroll;
   reapplyHover?.();
 }
 
