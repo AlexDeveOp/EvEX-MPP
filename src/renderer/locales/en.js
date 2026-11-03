@@ -1005,7 +1005,12 @@ export default {
   "Contraseña del proxy olvidada": "Proxy password forgotten",
   "Probar proxy": "Test proxy",
   "Probando…": "Testing…",
-  "Funciona ({ms} ms)": "Works ({ms} ms)",
+  "Proxy: responde ({ms} ms)": "Proxy: responds ({ms} ms)",
+  "Servidor XMPP {server}: se llega ({ms} ms)": "XMPP server {server}: reachable ({ms} ms)",
+  "Servidor XMPP {server}: no se llega ({error})": "XMPP server {server}: not reachable ({error})",
+  "error desconocido": "unknown error",
+  "Al probar, comprobar también el servidor de": "When testing, also check the server of",
+  "Ninguna cuenta (solo el proxy)": "No account (proxy only)",
   "Escribe el servidor del proxy": "Type the proxy server",
   "Falta el servidor del proxy": "The proxy server is missing",
   "Se usa en las cuentas que tienen «Usar el proxy general» (la opción por defecto), en la comprobación de actualizaciones, en la búsqueda de GIFs, en los emojis que se descargan y en las vistas previas de enlaces.":
