@@ -374,6 +374,18 @@ function bindTitlebar() {
   });
   $("#tb-settings").addEventListener("click", () => openSettings());
   $("#tb-sidebar").addEventListener("click", () => document.getElementById("app").classList.toggle("sidebar-hidden"));
+
+  // Botones propios de la ventana; el de maximizar cambia a «Restaurar» con la ventana maximizada.
+  $("#tb-minimize").addEventListener("click", () => api("window:minimize"));
+  $("#tb-maximize").addEventListener("click", () => api("window:maximize"));
+  $("#tb-close").addEventListener("click", () => api("window:close"));
+  onMain("window-maximized", (max) => {
+    const b = $("#tb-maximize");
+    b.classList.toggle("maximized", max);
+    const label = max ? t("Restaurar") : t("Maximizar");
+    b.title = label;
+    b.setAttribute("aria-label", label);
+  });
 }
 
 function renderWelcome() {

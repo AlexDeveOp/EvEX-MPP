@@ -1,5 +1,5 @@
 // Temas predefinidos, fuentes y aplicación de la apariencia (colores, fondos, tipografía, densidad).
-import { S, api } from "./state.js";
+import { S } from "./state.js";
 
 import { t, tk } from "./i18n.js";
 export const TOKENS = [
@@ -189,6 +189,4 @@ export function applyAppearance(settings = S.settings) {
 
   const sb = settings.sidebarBackground;
   applyBackgroundLayer(document.getElementById("sidebar-bg"), sb);
-
-  api("window:titlebar", { color: c.titlebar, symbolColor: c.text }).catch(() => {});
 }

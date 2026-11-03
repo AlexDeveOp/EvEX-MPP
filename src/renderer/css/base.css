@@ -215,9 +215,50 @@ kbd {
   border-color: var(--accent);
   color: var(--text);
 }
-.tb-overlay-space {
-  width: 140px;
+/* Botones personalizados de ventana (minimizar, maximizar, cerrar) */
+.tb-window-controls {
+  display: flex;
+  align-items: center;
   flex: none;
+  margin-left: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+.tb-wc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tb-wc:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.tb-wc + .tb-wc {
+  border-left: 1px solid var(--border);
+}
+.tb-wc-close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+.tb-wc svg {
+  width: 12px;
+  height: 12px;
+}
+.tb-wc .wc-restore,
+.tb-wc.maximized .wc-max {
+  display: none;
+}
+.tb-wc.maximized .wc-restore {
+  display: block;
 }
 
 #main {

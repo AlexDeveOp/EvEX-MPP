@@ -20,6 +20,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **GIFs**: a *GIF* button in the message box. *My GIFs* keeps the GIFs you save (right-click on an image → *Save to My GIFs*, or paste a link) with a local thumbnail, and works without any external service. Optional search in GIPHY or KLIPY with your own free key (off by default), shown as their terms require ("Powered by GIPHY", results unchanged and never stored). GIFs are sent as their link and as an XEP-0066 attachment, so other clients show the image.
 
 ### Changed
+- The minimize, maximize and close buttons are now drawn by the app instead of Windows: they follow the theme, are translated, and the maximize button turns into *Restore* while the window is maximized. *Close* still sends the app to the tray when *Close to tray* is on.
 - *Do not disturb* now also lets connection lost/restored sounds through, like fleet pings.
 - Several alerts of the same kind arriving at once ring only once.
 

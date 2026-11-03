@@ -152,7 +152,6 @@ function createWindow() {
     icon: nativeImage.createFromBuffer(renderIcon(256)),
     backgroundColor: "#0d1117",
     titleBarStyle: "hidden",
-    titleBarOverlay: { color: "#00000000", symbolColor: "#c9d1d9", height: 40 },
     webPreferences: {
       preload: path.join(ROOT, "src", "preload.cjs"),
       contextIsolation: true,
@@ -193,6 +192,9 @@ function createWindow() {
   win.on("focus", () => send("window-focus", true));
   for (const evt of ["blur", "minimize", "hide"]) win.on(evt, () => send("window-focus", false));
   win.on("restore", () => send("window-focus", win.isFocused()));
+  for (const evt of ["maximize", "unmaximize"]) win.on(evt, () => send("window-maximized", win.isMaximized()));
+  // Si arranca maximizada, el aviso llega antes que la página: se repite al cargarla.
+  win.webContents.on("did-finish-load", () => send("window-maximized", win.isMaximized()));
   win.on("close", (e) => {
     if (!quitting && store.get().settings.behavior.closeToTray) {
       e.preventDefault();
@@ -839,9 +841,11 @@ function registerIpc() {
   });
 
   handle("window:unread", (count, pings) => setUnread(count, pings));
-  handle("window:titlebar", ({ color, symbolColor }) => {
-    if (win && process.platform === "win32") win.setTitleBarOverlay({ color, symbolColor, height: 40 });
-  });
+  // Botones propios de la ventana (la barra de título la dibuja la app). Cerrar pasa por win.on("close"):
+  // con «cerrar a la bandeja» activado, la ventana solo se oculta.
+  handle("window:minimize", () => win?.minimize());
+  handle("window:maximize", () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()));
+  handle("window:close", () => win?.close());
   handle("window:focus", () => showWindow());
   handle("shell:open", (url) => openExternal(url));
   handle("shell:openUserData", () => shell.openPath(userData()));
