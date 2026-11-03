@@ -581,14 +581,15 @@ function senderJid(c, m) {
 }
 
 function messageEl(c, m, cont) {
+  const tip = fmtTimes(m.ts);
   if (m.sys) {
     return h(
       "div",
       { class: `msg sys ${m.kind || ""}`, dataset: { key: m.key } },
       icon(m.icon || "info", "sys-icon"),
       h("span", { class: "sys-text", html: formatBody(m.body).html }),
-      localTime(m.ts),
-      eveTime(m.ts),
+      localTime(m.ts, "", tip),
+      eveTime(m.ts, tip),
     );
   }
   const action = isAction(m.body);
@@ -626,14 +627,14 @@ function messageEl(c, m, cont) {
         "div",
         { class: "msg-head" },
         h("span", { class: "msg-nick", dataset: { nick: m.nick } }, m.nick),
-        localTime(m.ts, "msg-time"),
-        eveTime(m.ts),
+        localTime(m.ts, "msg-time", tip),
+        eveTime(m.ts, tip),
         m.out && c.type === "chat" ? h("span", { class: `receipt ${m.received ? "ok" : ""}`, title: m.received ? t("Entregado") : t("Enviado") }, icon(m.received ? "check-check" : "check")) : null,
       ),
       bodyEl,
       prevEl,
     ),
-    h("time", { class: "msg-time-side", title: fmtTimes(m.ts) }, S.settings.showLocalTime !== false ? fmtTime(m.ts) : null, S.settings.showEveTime !== false ? h("span", { class: "eve-side" }, fmtEve(m.ts)) : null),
+    h("time", { class: "msg-time-side", title: tip }, S.settings.showLocalTime !== false ? fmtTime(m.ts) : null, S.settings.showEveTime !== false ? h("span", { class: "eve-side" }, fmtEve(m.ts)) : null),
     h(
       "div",
       { class: "msg-actions" },
@@ -646,15 +647,16 @@ function messageEl(c, m, cont) {
 }
 
 // Hora local y hora EVE: cada una se puede ocultar en Preferencias → Mensajes → Hora.
-function localTime(ts, cls) {
+// tip: el texto del tooltip, calculado una vez por mensaje.
+function localTime(ts, cls, tip = fmtTimes(ts)) {
   if (S.settings.showLocalTime === false) return null;
-  return h("time", { class: cls, title: fmtTimes(ts) }, fmtTime(ts));
+  return h("time", { class: cls, title: tip }, fmtTime(ts));
 }
 
 // Hora EVE junto a la local, con otro estilo para distinguirlas.
-function eveTime(ts) {
+function eveTime(ts, tip = fmtTimes(ts)) {
   if (S.settings.showEveTime === false) return null;
-  return h("time", { class: "msg-eve", title: fmtTimes(ts) }, t("EVE {eve}", { eve: fmtEve(ts) }));
+  return h("time", { class: "msg-eve", title: tip }, t("EVE {eve}", { eve: fmtEve(ts) }));
 }
 
 function splitQuote(body) {

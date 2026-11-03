@@ -94,25 +94,32 @@ export function previewHtml(p) {
   return "";
 }
 
-// ---------- fechas ----------
+/// ---------- fechas ----------
+
+// Crear un Intl.DateTimeFormat es lo caro (toLocale*String crea uno en cada llamada): se guardan por idioma y opciones.
+const formatters = new Map();
+function formatter(opts) {
+  const key = `${locale()}|${JSON.stringify(opts)}`;
+  let f = formatters.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale(), opts);
+    formatters.set(key, f);
+  }
+  return f;
+}
 
 export function fmtTime(ts) {
   const s = S.settings;
-  return new Date(ts).toLocaleTimeString(locale(), {
-    hour: "2-digit",
-    minute: "2-digit",
-    ...(s.showSeconds ? { second: "2-digit" } : {}),
-    hour12: s.timeFormat === "12",
-  });
+  return formatter({ hour: "2-digit", minute: "2-digit", ...(s.showSeconds ? { second: "2-digit" } : {}), hour12: s.timeFormat === "12" }).format(ts);
 }
 
 // Hora EVE = UTC, siempre en 24 h como dentro del juego.
 export function fmtEve(ts, seconds = S.settings.showSeconds) {
-  return new Date(ts).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hour12: false, timeZone: "UTC" });
+  return formatter({ hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hour12: false, timeZone: "UTC" }).format(ts);
 }
 
 export function fmtEveDateTime(ts) {
-  return new Date(ts).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "medium", hour12: false, timeZone: "UTC" });
+  return formatter({ dateStyle: "medium", timeStyle: "medium", hour12: false, timeZone: "UTC" }).format(ts);
 }
 
 // Texto para tooltips: las dos horas, claramente etiquetadas.
@@ -126,11 +133,11 @@ export function fmtDay(ts) {
   const y = new Date(Date.now() - 86400e3);
   if (d.toDateString() === today.toDateString()) return t("Hoy");
   if (d.toDateString() === y.toDateString()) return t("Ayer");
-  return d.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined });
+  return formatter({ weekday: "long", day: "numeric", month: "long", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined }).format(d);
 }
 
 export function fmtDateTime(ts) {
-  return new Date(ts).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "short", hour12: S.settings.timeFormat === "12" });
+  return formatter({ dateStyle: "medium", timeStyle: "short", hour12: S.settings.timeFormat === "12" }).format(ts);
 }
 
 export function timeAgo(ts) {
