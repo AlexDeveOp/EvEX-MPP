@@ -241,6 +241,11 @@ export function secretStorage() {
   return storageProbe;
 }
 
+// Para los tests: la próxima consulta vuelve a comprobar el llavero.
+export function resetSecretStorageProbe() {
+  storageProbe = null;
+}
+
 // Para la interfaz al arrancar: no espera a que el usuario conteste a la ventana del llavero. Si no hay respuesta
 // enseguida devuelve "unknown"; la comprobación sigue y se usa al guardar una contraseña.
 export function secretStorageSoon(ms = 1500) {

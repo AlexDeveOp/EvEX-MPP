@@ -80,6 +80,7 @@ test("upsertAccount añade o sustituye por id, y removeAccount la quita", () => 
 });
 
 test("las contraseñas nunca se guardan sin cifrar", async () => {
+  store.resetSecretStorageProbe();
   // Sin cifrado del sistema, guardar falla y no escribe nada.
   await assert.rejects(store.setPassword("acc", "secreta"));
   assert.ok(!fs.existsSync(path.join(dir, "secrets.json")));
@@ -104,11 +105,13 @@ test("las contraseñas nunca se guardan sin cifrar", async () => {
 
 // En Linux sin llavero, Chromium cifra con una clave fija y pública ("v10"): eso no cuenta como cifrado y no se guarda.
 test("en Linux, sin llavero (cifrado v10) la contraseña no se guarda", { skip: process.platform !== "linux" && "solo en Linux" }, async () => {
+  store.resetSecretStorageProbe();
   safeStorage.encryptStringAsync = async (s) => Buffer.from(`v10${s}`);
   try {
     await assert.rejects(store.setPassword("otra", "secreta"), (e) => e.code === "NO_KEYRING");
     assert.equal(store.hasPassword("otra"), false);
   } finally {
     delete safeStorage.encryptStringAsync;
+    store.resetSecretStorageProbe();
   }
 });
