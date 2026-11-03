@@ -7,6 +7,7 @@ import { initSidebar } from "./sidebar.js";
 import { initOccupants } from "./occupants.js";
 import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, markRead, updateBadge, pingsConv } from "./convs.js";
 import { showRecoveredPings } from "./ping-recovery.js";
+import { startFormupWatch } from "./formup.js";
 import { openSettings } from "./settings.js";
 import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } from "./accounts.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
@@ -64,6 +65,7 @@ async function boot() {
   // A partir de aquí el proceso principal entrega los eventos que llegaron durante la carga.
   await api("ready");
   pingsConv();
+  startFormupWatch();
   document.getElementById("app").classList.remove("booting");
   setTimeout(() => offerPidginRepair().catch(console.error), 1500);
 }

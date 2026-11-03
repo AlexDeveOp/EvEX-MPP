@@ -9,6 +9,9 @@ import { addCustomEmoji, emojifyHtml } from "./emoji.js";
 import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
 import { checkUpdatesNow } from "./updates.js";
 import { newRule, normalizeRule, compileRule } from "./keywords.js";
+import { parseFormup, countdownText, countdownSettings } from "./formup.js";
+import { parsePing } from "./pings.js";
+import { fmtTime, fmtEve } from "./format.js";
 import { openAccounts, openPidginImport } from "./accounts.js";
 import { repairPidginHistory } from "./pidgin-repair.js";
 
@@ -1250,3 +1253,69 @@ function gifsGroup() {
   );
 }
 
+// ---------- cuenta atrás del formup (Preferencias → Pings de flota) ----------
+
+// Apartado propio: se llama desde la pestaña de pings. Ajustes en settings.pingCountdown (valores por defecto en formup.js).
+export function formupGroup() {
+  const cfg = () => countdownSettings();
+  const set = (patch) => full((x) => (x.pingCountdown = { ...countdownSettings(x), ...patch }));
+  const c = cfg();
+
+  const sel = select([...Object.entries(SOUNDS).map(([k, v]) => [k, t(v.name)]), ["custom", t("Archivo propio…")]], c.sound.preset, async (v) => {
+    if (v === "custom" && !cfg().sound.file) {
+      const url = await api("file:pick", "sound");
+      if (!url) return (sel.value = cfg().sound.preset);
+      set({ sound: { ...cfg().sound, preset: "custom", file: url } });
+    } else set({ sound: { ...cfg().sound, preset: v } });
+    previewSound(cfg().sound);
+  });
+  const pick = iconButton("folder-open", t("Elegir otro archivo de sonido"), async () => {
+    const url = await api("file:pick", "sound");
+    if (!url) return;
+    set({ sound: { ...cfg().sound, preset: "custom", file: url } });
+    sel.value = "custom";
+    previewSound(cfg().sound);
+  });
+  const vol = range(0, 1, 0.05, c.sound.volume ?? 1, (v) => set({ sound: { ...cfg().sound, volume: v } }), (v) => `${Math.round(v * 100)}%`);
+  vol.classList.add("sound-volume");
+  vol.title = t("Volumen de este sonido");
+
+  // Probar con el texto de un ping: qué hora del formup se lee.
+  const sample = h("textarea", { class: "input", rows: 3, placeholder: t("Pega aquí un ping para ver qué hora del formup se lee") });
+  const result = h("p", { class: "muted small formup-test" });
+  sample.addEventListener("input", () => {
+    if (!sample.value.trim()) return (result.textContent = "");
+    const at = parseFormup(parsePing(sample.value), Date.now());
+    result.textContent = at ? t("Formup: {eve} EVE ({local} local) · {text}", { eve: fmtEve(at), local: fmtTime(at), text: countdownText(at).text }) : t("No se encuentra ninguna hora de formup en este texto.");
+  });
+
+  return group(
+    t("Cuenta atrás del formup"),
+    toggle(c.enabled, (v) => set({ enabled: v }), t("Mostrar la cuenta atrás"), t("Muestra en la tarjeta del ping cuánto falta para el formup")),
+    toggle(c.alert, (v) => set({ alert: v }), t("Avisar cuando llegue el formup"), t("Con burbuja y sonido, aunque esté activado «No molestar»")),
+    field(
+      t("Avisar antes"),
+      select(
+        [
+          ["0", t("No, solo a la hora")],
+          ["5", t("5 minutos antes")],
+          ["10", t("10 minutos antes")],
+          ["15", t("15 minutos antes")],
+          ["30", t("30 minutos antes")],
+        ],
+        String(c.before),
+        (v) => set({ before: Number(v) }),
+      ),
+    ),
+    toggle(c.atTime, (v) => set({ atTime: v }), t("Avisar también a la hora exacta del formup")),
+    toggle(c.sticky, (v) => set({ sticky: v }), t("El aviso se queda en pantalla hasta cerrarlo")),
+    field(t("Sonido del aviso"), h("div", { class: "row sound-row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cfg().sound)), pick, vol)),
+    h(
+      "p",
+      { class: "muted small" },
+      t("La hora se lee en hora EVE de campos como «Formup Time: 19:00» o de textos como «formup at 19:30 EVE» o «undock in 20 min». La hora del pie del ping es la de envío, no la del formup. Si el ping no trae hora, no hay cuenta atrás."),
+    ),
+    field(t("Probar"), sample),
+    result,
+  );
+}

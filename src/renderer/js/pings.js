@@ -3,6 +3,7 @@ import { h, icon, esc } from "./dom.js";
 import { formatBody, fmtDateTime, fmtEve, fmtTimes, timeAgo } from "./format.js";
 import { S } from "./state.js";
 import { matchRule, highlightRules, ruleLabel } from "./keywords.js";
+import { parseFormup, countdownText, countdownSettings, watchCountdowns } from "./formup.js";
 
 import { t } from "./i18n.js";
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
@@ -95,6 +96,9 @@ export function pingCard(m) {
   if (fresh) watchFresh();
   const rule = matchRule(m.body, "pings");
   const rules = highlightRules("pings");
+  const formupAt = countdownSettings().enabled ? parseFormup(p, m.ts) : null;
+  const cd = formupAt ? countdownText(formupAt) : null;
+  if (cd && cd.state !== "old") watchCountdowns();
   const card = h(
     "article",
     { class: `ping-card ${fresh ? "fresh" : ""} ${rule ? "kw" : ""}`, dataset: { key: m.key, ts: String(m.ts) }, style: rule ? { "--kw": rule.color } : null },
@@ -104,6 +108,14 @@ export function pingCard(m) {
       icon("siren", "ping-icon"),
       h("div", { class: "ping-title", html: formatBody(p.title, { rules }).html }),
       rule ? h("span", { class: "kw-tag", title: t("Regla por palabra clave") }, ruleLabel(rule)) : null,
+      cd
+        ? h(
+            "span",
+            { class: "formup-chip", dataset: { at: String(formupAt), state: cd.state }, title: t("Hora del formup: {eve} EVE · {local} local", { eve: fmtEve(formupAt), local: fmtDateTime(formupAt) }) },
+            icon("clock"),
+            h("span", { class: "formup-text" }, cd.text),
+          )
+        : null,
       p.footer ? h("span", { class: "ping-group", title: t("Destinatarios") }, p.footer.to) : null,
       h("time", { class: "ping-time", title: fmtTimes(m.ts) }, timeAgo(m.ts)),
     ),

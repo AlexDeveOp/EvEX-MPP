@@ -986,3 +986,37 @@
   font-family: var(--font);
   font-size: 0.85em;
 }
+
+/* Cuenta atrás del formup en la tarjeta del ping. */
+.formup-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: 0.82em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.formup-chip .icon {
+  width: 14px;
+  height: 14px;
+}
+.formup-chip[data-state="now"] {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 28%, transparent);
+}
+.animations .formup-chip[data-state="now"] {
+  animation: pulse 1.4s infinite;
+}
+.formup-chip[data-state="past"],
+.formup-chip[data-state="old"] {
+  font-weight: 600;
+  color: var(--text2);
+  border-color: var(--border);
+  background: transparent;
+}
