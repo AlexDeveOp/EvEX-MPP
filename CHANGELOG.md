@@ -7,6 +7,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-03
+
 ### Added
 - More alerts with sound: message sent, connection lost, connection restored, contact comes online or goes offline, contact request and room invitation. The new ones are off or discreet by default; contacts stay silent for the first seconds after connecting so the initial burst does not ring.
 - Each sound has its own volume on top of the master volume, and you can choose the audio output device (e.g. your headset).
@@ -167,7 +169,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.0...v0.4.1
