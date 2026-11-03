@@ -14,7 +14,7 @@
     "mock": "node test/mock-xmpp.mjs",
     "i18n": "node scripts/i18n-check.mjs",
     "check": "node scripts/check.mjs",
-    "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\"",
+    "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\" \"test/unit/*.test.js\"",
     "lint": "eslint .",
     "assets:emoji": "node scripts/build-anim-emoji.mjs",
     "assets:flags": "node scripts/build-flag-emoji.mjs",
