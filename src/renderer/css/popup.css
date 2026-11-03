@@ -65,8 +65,10 @@ body {
   --accent: var(--warn, #f59e0b);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, var(--surface, #1a2230)), var(--surface, #1a2230) 70%);
 }
+/* Late unos segundos y se queda fija: una animación infinita hace que Chromium redibuje la burbuja a 60 fps
+   (25–30 % de GPU) mientras siga abierta, también con la ventana minimizada. */
 .card.ping .head .badge {
-  animation: pulse 1s infinite;
+  animation: pulse 1s 8;
 }
 @keyframes pulse {
   50% {
