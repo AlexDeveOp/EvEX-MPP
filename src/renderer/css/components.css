@@ -1725,3 +1725,33 @@ select.input {
 .voice-help code {
   user-select: all;
 }
+
+/* Proxy (Preferencias → Red y proxy, y la ficha de cada cuenta). */
+.proxy-options.off {
+  opacity: 0.55;
+}
+.proxy-test {
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 8px;
+}
+.proxy-status {
+  color: var(--text2);
+}
+.proxy-status.good {
+  color: var(--ok);
+}
+.proxy-status.bad {
+  color: var(--danger);
+}
+.proxy-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0 0;
+  color: var(--text2);
+}
+.proxy-note .icon {
+  flex: none;
+  margin-top: 2px;
+}
