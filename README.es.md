@@ -65,7 +65,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - 4 estilos de mensaje: moderno, burbujas, IRC y Pidgin.
 - **GIFs**: botón *GIF* junto al de emojis. *Mis GIFs* guarda los GIFs que quieras (clic derecho → *Guardar en Mis GIFs*) y funciona sin ningún servicio; búsqueda opcional en GIPHY o KLIPY con tu propia clave gratuita.
 - **Fondos** para la ventana, la barra lateral y cada sala o chat: una imagen de tu PC, pegada (Ctrl+V), arrastrada desde el Explorador o el navegador, o descargada de una dirección de Internet, con encaje (llenar, entera, estirar, mosaico, original), zoom, posición (arrastrándola en la vista previa), brillo, saturación, intensidad y desenfoque; o un degradado o un color.
-- Emojis animados de Google (Noto), Twemoji o los nativos, y emojis propios. Los animados más usados vienen con la app y funcionan sin conexión.
+- Emojis animados de Google (Noto), Twemoji o los nativos, y emojis propios. Los animados más usados y todas las banderas vienen con la app y funcionan sin conexión (Windows no sabe dibujar las banderas).
 
 **Escritorio**
 - Bandeja del sistema (cerrar o minimizar a la bandeja).
@@ -119,7 +119,8 @@ npm run dev        # con DevTools
 npm run dist       # instalador + portable en dist/
 npm run assets     # regenera iconos (Lucide) y datos de emojis (emojibase)
 npm run assets:emoji  # regenera los emojis animados incluidos (los descarga de Google, ~15 min)
-npm test           # tests unitarios y de integración XMPP (contra el servidor simulado)
+npm run assets:flags  # regenera las banderas incluidas (las descarga de Google, ~1 min)
+npm test           # tests unitarios, de propiedades (fast-check) y de integración XMPP (contra el servidor simulado)
 npm run lint       # ESLint
 npm run check      # comprueba la sintaxis de todos los ficheros JavaScript
 npm run i18n       # comprueba que todos los textos tienen traducción
@@ -160,4 +161,4 @@ Variables de diagnóstico:
 
 ## Licencia
 
-MIT. Iconos: Lucide (ISC). Datos de emojis: emojibase (MIT). Fuentes: Fontsource (OFL). Emojis animados: [Animated Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/) © Google, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), redimensionados. Detalles en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. Iconos: Lucide (ISC). Datos de emojis: emojibase (MIT). Fuentes: Fontsource (OFL). Emojis animados: [Animated Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/) © Google, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), redimensionados. Banderas: [Noto Emoji](https://github.com/googlefonts/noto-emoji) © Google (Apache 2.0), redimensionadas. Detalles en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

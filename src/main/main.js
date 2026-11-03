@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import * as store from "./store.js";
 import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
-import { scanPidgin, importLogs, scanPidginSounds, repairImportedLogs } from "./pidgin-import.js";
+import { scanPidgin, importLogs, scanPidginSounds, repairImportedLogs, shouldOfferRepair } from "./pidgin-import.js";
 import { senderTargets, pidginPingEntries, storeRecovered } from "./ping-recovery.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, closeAllPopups } from "./popups.js";
@@ -763,15 +763,10 @@ function registerIpc() {
     const scan = scanPidgin();
     return store.get().accounts.map((acc) => ({ acc, p: scan.accounts.find((p) => p.jid === acc.jid) })).filter((x) => x.p && fs.existsSync(x.p.logsDir));
   };
-  // ¿Ofrecer la reparación al arrancar? Solo una vez, si hay historial importado con una versión anterior
-  // y no se ha reparado ya (una carpeta logs-copia-* es de una reparación anterior a esta marca).
-  handle("pidgin:repairStatus", () => {
-    const imp = store.get().imported;
-    if (imp.__logsRepaired || imp.__repairOffered) return { offer: false };
-    if (!Object.entries(imp).some(([k, v]) => !k.startsWith("__") && v === 1)) return { offer: false };
-    if (fs.readdirSync(userData()).some((n) => n.startsWith("logs-copia-"))) return { offer: false };
-    return { offer: repairTargets().length > 0 };
-  });
+  // ¿Ofrecer la reparación al arrancar? (shouldOfferRepair, en pidgin-import.js)
+  handle("pidgin:repairStatus", () => ({
+    offer: shouldOfferRepair({ imported: store.get().imported, dataEntries: fs.readdirSync(userData()), hasTargets: () => repairTargets().length > 0 }),
+  }));
   handle("pidgin:repairOffered", () => {
     store.get().imported.__repairOffered = 1;
     store.save();

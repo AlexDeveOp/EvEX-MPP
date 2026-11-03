@@ -1,6 +1,7 @@
 // Genera build/license_es.txt y build/license_en.txt: la página que muestra el instalador antes de instalar
 // (resumen de privacidad + licencia MIT). Mantener al día con PRIVACY.md. Uso: npm run license-pages
-// Importante: UTF-8 SIN BOM. electron-builder añade el BOM al compilar; si ya lo llevan, NSIS muestra un carácter raro.
+// Se escriben en UTF-8 CON BOM y saltos CRLF, como los quiere NSIS. electron-builder (26.x) solo añade el BOM si falta,
+// así que empaquetar ya no modifica estos ficheros versionados (antes cada `npm run dist` los dejaba cambiados en git).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,7 @@ const PAGES = {
 
 for (const [lang, text] of Object.entries(PAGES)) {
   const file = path.join(root, "build", `license_${lang}.txt`);
-  fs.writeFileSync(file, (text + license + "\n").replace(/\n/g, "\r\n"));
+  // LICENSE puede llegar ya con CRLF (checkout de Windows): se normaliza antes para no dejar "\r\r\n".
+  fs.writeFileSync(file, String.fromCharCode(0xfeff) + (text + license + "\n").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n"));
   console.log(path.relative(root, file));
 }

@@ -1,4 +1,5 @@
 import { t } from "./i18n.js";
+import { shadeForWhite } from "./contrast.js";
 // Contenido de una burbuja de notificación. Los datos llegan ya preparados desde la ventana principal.
 const id = new URLSearchParams(location.search).get("id");
 const call = (ch, ...a) => window.evex.call(ch, ...a);
@@ -14,20 +15,11 @@ function el(tag, cls, text) {
 // La sirena de los pings (la misma que en la app), en blanco. Si el color de aviso del tema es claro (Nord, Dracula…),
 // la insignia se oscurece lo justo para que el blanco se lea (4,5:1) sin perder el tono.
 const SIREN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/></svg>';
-function luminance(hex) {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
 function sirenBadge(bg) {
   const b = el("div", "badge");
   b.innerHTML = SIREN;
   b.style.color = "#fff";
-  if (!/^#[0-9a-f]{6}$/i.test(bg || "")) bg = "#f59e0b";
-  const rgb = [1, 3, 5].map((i) => parseInt(bg.slice(i, i + 2), 16));
-  let k = 0;
-  const shade = () => "#" + rgb.map((v) => Math.round(v * (1 - k)).toString(16).padStart(2, "0")).join("");
-  while (k < 0.9 && 1.05 / (luminance(shade()) + 0.05) < 4.5) k += 0.02;
-  b.style.background = shade();
+  b.style.background = shadeForWhite(bg);
   return b;
 }
 

@@ -9,7 +9,7 @@
     "assets": "node scripts/build-assets.mjs",
     "probe": "node scripts/probe.mjs",
     "build:icon": "node scripts/build-icon.mjs",
-    "dist": "node scripts/build-icon.mjs && electron-builder --win nsis portable --publish never",
+    "dist": "node scripts/build-icon.mjs && electron-builder --win nsis portable --publish never && node scripts/check-build-clean.mjs",
     "dist:dir": "electron-builder --win dir --publish never",
     "mock": "node test/mock-xmpp.mjs",
     "i18n": "node scripts/i18n-check.mjs",
@@ -38,6 +38,7 @@
     "electron-builder": "^26.18.0",
     "emojibase-data": "^18.0.0",
     "eslint": "^10.14.0",
+    "fast-check": "^4.10.2",
     "globals": "^17.14.0",
     "lucide-static": "^1.66.0",
     "sharp": "^0.35.5"
@@ -53,8 +54,20 @@
     },
     "files": [
       "src/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/@fontsource-variable/*/files/*-{opsz,standard}-*",
+      "!node_modules/@fontsource-variable/*/files/*-italic.woff2",
+      "!node_modules/@fontsource/rajdhani/files/*.woff",
+      "!node_modules/@fontsource/rajdhani/{files/*-300-*,300.css}",
+      "!node_modules/@xmpp/client/{dist,example.js,test.js}"
     ],
+    "electronLanguages": [
+      "es",
+      "es-419",
+      "en-US",
+      "en-GB"
+    ],
+    "compression": "maximum",
     "asar": true,
     "win": {
       "target": [

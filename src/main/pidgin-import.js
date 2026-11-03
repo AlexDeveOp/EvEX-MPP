@@ -337,6 +337,16 @@ function logFiles(logsDir, convs) {
 
 // ---------- reparar lo importado con versiones anteriores ----------
 
+// ¿Ofrecer la reparación al arrancar? Solo una vez, si hay ficheros importados con una versión anterior (valor 1;
+// los actuales valen 2) y no se ha reparado ya: ni la marca __logsRepaired ni una carpeta logs-copia-* (de una
+// reparación anterior a la marca). hasTargets (¿tiene Pidgin registros de alguna cuenta?) se mira lo último.
+export function shouldOfferRepair({ imported = {}, dataEntries = [], hasTargets = () => true }) {
+  if (imported.__logsRepaired || imported.__repairOffered) return false;
+  if (!Object.entries(imported).some(([k, v]) => !k.startsWith("__") && v === 1)) return false;
+  if (dataEntries.some((n) => n.startsWith("logs-copia-"))) return false;
+  return !!hasTargets();
+}
+
 const SEP = String.fromCharCode(0);
 // Reconoce una entrada importada: autor, segundo exacto y texto (sin espacios sobrantes).
 const entryKey = (e) => `${e.nick || ""}${SEP}${Math.floor((e.ts || 0) / 1000)}${SEP}${String(e.body ?? "").trim()}`;
