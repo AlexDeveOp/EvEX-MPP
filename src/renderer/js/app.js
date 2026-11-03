@@ -12,6 +12,7 @@ import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } 
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openSearch } from "./search.js";
 import { showUpdate } from "./updates.js";
+import { offerPidginRepair } from "./pidgin-repair.js";
 import { playSound, stopPingRepeat } from "./sounds.js";
 
 import { t, setLanguagePreference, translateStatic } from "./i18n.js";
@@ -64,6 +65,7 @@ async function boot() {
   await api("ready");
   pingsConv();
   document.getElementById("app").classList.remove("booting");
+  setTimeout(() => offerPidginRepair().catch(console.error), 1500);
 }
 
 function applySnapshot(id, snap) {

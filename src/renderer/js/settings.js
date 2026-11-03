@@ -10,6 +10,7 @@ import { BUNDLED_ANIMATED } from "./data/emoji-anim.js";
 import { checkUpdatesNow } from "./updates.js";
 import { newRule, normalizeRule, compileRule } from "./keywords.js";
 import { openAccounts, openPidginImport } from "./accounts.js";
+import { repairPidginHistory } from "./pidgin-repair.js";
 
 import { t, tk, LANGUAGES, setLanguagePreference } from "./i18n.js";
 // Cambios solo visuales: se aplican al momento sin repintar mensajes.
@@ -1249,26 +1250,3 @@ function gifsGroup() {
   );
 }
 
-async function repairPidginHistory() {
-  const ok = await confirmDialog({
-    title: t("Reparar historial importado de Pidgin"),
-    message: t("Se vuelven a leer tus registros de Pidgin (sin cambiarlos) para corregir la fecha de los mensajes mal fechados y quitar los avisos de Pidgin. Antes se hace una copia de seguridad completa del historial en la carpeta de datos."),
-    okLabel: t("Reparar"),
-  });
-  if (!ok) return;
-  const busy = toast(t("Reparando el historial…"), { timeout: 0 });
-  try {
-    const r = await api("pidgin:repairLogs");
-    busy();
-    if (!r.accounts) return toast(t("No hay historial de Pidgin para ninguna de tus cuentas."), { kind: "warn" });
-    await confirmDialog({
-      title: t("Historial reparado"),
-      message: t("Fechas corregidas: {fixed}. Avisos de Pidgin quitados: {removed}. Copia de seguridad: {backup} (en la carpeta de datos). La ventana se recargará para mostrar el historial corregido.", r),
-      okLabel: t("Recargar"),
-    });
-    location.reload();
-  } catch (err) {
-    busy();
-    toast(t("No se pudo reparar el historial: {message}", { message: err.message }), { kind: "error", timeout: 10000 });
-  }
-}

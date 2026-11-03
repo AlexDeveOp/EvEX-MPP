@@ -759,9 +759,26 @@ function registerIpc() {
 
   // Repara el historial importado de Pidgin con versiones anteriores (fechas día/mes y avisos de Pidgin).
   // Antes copia la carpeta de historial entera, por si hubiera que volver atrás.
-  handle("pidgin:repairLogs", async () => {
+  const repairTargets = () => {
     const scan = scanPidgin();
-    const targets = store.get().accounts.map((acc) => ({ acc, p: scan.accounts.find((p) => p.jid === acc.jid) })).filter((x) => x.p && fs.existsSync(x.p.logsDir));
+    return store.get().accounts.map((acc) => ({ acc, p: scan.accounts.find((p) => p.jid === acc.jid) })).filter((x) => x.p && fs.existsSync(x.p.logsDir));
+  };
+  // ¿Ofrecer la reparación al arrancar? Solo una vez, si hay historial importado con una versión anterior
+  // y no se ha reparado ya (una carpeta logs-copia-* es de una reparación anterior a esta marca).
+  handle("pidgin:repairStatus", () => {
+    const imp = store.get().imported;
+    if (imp.__logsRepaired || imp.__repairOffered) return { offer: false };
+    if (!Object.entries(imp).some(([k, v]) => !k.startsWith("__") && v === 1)) return { offer: false };
+    if (fs.readdirSync(userData()).some((n) => n.startsWith("logs-copia-"))) return { offer: false };
+    return { offer: repairTargets().length > 0 };
+  });
+  handle("pidgin:repairOffered", () => {
+    store.get().imported.__repairOffered = 1;
+    store.save();
+    return true;
+  });
+  handle("pidgin:repairLogs", async () => {
+    const targets = repairTargets();
     if (!targets.length) return { accounts: 0 };
     const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
     const backup = path.join(userData(), `logs-copia-${stamp}`);
@@ -773,6 +790,8 @@ function registerIpc() {
       total.fixed += r.fixed;
       total.removed += r.removed;
     }
+    store.get().imported.__logsRepaired = 1;
+    store.save();
     return total;
   });
 
@@ -810,7 +829,8 @@ function registerIpc() {
           alreadyImported: cfg.imported,
           onProgress: (pr) => send("import-progress", pr),
         });
-        for (const f of logResult.files) cfg.imported[f] = 1;
+        // 2 = importado con las reglas actuales; 1 = con una versión anterior, que puede necesitar reparación.
+        for (const f of logResult.files) cfg.imported[f] = 2;
         store.save();
         logResult = { conversations: logResult.conversations, messages: logResult.messages };
       }

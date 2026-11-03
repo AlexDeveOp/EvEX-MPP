@@ -9,7 +9,7 @@ const CHANNELS = [
   "rooms:update", "rooms:pushBookmarks", "rooms:fetchBookmarks",
   "roster:add", "roster:remove", "roster:update", "roster:answer",
   "logs:tail", "logs:search", "logs:list",
-  "pidgin:scan", "pidgin:import", "pidgin:repairLogs", "sounds:pidginScan", "sounds:pidginImport", "gifs:search", "gifs:save", "gifs:remove",
+  "pidgin:scan", "pidgin:import", "pidgin:repairLogs", "pidgin:repairStatus", "pidgin:repairOffered", "sounds:pidginScan", "sounds:pidginImport", "gifs:search", "gifs:save", "gifs:remove",
   "file:pick", "image:importPath", "image:importBytes", "image:importUrl", "emoji:import", "theme:export", "theme:import", "avatar:set", "fonts:list",
   "notify", "notify:test", "popup:get", "popup:size", "popup:click", "popup:close", "popup:hover", "window:unread", "window:minimize", "window:maximize", "window:close", "window:focus", "shell:open", "shell:openUserData", "updates:check", "pings:sync", "app:quit",
 ];
