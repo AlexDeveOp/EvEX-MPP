@@ -1,21 +1,22 @@
 // Proceso principal de EvEX-MPP: ventanas, bandeja, protocolos internos, IPC y conexiones XMPP.
-import { app, BrowserWindow, ipcMain, protocol, net, shell, dialog, Tray, Menu, nativeImage, Notification, powerMonitor, session, clipboard } from "electron";
+import { app, BrowserWindow, ipcMain, protocol, net, shell, Menu, nativeImage, Notification, powerMonitor, session, clipboard } from "electron";
 import path from "node:path";
 import fs from "node:fs";
-import crypto from "node:crypto";
-import { execFile } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as store from "./store.js";
 import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
-import { scanPidgin, importLogs, scanPidginSounds, repairImportedLogs, shouldOfferRepair } from "./pidgin-import.js";
-import { senderTargets, pidginPingEntries, storeRecovered } from "./ping-recovery.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
-import { showPopup, configurePopups, popupIpc, closeAllPopups } from "./popups.js";
+import { showPopup, configurePopups, popupIpc } from "./popups.js";
+import { createTray, buildTrayMenu, refreshTray, setUnread } from "./tray.js";
+import { configurePingSync, syncPings } from "./ping-sync.js";
+import { registerMediaIpc } from "./media-ipc.js";
+import { registerPidginIpc } from "./pidgin-ipc.js";
+import { userData, mediaDir, avatarDir } from "./paths.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
-import { searchGifs, downloadGif, isProviderUrl } from "./gifs.js";
+import { isProviderUrl } from "./gifs.js";
 
-import { t, tk, setLanguage, currentLang } from "./i18n.js";
+import { t, setLanguage, currentLang } from "./i18n.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const RENDERER = path.join(ROOT, "src", "renderer");
 const NODE_MODULES = path.join(ROOT, "node_modules");
@@ -39,17 +40,14 @@ let win = null;
 let tray = null;
 let quitting = false;
 let logs = null;
-let unread = 0;
 // Los eventos XMPP que llegan mientras la interfaz carga se guardan y se entregan cuando avisa de que está lista.
 let rendererReady = false;
 const pendingEvents = [];
 const accounts = new Map(); // id -> XmppAccount
 let pingSyncTimer = null;
+let pendingRecovered = 0; // pings recuperados antes de que la interfaz esté lista
 const autoAway = new Map(); // id -> presencia previa
 
-const userData = () => app.getPath("userData");
-const mediaDir = (...p) => path.join(userData(), "media", ...p);
-const avatarDir = () => mediaDir("avatars");
 
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
@@ -286,117 +284,6 @@ function nativeContextMenu(params) {
   if (items.length) Menu.buildFromTemplate(items).popup({ window: win });
 }
 
-// ---------- bandeja ----------
-
-// Los iconos se dibujan píxel a píxel: se hace una vez y se reutilizan (el parpadeo de la bandeja los cambia cada 650 ms).
-const iconCache = new Map();
-function cachedIcon(key, make) {
-  if (!iconCache.has(key)) iconCache.set(key, make());
-  return iconCache.get(key);
-}
-
-function trayImage() {
-  const badge = unread > 0;
-  return cachedIcon(`tray:${badge}`, () => nativeImage.createFromBuffer(renderIcon(64, { badge })).resize({ width: 16, height: 16, quality: "best" }));
-}
-
-function buildTrayMenu() {
-  const setAll = (show, label) => ({
-    label,
-    click: () => {
-      for (const a of accounts.values()) if (a.online) a.setPresence(show).catch(() => {});
-    },
-  });
-  return Menu.buildFromTemplate([
-    { label: t("Mostrar EvEX-MPP"), click: showWindow },
-    {
-      label: t("Cambiar de cuenta…"),
-      click: () => {
-        showWindow();
-        send("switch-account");
-      },
-    },
-    { type: "separator" },
-    setAll("", t("Disponible")),
-    setAll("away", t("Ausente")),
-    setAll("dnd", t("No molestar")),
-    setAll("xa", t("Ausente (extendido)")),
-    { type: "separator" },
-    {
-      label: t("Desconectar todo"),
-      click: () => {
-        for (const a of accounts.values()) a.disconnect().catch(() => {});
-      },
-    },
-    {
-      label: t("Salir"),
-      click: () => {
-        quitting = true;
-        app.quit();
-      },
-    },
-  ]);
-}
-
-function createTray() {
-  tray = new Tray(trayImage());
-  tray.setToolTip("EvEX-MPP");
-  tray.setContextMenu(buildTrayMenu());
-  tray.on("click", () => (win?.isVisible() && win.isFocused() ? win.hide() : showWindow()));
-  tray.on("double-click", showWindow);
-  tray.on("balloon-click", showWindow);
-}
-
-// Pings sin leer: la bandeja muestra la sirena sobre un círculo ámbar (parpadeando si está activado) hasta que se abren los pings.
-let pingAlert = 0;
-let blinkTimer = null;
-let blinkOn = false;
-const alertImage = () => cachedIcon("alert", () => nativeImage.createFromBuffer(renderAlertIcon(64)).resize({ width: 16, height: 16, quality: "best" }));
-
-function refreshTray() {
-  if (!tray) return;
-  if (process.env.EVEX_DEBUG) console.log(`[bandeja] sin leer=${unread} pings=${pingAlert}`);
-  clearInterval(blinkTimer);
-  blinkTimer = null;
-  if (pingAlert) {
-    tray.setImage(alertImage());
-    tray.setToolTip(t("¡{pingAlert} ping{x} de flota sin leer!", { pingAlert, x: pingAlert > 1 ? "s" : "" }));
-    if (store.get().settings.notifications.trayBlink) {
-      blinkOn = true;
-      blinkTimer = setInterval(() => {
-        blinkOn = !blinkOn;
-        tray.setImage(blinkOn ? alertImage() : trayImage());
-      }, 650);
-    }
-  } else {
-    tray.setImage(trayImage());
-    tray.setToolTip(unread ? t("EvEX-MPP — {unread} sin leer", { unread }) : "EvEX-MPP");
-  }
-  if (win && process.platform === "win32") {
-    const overlay = pingAlert ? cachedIcon("overlay:alert", () => nativeImage.createFromBuffer(renderAlertIcon(32))) : unread ? cachedIcon("overlay:badge", () => nativeImage.createFromBuffer(renderBadge())) : null;
-    win.setOverlayIcon(overlay, pingAlert ? t("Ping de flota") : unread ? t("{unread} sin leer", { unread }) : "");
-  }
-}
-
-// La interfaz avisa en cada mensaje: los cambios seguidos se juntan en una sola actualización de la bandeja.
-let trayRefreshTimer = null;
-function setUnread(count, pings = 0) {
-  const changed = count !== unread || pings !== pingAlert;
-  unread = count;
-  if (pings === 0 && pingAlert) closeAllPopups("ping");
-  // El primer ping se ve al momento; el resto de cambios espera un poco por si llegan más.
-  const urgent = pings > 0 && !pingAlert;
-  pingAlert = pings;
-  if (!changed) return;
-  clearTimeout(trayRefreshTimer);
-  if (urgent) refreshTray();
-  else trayRefreshTimer = setTimeout(refreshTray, 150);
-}
-
-function renderBadge() {
-  return renderIcon(32, { badge: true, accent: "#ef4444", accent2: "#dc2626" });
-}
-
 // ---------- cuentas ----------
 
 function publicAccount(a) {
@@ -464,71 +351,6 @@ function onAccountEvent(x, ev) {
   if (ev.type === "server-info") syncPings().catch(() => {});
 }
 
-// ---------- pings perdidos con la app cerrada ----------
-
-const PIDGIN_LOOKBACK = 3 * 86400e3; // primera revisión de los registros de Pidgin: los últimos 3 días
-const ARCHIVE_LOOKBACK = 7 * 86400e3; // como mucho se piden al servidor los últimos 7 días
-const pidginChecked = new Map(); // id de cuenta -> cuándo se revisaron por última vez sus registros de Pidgin
-let pidginScan = null;
-let pingSyncQueue = Promise.resolve();
-let pendingRecovered = 0;
-
-function pidginAccounts() {
-  if (!pidginScan || Date.now() - pidginScan.at > 10 * 60e3) pidginScan = { at: Date.now(), accounts: scanPidgin().accounts };
-  return pidginScan.accounts;
-}
-
-// Revisa los registros de Pidgin y, con `server`, el archivo del servidor de las cuentas conectadas. Las llamadas se
-// encolan para no leer ni guardar lo mismo dos veces a la vez.
-// `notify: false` cuando quien pide la revisión (el botón) ya muestra el resultado.
-function syncPings({ server = true, notify = true } = {}) {
-  const run = pingSyncQueue.then(() => syncPingsNow({ server, notify }));
-  pingSyncQueue = run.catch(() => {});
-  return run;
-}
-
-async function syncPingsNow({ server, notify }) {
-  const s = store.get().settings;
-  const result = { added: 0, pidgin: false, accounts: [] };
-  if (!s.pingSenders?.length) return result;
-  const usePidgin = s.pingRecovery?.pidgin !== false;
-  const useServer = server && s.pingRecovery?.server !== false;
-  for (const acc of store.get().accounts) {
-    const x = accounts.get(acc.id);
-    const targets = senderTargets(s.pingSenders, acc.jid).filter((tg) => tg.jid);
-    const info = { account: acc.alias || acc.jid, online: !!x?.online, mam: !!x?.mam, pidgin: 0, server: 0, error: "" };
-    const nickOf = (jid) => x?.roster.get(jid)?.name;
-    const p = usePidgin ? pidginAccounts().find((a) => a.jid.toLowerCase() === acc.jid.toLowerCase()) : null;
-    if (p && fs.existsSync(p.logsDir)) {
-      result.pidgin = true;
-      const startedAt = Date.now();
-      const since = (pidginChecked.get(acc.id) ?? startedAt - PIDGIN_LOOKBACK) - 60e3;
-      for (const tg of targets) info.pidgin += storeRecovered(logs, acc.id, tg.jid, pidginPingEntries(p.logsDir, tg, since, [p.alias, p.jid.split("@")[0]].filter(Boolean).map((n) => n.toLowerCase())), nickOf(tg.jid));
-      pidginChecked.set(acc.id, startedAt);
-    }
-    if (useServer && x?.online && x.mam) {
-      for (const tg of targets) {
-        const last = logs.lastTimestamp(acc.id, tg.jid) || 0;
-        const start = Math.max(last - 60e3, Date.now() - ARCHIVE_LOOKBACK);
-        try {
-          info.server += storeRecovered(logs, acc.id, tg.jid, await x.fetchArchive(tg.jid, start), nickOf(tg.jid));
-        } catch (e) {
-          info.error = e.message;
-        }
-      }
-    }
-    result.added += info.pidgin + info.server;
-    result.accounts.push(info);
-  }
-  if (process.env.EVEX_DEBUG) console.log("[pings]", JSON.stringify({ server, ...result }));
-  // Si la interfaz aún no escucha (la cuenta conecta antes de que termine de cargar), el aviso espera a «ready».
-  if (result.added && notify) {
-    if (rendererReady) send("pings-recovered", { count: result.added });
-    else pendingRecovered += result.added;
-  }
-  return result;
-}
-
 // Solo pedimos a la sala el historial posterior al último mensaje guardado.
 function historyOptions(accountId, roomJid) {
   const since = logs.lastTimestamp(accountId, roomJid);
@@ -562,52 +384,6 @@ async function connectAccount(id, password) {
   if (!pw) throw new Error("NEED_PASSWORD");
   x.autojoinDone = false;
   await x.connect(pw);
-}
-
-// ---------- ficheros de usuario ----------
-
-// Los nombres se traducen al abrir el diálogo (el idioma puede cambiar en marcha).
-const fileFilters = (kind) => (FILTERS[kind] || []).map((f) => ({ ...f, name: t(f.name) }));
-
-const FILTERS = {
-  image: [{ name: tk("Imágenes"), extensions: ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"] }],
-  sound: [{ name: tk("Sonidos"), extensions: ["mp3", "wav", "ogg", "m4a", "flac"] }],
-  video: [{ name: tk("Vídeo"), extensions: ["mp4", "webm"] }],
-};
-
-function copyToMedia(src, sub = "files") {
-  const data = fs.readFileSync(src);
-  const hash = crypto.createHash("sha1").update(data).digest("hex").slice(0, 20);
-  const ext = path.extname(src).toLowerCase();
-  const name = `${hash}${ext}`;
-  fs.mkdirSync(mediaDir(sub), { recursive: true });
-  const dest = mediaDir(sub, name);
-  // "wx" falla si ya existe: el nombre es el hash del contenido, así que ya está copiado.
-  try {
-    fs.writeFileSync(dest, data, { flag: "wx" });
-  } catch (err) {
-    if (err.code !== "EEXIST") throw err;
-  }
-  return `media://evex/${sub}/${name}`;
-}
-
-function listSystemFonts() {
-  const keys = ["HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", "HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"];
-  const query = (k) =>
-    new Promise((resolve) => execFile("reg", ["query", k], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => resolve(err ? "" : out)));
-  const STYLE = /\b(bold|italic|oblique|light|semilight|semibold|demibold|black|heavy|thin|extralight|extrabold|ultralight|ultrabold|medium|regular|condensed|narrow|semicondensed|extended|book|normal)\b/gi;
-  return Promise.all(keys.map(query)).then((outs) => {
-    const names = new Set();
-    for (const line of outs.join("\n").split(/\r?\n/)) {
-      const m = line.match(/^\s{4}(.+?)\s+REG_SZ\s+/);
-      if (!m) continue;
-      for (const part of m[1].replace(/\s*\((TrueType|OpenType|All res)\)\s*$/i, "").split(/\s*&\s*/)) {
-        const fam = part.replace(STYLE, "").replace(/\s+/g, " ").trim();
-        if (fam && !/^\d/.test(fam)) names.add(fam);
-      }
-    }
-    return [...names].sort((a, b) => a.localeCompare(b));
-  });
 }
 
 // ---------- IPC ----------
@@ -742,191 +518,8 @@ function registerIpc() {
   handle("logs:search", (id, opts) => logs.search(id, opts));
   handle("logs:list", (id) => logs.listConversations(id));
 
-  // Sonidos de Pidgin: se buscan en el Pidgin instalado y se copian a la carpeta de la app (no se incluyen con EvEX-MPP).
-  // GIFs: búsqueda con la clave del usuario y copias locales de «Mis GIFs» (solo para la miniatura).
-  handle("gifs:search", ({ query, page }) => {
-    const g = store.get().settings.gifs;
-    return searchGifs({ provider: g.provider, key: g.keys?.[g.provider], query, page, rating: g.rating, lang: currentLang(), fetchImpl: (url, opts) => net.fetch(url, opts) });
-  });
-  handle("gifs:save", async (url) => {
-    const { buffer, ext } = await downloadGif(url, { fetchImpl: (u, opts) => net.fetch(u, opts) });
-    const name = `${crypto.createHash("sha1").update(buffer).digest("hex").slice(0, 20)}.${ext}`;
-    fs.mkdirSync(mediaDir("gifs"), { recursive: true });
-    fs.writeFileSync(mediaDir("gifs", name), buffer);
-    return { url, thumb: `media://evex/gifs/${name}` };
-  });
-  handle("gifs:remove", (thumb) => {
-    const m = String(thumb || "").match(/^media:\/\/evex\/gifs\/([0-9a-f]{20}\.[a-z]{3,4})$/);
-    if (m) fs.rmSync(mediaDir("gifs", m[1]), { force: true });
-    return true;
-  });
-
-  handle("sounds:pidginScan", () => {
-    const r = scanPidginSounds();
-    return { found: r.found, sounds: Object.fromEntries(Object.entries(r.sounds).map(([k, v]) => [k, { name: path.basename(v.file), custom: v.custom }])) };
-  });
-  handle("sounds:pidginImport", (kinds) => {
-    const r = scanPidginSounds();
-    const out = {};
-    for (const k of kinds || []) if (r.sounds[k]) out[k] = copyToMedia(r.sounds[k].file, "sounds");
-    return out;
-  });
-
-  // Repara el historial importado de Pidgin con versiones anteriores (fechas día/mes y avisos de Pidgin).
-  // Antes copia la carpeta de historial entera, por si hubiera que volver atrás.
-  const repairTargets = () => {
-    const scan = scanPidgin();
-    return store.get().accounts.map((acc) => ({ acc, p: scan.accounts.find((p) => p.jid === acc.jid) })).filter((x) => x.p && fs.existsSync(x.p.logsDir));
-  };
-  // ¿Ofrecer la reparación al arrancar? (shouldOfferRepair, en pidgin-import.js)
-  handle("pidgin:repairStatus", () => ({
-    offer: shouldOfferRepair({ imported: store.get().imported, dataEntries: fs.readdirSync(userData()), hasTargets: () => repairTargets().length > 0 }),
-  }));
-  handle("pidgin:repairOffered", () => {
-    store.get().imported.__repairOffered = 1;
-    store.save();
-    return true;
-  });
-  handle("pidgin:repairLogs", async () => {
-    const targets = repairTargets();
-    if (!targets.length) return { accounts: 0 };
-    const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
-    const backup = path.join(userData(), `logs-copia-${stamp}`);
-    fs.cpSync(path.join(userData(), "logs"), backup, { recursive: true });
-    const total = { accounts: targets.length, conversations: 0, fixed: 0, removed: 0, backup: path.basename(backup) };
-    for (const { acc, p } of targets) {
-      const r = await repairImportedLogs({ logsDir: p.logsDir, selfNames: [p.alias, p.jid.split("@")[0]].filter(Boolean).map((s) => s.toLowerCase()), logs, accountId: acc.id });
-      total.conversations += r.conversations;
-      total.fixed += r.fixed;
-      total.removed += r.removed;
-    }
-    store.get().imported.__logsRepaired = 1;
-    store.save();
-    return total;
-  });
-
-  handle("pidgin:scan", () => {
-    const r = scanPidgin();
-    return { ...r, imported: Object.keys(store.get().imported).length };
-  });
-  handle("pidgin:import", async ({ jids, importPasswords, importRooms, importLogs: doLogs }) => {
-    const scan = scanPidgin({ includePasswords: importPasswords });
-    const results = [];
-    for (const p of scan.accounts.filter((a) => jids.includes(a.jid))) {
-      let acc = store.get().accounts.find((a) => a.jid === p.jid);
-      const rooms = acc?.rooms ? [...acc.rooms] : [];
-      if (importRooms) for (const r of p.rooms) if (!rooms.some((x) => x.jid === r.jid)) rooms.push(r);
-      acc = store.upsertAccount({
-        ...(acc || {}),
-        jid: p.jid,
-        alias: acc?.alias || p.alias,
-        host: p.host,
-        port: p.port,
-        security: p.security,
-        autoLogin: p.autoLogin,
-        nick: acc?.nick || p.alias,
-        rooms,
-      });
-      if (importPasswords && p.password) await store.setPassword(acc.id, p.password);
-      let logResult = null;
-      if (doLogs) {
-        const cfg = store.get();
-        logResult = await importLogs({
-          logsDir: p.logsDir,
-          selfNames: [p.alias, p.jid.split("@")[0]].map((s) => s.toLowerCase()),
-          logs,
-          accountId: acc.id,
-          alreadyImported: cfg.imported,
-          onProgress: (pr) => send("import-progress", pr),
-        });
-        // 2 = importado con las reglas actuales; 1 = con una versión anterior, que puede necesitar reparación.
-        for (const f of logResult.files) cfg.imported[f] = 2;
-        store.save();
-        logResult = { conversations: logResult.conversations, messages: logResult.messages };
-      }
-      results.push({ jid: p.jid, accountId: acc.id, rooms: p.rooms.length, logs: logResult, password: importPasswords && !!p.password });
-    }
-    store.flush();
-    return { results, accounts: store.get().accounts.map(publicAccount) };
-  });
-
-  handle("file:pick", async (kind) => {
-    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: fileFilters(kind) });
-    if (r.canceled || !r.filePaths[0]) return null;
-    return copyToMedia(r.filePaths[0], kind === "sound" ? "sounds" : "files");
-  });
-
-  // Imágenes de fuera de la app para los fondos: arrastradas desde el Explorador, pegadas del portapapeles o desde una
-  // dirección de Internet. Siempre se copian a la carpeta de la app (así el fondo sigue aunque se borre el original).
-  const IMAGE_EXT = FILTERS.image[0].extensions;
-  const MAX_IMAGE = 25 * 1024 * 1024;
-  const saveImageBuffer = (buffer, ext) => {
-    const name = `${crypto.createHash("sha1").update(buffer).digest("hex").slice(0, 20)}.${ext}`;
-    fs.mkdirSync(mediaDir("files"), { recursive: true });
-    try {
-      fs.writeFileSync(mediaDir("files", name), buffer, { flag: "wx" });
-    } catch (err) {
-      if (err.code !== "EEXIST") throw err;
-    }
-    return `media://evex/files/${name}`;
-  };
-  handle("image:importPath", (file) => {
-    const ext = path.extname(String(file || "")).slice(1).toLowerCase();
-    if (!IMAGE_EXT.includes(ext)) throw new Error(t("Ese archivo no es una imagen ({ext}).", { ext: ext || "?" }));
-    const st = fs.statSync(file);
-    if (!st.isFile()) throw new Error(t("Ese archivo no es una imagen ({ext}).", { ext }));
-    if (st.size > MAX_IMAGE) throw new Error(t("La imagen es demasiado grande (máximo {mb} MB).", { mb: 25 }));
-    return copyToMedia(file, "files");
-  });
-  // Imagen pegada (Ctrl+V o «Pegar imagen»): la interfaz la lee del portapapeles y manda sus bytes.
-  // Se comprueba la cabecera del fichero: no basta con el tipo que diga el portapapeles.
-  const MAGIC = { png: [0x89, 0x50, 0x4e, 0x47], jpg: [0xff, 0xd8, 0xff], gif: [0x47, 0x49, 0x46, 0x38], webp: [0x52, 0x49, 0x46, 0x46] };
-  handle("image:importBytes", (data, type) => {
-    const ext = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" }[String(type).toLowerCase()];
-    const buffer = Buffer.from(data instanceof Uint8Array ? data : new Uint8Array(data || []));
-    if (!ext || !MAGIC[ext].every((b, i) => buffer[i] === b)) throw new Error(t("No hay ninguna imagen copiada en el portapapeles."));
-    if (buffer.length > MAX_IMAGE) throw new Error(t("La imagen es demasiado grande (máximo {mb} MB).", { mb: 25 }));
-    return saveImageBuffer(buffer, ext);
-  });
-  handle("image:importUrl", async (url) => {
-    const { buffer, ext } = await downloadGif(String(url || "").trim(), { fetchImpl: (u, opts) => net.fetch(u, opts), maxBytes: MAX_IMAGE });
-    return saveImageBuffer(buffer, ext);
-  });
-
-  handle("emoji:import", async () => {
-    const r = await dialog.showOpenDialog(win, { title: t("Elige imágenes (GIF, PNG, WebP…) — el nombre del fichero será el :código:"), properties: ["openFile", "multiSelections"], filters: fileFilters("image") });
-    if (r.canceled) return [];
-    return r.filePaths.map((f) => ({
-      name: path.basename(f, path.extname(f)).toLowerCase().replace(/[^a-z0-9_+-]+/g, "_"),
-      url: copyToMedia(f, "emoji"),
-    }));
-  });
-
-  handle("theme:export", async (data) => {
-    const r = await dialog.showSaveDialog(win, { defaultPath: `${(data.name || "tema").replace(/[^\w-]+/g, "_")}.evex-theme.json`, filters: [{ name: t("Tema EvEX"), extensions: ["json"] }] });
-    if (r.canceled || !r.filePath) return false;
-    fs.writeFileSync(r.filePath, JSON.stringify(data, null, 2));
-    return true;
-  });
-  handle("theme:import", async () => {
-    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: [{ name: t("Tema EvEX"), extensions: ["json"] }] });
-    if (r.canceled || !r.filePaths[0]) return null;
-    return JSON.parse(fs.readFileSync(r.filePaths[0], "utf8"));
-  });
-
-  handle("avatar:set", async (id) => {
-    const r = await dialog.showOpenDialog(win, { properties: ["openFile"], filters: fileFilters("image") });
-    if (r.canceled || !r.filePaths[0]) return false;
-    let img = nativeImage.createFromPath(r.filePaths[0]);
-    if (img.isEmpty()) throw new Error(t("No se pudo leer la imagen"));
-    const { width, height } = img.getSize();
-    const side = Math.min(width, height);
-    img = img.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 2), width: side, height: side }).resize({ width: 128, height: 128, quality: "best" });
-    await getConn(id).setOwnAvatar(img.toPNG(), "image/png");
-    return true;
-  });
-
-  handle("fonts:list", () => listSystemFonts());
+  registerMediaIpc(handle, { getWin: () => win, getConn });
+  registerPidginIpc(handle, { logs, send, publicAccount });
 
   // Burbuja propia, notificación de Windows o ambas, según Preferencias → Notificaciones.
   handle("notify", (data) => {
@@ -1024,6 +617,15 @@ app.whenReady().then(async () => {
   store.load();
   setLanguage(store.get().settings.language);
   logs = new Logs(path.join(userData(), "logs"));
+  configurePingSync({
+    accounts,
+    logs,
+    // Si la interfaz aún no escucha (la cuenta conecta antes de que termine de cargar), el aviso espera a «ready».
+    onRecovered: (count) => {
+      if (rendererReady) send("pings-recovered", { count });
+      else pendingRecovered += count;
+    },
+  });
   registerProtocols();
   registerIpc();
   popupIpc(handle);
@@ -1039,7 +641,16 @@ app.whenReady().then(async () => {
   });
 
   createWindow();
-  createTray();
+  tray = createTray({
+    getWin: () => win,
+    accounts,
+    showWindow,
+    send,
+    quit: () => {
+      quitting = true;
+      app.quit();
+    },
+  });
   startIdleWatcher();
 
   for (const a of store.get().accounts) {
