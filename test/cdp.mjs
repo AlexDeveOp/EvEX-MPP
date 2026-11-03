@@ -49,7 +49,7 @@ for (const s of steps) {
     const g = await send("Runtime.evaluate", { expression: "globalThis" });
     const r = await send("Runtime.callFunctionOn", {
       objectId: g.result?.result?.objectId,
-      functionDeclaration: "function (sel) { const e = document.querySelector(sel); if (!e) return null; const b = e.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }",
+      functionDeclaration: "function (sel) { const e = document.querySelector(sel); if (!e) return null; e.scrollIntoView({ block: 'center' }); const b = e.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }",
       arguments: [{ value: sel }],
       returnByValue: true,
     });

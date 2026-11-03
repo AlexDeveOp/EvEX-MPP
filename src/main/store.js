@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS = {
   background: { type: "none", value: "", opacity: 0.35, blur: 0, dim: 0.4 },
   sidebarBackground: { type: "none", value: "", opacity: 0.25, blur: 8 },
   conversationBackgrounds: {},
+  bgLibrary: [], // imágenes importadas para los fondos («Tus imágenes»)
   emojiStyle: "noto-animated",
   downloadEmoji: false, // descargar de Google los animados que no vienen con la app
   emojiSize: 1.25,
