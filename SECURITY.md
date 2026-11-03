@@ -36,7 +36,7 @@ Every release is built by GitHub Actions from the tagged source code and include
    This proves the file was built by this repository's release workflow from a specific commit.
    The attestation is also attached to the release as `EvEX-MPP-vX.Y.Z.intoto.jsonl`; add `--bundle <that file>` to check it without querying GitHub's attestation API.
 
-The executables are not code-signed yet, so Windows SmartScreen may warn the first time ("More info" → "Run anyway").
+The executables are not code-signed yet, so Windows SmartScreen may warn the first time ("More info" → "Run anyway"). The README explains why (the application for free signing through SignPath Foundation was declined for now) in its [code signing policy](README.md#code-signing-policy), and the full checks in [How to verify your download](README.md#how-to-verify-your-download).
 
 ## How the app protects you
 
