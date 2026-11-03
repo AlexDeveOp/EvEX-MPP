@@ -127,6 +127,9 @@ test("proxy https con un certificado en el que no se confía → PROXY_CONNECT",
   const fp = await fake({ type: "https" });
   const err = await openTunnel(proxyFor(fp, "https"), "localhost", echoPort, { timeout: 5000 }).catch((e) => e);
   assert.equal(err.code, "PROXY_CONNECT");
+  // Mensaje para el usuario, sin el inglés de Node ni sus pistas para programadores (--use-system-ca…).
+  assert.match(err.message, /certificado del proxy .* no es de confianza: es autofirmado/);
+  assert.doesNotMatch(err.message, /Node|--use|certificate/);
 });
 
 test("proxy que no contesta → PROXY_TIMEOUT", async () => {

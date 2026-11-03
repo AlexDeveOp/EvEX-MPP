@@ -1048,4 +1048,12 @@ export default {
   "El proxy general está activado pero no tiene servidor.": "The general proxy is turned on but has no server.",
   "El proxy propio de la cuenta no tiene servidor.": "The account's own proxy has no server.",
   "La respuesta es demasiado grande.": "The response is too large.",
+  "El certificado del proxy {proxy} no es de confianza: {reason}": "The certificate of the proxy {proxy} is not trusted: {reason}",
+  "ha caducado": "it has expired",
+  "todavía no es válido": "it is not valid yet",
+  "es de otro servidor": "it belongs to another server",
+  "es autofirmado": "it is self-signed",
+  "lo emite una autoridad que este equipo no reconoce": "it is issued by an authority this computer does not recognize",
+  "está revocado": "it has been revoked",
+  "no se ha podido verificar": "it could not be verified",
 };

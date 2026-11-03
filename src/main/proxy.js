@@ -203,6 +203,30 @@ export function proxyCAs() {
   return trustedCAs || undefined;
 }
 
+// Motivo comprensible de un certificado rechazado (el mensaje de Node va en inglés y trae pistas para programadores),
+// o null si el error no es de certificado.
+function certProblem(err) {
+  switch (err?.code) {
+    case "CERT_HAS_EXPIRED":
+      return t("ha caducado");
+    case "CERT_NOT_YET_VALID":
+      return t("todavía no es válido");
+    case "ERR_TLS_CERT_ALTNAME_INVALID":
+      return t("es de otro servidor");
+    case "DEPTH_ZERO_SELF_SIGNED_CERT":
+    case "SELF_SIGNED_CERT_IN_CHAIN":
+      return t("es autofirmado");
+    case "UNABLE_TO_VERIFY_LEAF_SIGNATURE":
+    case "UNABLE_TO_GET_ISSUER_CERT":
+    case "UNABLE_TO_GET_ISSUER_CERT_LOCALLY":
+      return t("lo emite una autoridad que este equipo no reconoce");
+    case "CERT_REVOKED":
+      return t("está revocado");
+    default:
+      return /CERT|certificate/i.test(`${err?.code} ${err?.message}`) ? t("no se ha podido verificar") : null;
+  }
+}
+
 // Abre un túnel hasta targetHost:targetPort a través del proxy y devuelve el socket ya conectado al destino
 // (para https, el TLSSocket con el proxy). Los errores llevan .code: PROXY_CONNECT, PROXY_AUTH, PROXY_TARGET,
 // PROXY_TIMEOUT o PROXY_PROTOCOL. El nombre del destino nunca se resuelve aquí: lo resuelve el proxy.
@@ -224,7 +248,9 @@ export async function openTunnel(proxy, targetHost, targetPort, { timeout = 1500
       reject(
         connected
           ? proxyError("PROXY_PROTOCOL", t("Respuesta no válida del proxy: {detail}", { detail: err.message }))
-          : proxyError("PROXY_CONNECT", t("No se pudo conectar con el proxy {proxy}: {reason}", { proxy: hostPort(p.host, p.port), reason: err.message })),
+          : certProblem(err)
+            ? proxyError("PROXY_CONNECT", t("El certificado del proxy {proxy} no es de confianza: {reason}", { proxy: hostPort(p.host, p.port), reason: certProblem(err) }))
+            : proxyError("PROXY_CONNECT", t("No se pudo conectar con el proxy {proxy}: {reason}", { proxy: hostPort(p.host, p.port), reason: err.message })),
       ),
     );
     timer = setTimeout(() => reject(proxyError("PROXY_TIMEOUT", t("El proxy no ha respondido a tiempo ({seconds} s)", { seconds: Math.round(timeout / 1000) }))), timeout);
