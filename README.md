@@ -2,7 +2,7 @@
 
 **English** | [Español](README.es.md)
 
-A Windows desktop XMPP (Jabber) client built for EVE Online communities and alliances that coordinate over Jabber. It is a modern, highly customizable alternative to Pidgin: rooms with auto-join, fleet pings shown as cards, always-on-top pop-up alerts, EVE time and themes. The interface is available in English and Spanish.
+A desktop XMPP (Jabber) client for Windows (and Linux, in beta) built for EVE Online communities and alliances that coordinate over Jabber. It is a modern, highly customizable alternative to Pidgin: rooms with auto-join, fleet pings shown as cards, always-on-top pop-up alerts, EVE time and themes. The interface is available in English and Spanish.
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6)
 
@@ -16,6 +16,30 @@ A Windows desktop XMPP (Jabber) client built for EVE Online communities and alli
 | `EvEX-MPP-<version>-portable.exe` | **Portable.** Nothing to install. It keeps its data in an `EvEX-MPP-datos` folder next to the `.exe`, so you can carry it on a USB stick. |
 
 The executables are not code-signed yet, so Windows SmartScreen will warn you the first time. Before running them, you can check that they are exactly what GitHub built from this repository: see [How to verify your download](#how-to-verify-your-download). [CHANGELOG.md](CHANGELOG.md) lists what changed in each version.
+
+### Linux
+
+**Beta**, for x64 (included in the releases after 0.6.0). Two packages, built by GitHub Actions on Ubuntu:
+
+| File | What it is |
+|---|---|
+| `EvEX-MPP-<version>-x86_64.AppImage` | **AppImage.** Nothing to install: make it executable and run it. It needs FUSE 2: on Ubuntu 24.04 or later `sudo apt install libfuse2t64`, on 22.04 `sudo apt install libfuse2`. Without it, run it with `--appimage-extract-and-run`. |
+| `evex-mpp_<version>_amd64.deb` | **Debian/Ubuntu package.** Adds EvEX-MPP to the applications menu and the `evex-mpp` command. Uninstall it with `sudo apt remove evex-mpp`; your data in `~/.config/EvEX-MPP` is kept. |
+
+```bash
+chmod +x EvEX-MPP-<version>-x86_64.AppImage && ./EvEX-MPP-<version>-x86_64.AppImage
+# or
+sudo apt install ./evex-mpp_<version>_amd64.deb
+```
+
+Verify them first like the Windows files (`sha256sum -c` and `gh attestation verify`, see [How to verify your download](#how-to-verify-your-download)). They are not signed either: there is no GPG signature or apt repository yet.
+
+What it needs on Linux:
+
+- **A keyring** to store your passwords encrypted: GNOME Keyring (`gnome-keyring`) or KWallet. GNOME and KDE include one; on other desktops install it, or the password cannot be saved encrypted.
+- **Speech Dispatcher and a voice** to read fleet pings aloud: `sudo apt install speech-dispatcher espeak-ng`.
+- **Alerts on Wayland:** a Wayland desktop does not let apps place their own windows or keep them on top, so EvEX-MPP shows alerts as system notifications there instead of its own pop-ups (on X11 the pop-ups work as on Windows). If the desktop has no notification service, it falls back to its own pop-ups.
+- **Tray icon:** GNOME shows it only with the *AppIndicator and KStatusNotifierItem Support* extension (included in Ubuntu). KDE, Xfce and Cinnamon show it out of the box.
 
 ## How to verify your download
 
@@ -31,7 +55,7 @@ $expected = ((Get-Content checksums.txt) -match [regex]::Escape($file) -split '\
 if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $expected) { "OK: the checksum matches" } else { "DOES NOT MATCH: do not run it" }
 ```
 
-To compare by eye instead, `Get-FileHash <file> -Algorithm SHA256` prints the hash, which must equal the line for that file in `checksums.txt`. On Linux, macOS or Git Bash: `sha256sum -c --ignore-missing checksums.txt`.
+To compare by eye instead, `Get-FileHash <file> -Algorithm SHA256` prints the hash, which must equal the line for that file in `checksums.txt`. On Linux (for the AppImage and the `.deb`), macOS or Git Bash, in the folder with the downloads: `sha256sum -c --ignore-missing checksums.txt`, which prints `OK` for each file it finds.
 
 **2. Build provenance (GitHub attestation).** With the [GitHub CLI](https://cli.github.com/) installed:
 
@@ -39,9 +63,9 @@ To compare by eye instead, `Get-FileHash <file> -Algorithm SHA256` prints the ha
 gh attestation verify EvEX-MPP-Setup-<version>.exe --repo AlexDeveOp/EvEX-MPP
 ```
 
-It succeeds only if the file was built by a GitHub Actions workflow of this repository; it also shows the tag and commit it was built from. To also require the release workflow, add `--signer-workflow AlexDeveOp/EvEX-MPP/.github/workflows/release.yml`. Without an Internet connection, pass the attestation file from the release: `--bundle EvEX-MPP-v<version>.intoto.jsonl`. A modified file fails the check.
+It succeeds only if the file was built by a GitHub Actions workflow of this repository; it also shows the tag and commit it was built from. To also require the release workflow, add `--signer-workflow AlexDeveOp/EvEX-MPP/.github/workflows/release.yml`. Without an Internet connection, pass the attestation file from the release: `--bundle EvEX-MPP-v<version>.intoto.jsonl`. A modified file fails the check. The same command works on Linux and for every file of the release, including the AppImage and the `.deb`.
 
-**3. Windows SmartScreen.** The first time you run the installer or the portable, Windows may show *"Windows protected your PC"*. It appears because the executables are **not code-signed yet**, so Windows does not know the publisher and the files have not built up download reputation. It does not mean that anything harmful was found. If the checks above passed, click **More info** → **Run anyway**. This will go away once releases are signed; see the [code signing policy](#code-signing-policy).
+**3. Windows SmartScreen.** The first time you run the installer or the portable, Windows may show *"Windows protected your PC"*. It appears because the executables are **not code-signed yet**, so Windows does not know the publisher and the files have not built up download reputation. It does not mean that anything harmful was found. If the checks above passed, click **More info** → **Run anyway**. This will go away once releases are signed; see the [code signing policy](#code-signing-policy). Linux shows no such warning, but its packages are not signed either, so the checks above are just as useful there.
 
 **4. VirusTotal.** Each release is scanned on [VirusTotal](https://www.virustotal.com/), and the reports are linked here and in the release notes. A few engines sometimes flag unsigned installers by heuristics; a clean checksum and attestation tell you the file is the one GitHub built.
 

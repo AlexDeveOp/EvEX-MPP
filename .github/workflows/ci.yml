@@ -42,3 +42,26 @@ jobs:
 
       - name: Vulnerabilidades en las dependencias de la app
         run: npm audit --omit=dev --audit-level=high
+
+  # Compila el AppImage y el .deb para que un fallo de empaquetado en Linux se vea en el PR y no al publicar.
+  # No es un check obligatorio para fusionar.
+  linux-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar AppImage y .deb (y comprobar que build/ no cambia)
+        run: npm run dist:linux
+
+      - name: Contenido del .deb
+        run: |
+          dpkg-deb -I dist/*.deb | sed -n '/Package:/,$p'
+          dpkg-deb -c dist/*.deb | grep -E "applications/.*\.desktop|icons/.*\.png|chrome-sandbox"

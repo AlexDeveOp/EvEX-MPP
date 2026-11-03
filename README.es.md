@@ -2,7 +2,7 @@
 
 [English](README.md) | **Español**
 
-Cliente XMPP (Jabber) de escritorio para Windows, pensado para comunidades y alianzas de EVE Online que se coordinan por Jabber. Es una alternativa moderna y muy personalizable a Pidgin: salas con autounión, pings de flota en tarjetas, avisos emergentes siempre visibles, hora EVE y temas. La interfaz está en español e inglés.
+Cliente XMPP (Jabber) de escritorio para Windows (y Linux, en pruebas), pensado para comunidades y alianzas de EVE Online que se coordinan por Jabber. Es una alternativa moderna y muy personalizable a Pidgin: salas con autounión, pings de flota en tarjetas, avisos emergentes siempre visibles, hora EVE y temas. La interfaz está en español e inglés.
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6)
 
@@ -16,6 +16,30 @@ En [Releases](../../releases) hay dos ejecutables:
 | `EvEX-MPP-<versión>-portable.exe` | **Portable.** No se instala. Guarda sus datos en `EvEX-MPP-datos`, junto al `.exe`, así que se puede llevar en un USB. |
 
 Los ejecutables aún no están firmados, así que la primera vez avisará Windows SmartScreen. Antes de abrirlos puedes comprobar que son exactamente los que compiló GitHub a partir de este repositorio: lo explica [Cómo verificar la descarga](#cómo-verificar-la-descarga). En [CHANGELOG.md](CHANGELOG.md) están los cambios de cada versión.
+
+### Linux
+
+**En pruebas (beta)**, para x64 (en las versiones posteriores a la 0.6.0). Hay dos paquetes, compilados por GitHub Actions en Ubuntu:
+
+| Archivo | Para qué |
+|---|---|
+| `EvEX-MPP-<versión>-x86_64.AppImage` | **AppImage.** No se instala: dale permiso de ejecución y ábrelo. Necesita FUSE 2: en Ubuntu 24.04 o posterior, `sudo apt install libfuse2t64`; en la 22.04, `sudo apt install libfuse2`. Sin él, ábrelo con `--appimage-extract-and-run`. |
+| `evex-mpp_<versión>_amd64.deb` | **Paquete de Debian/Ubuntu.** Añade EvEX-MPP al menú de aplicaciones y el comando `evex-mpp`. Se desinstala con `sudo apt remove evex-mpp` y conserva tus datos de `~/.config/EvEX-MPP`. |
+
+```bash
+chmod +x EvEX-MPP-<versión>-x86_64.AppImage && ./EvEX-MPP-<versión>-x86_64.AppImage
+# o bien
+sudo apt install ./evex-mpp_<versión>_amd64.deb
+```
+
+Verifícalos antes, igual que los archivos de Windows (`sha256sum -c` y `gh attestation verify`; consulta [Cómo verificar la descarga](#cómo-verificar-la-descarga)). Tampoco están firmados: todavía no hay firma GPG ni repositorio de apt.
+
+Qué necesita en Linux:
+
+- **Un llavero** para guardar tus contraseñas cifradas: el de GNOME (`gnome-keyring`) o KWallet. GNOME y KDE ya traen uno; en otros escritorios, instálalo, o la contraseña no se podrá guardar cifrada.
+- **Speech Dispatcher y una voz** para leer en voz alta los pings de flota: `sudo apt install speech-dispatcher espeak-ng`.
+- **Avisos en Wayland:** un escritorio Wayland no deja que las apps coloquen sus ventanas ni las pongan por encima, así que allí EvEX-MPP muestra los avisos como notificaciones del sistema en vez de sus burbujas (en X11 las burbujas funcionan como en Windows). Si el escritorio no tiene servicio de notificaciones, vuelve a sus burbujas.
+- **Icono de la bandeja:** GNOME solo lo muestra con la extensión *AppIndicator and KStatusNotifierItem Support* (Ubuntu ya la trae). KDE, Xfce y Cinnamon lo muestran sin más.
 
 ## Cómo verificar la descarga
 
@@ -31,7 +55,7 @@ $expected = ((Get-Content checksums.txt) -match [regex]::Escape($file) -split '\
 if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $expected) { "OK: la suma coincide" } else { "NO COINCIDE: no lo ejecutes" }
 ```
 
-Si prefieres compararlo a ojo, `Get-FileHash <archivo> -Algorithm SHA256` muestra la suma, que debe ser igual a la línea de ese archivo en `checksums.txt`. En Linux, macOS o Git Bash: `sha256sum -c --ignore-missing checksums.txt`.
+Si prefieres compararlo a ojo, `Get-FileHash <archivo> -Algorithm SHA256` muestra la suma, que debe ser igual a la línea de ese archivo en `checksums.txt`. En Linux (para el AppImage y el `.deb`), macOS o Git Bash, en la carpeta de las descargas: `sha256sum -c --ignore-missing checksums.txt`, que escribe `OK` para cada archivo que encuentra.
 
 **2. Origen de la compilación (atestación de GitHub).** Con la [CLI de GitHub](https://cli.github.com/) instalada:
 
@@ -39,9 +63,9 @@ Si prefieres compararlo a ojo, `Get-FileHash <archivo> -Algorithm SHA256` muestr
 gh attestation verify EvEX-MPP-Setup-<versión>.exe --repo AlexDeveOp/EvEX-MPP
 ```
 
-Solo da el visto bueno si el archivo lo compiló un workflow de GitHub Actions de este repositorio, y además muestra la etiqueta y el commit de los que salió. Para exigir también que sea el workflow de las versiones, añade `--signer-workflow AlexDeveOp/EvEX-MPP/.github/workflows/release.yml`. Sin conexión a Internet, pásale el archivo de atestación de la versión: `--bundle EvEX-MPP-v<versión>.intoto.jsonl`. Un archivo modificado no pasa la comprobación.
+Solo da el visto bueno si el archivo lo compiló un workflow de GitHub Actions de este repositorio, y además muestra la etiqueta y el commit de los que salió. Para exigir también que sea el workflow de las versiones, añade `--signer-workflow AlexDeveOp/EvEX-MPP/.github/workflows/release.yml`. Sin conexión a Internet, pásale el archivo de atestación de la versión: `--bundle EvEX-MPP-v<versión>.intoto.jsonl`. Un archivo modificado no pasa la comprobación. El mismo comando sirve en Linux y para todos los archivos de la versión, también el AppImage y el `.deb`.
 
-**3. Windows SmartScreen.** La primera vez que abras el instalador o el portable, Windows puede mostrar *«Windows protegió su PC»*. Sale porque los ejecutables **aún no están firmados**: Windows no conoce al editor y los archivos todavía no tienen reputación de descargas. No significa que haya encontrado nada dañino. Si las comprobaciones anteriores salieron bien, pulsa **Más información** → **Ejecutar de todas formas**. Dejará de salir cuando las versiones estén firmadas; consulta la [política de firma de código](#política-de-firma-de-código-code-signing-policy).
+**3. Windows SmartScreen.** La primera vez que abras el instalador o el portable, Windows puede mostrar *«Windows protegió su PC»*. Sale porque los ejecutables **aún no están firmados**: Windows no conoce al editor y los archivos todavía no tienen reputación de descargas. No significa que haya encontrado nada dañino. Si las comprobaciones anteriores salieron bien, pulsa **Más información** → **Ejecutar de todas formas**. Dejará de salir cuando las versiones estén firmadas; consulta la [política de firma de código](#política-de-firma-de-código-code-signing-policy). Linux no muestra ningún aviso parecido, pero sus paquetes tampoco están firmados, así que las comprobaciones anteriores sirven igual allí.
 
 **4. VirusTotal.** Cada versión se analiza en [VirusTotal](https://www.virustotal.com/), y los informes se enlazan aquí y en las notas de la versión. Algunos antivirus a veces marcan por heurística los instaladores sin firmar; una suma y una atestación correctas indican que el archivo es el que compiló GitHub.
 

@@ -8,6 +8,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Linux packages (beta):** an AppImage and a `.deb` for x64, built by GitHub Actions on Ubuntu and published with the Windows files, in the same `checksums.txt` and build provenance attestation. The `.deb` adds a menu entry (Network / Instant Messaging) and the `evex-mpp` command, recommends a keyring and Speech Dispatcher, and sets `chrome-sandbox` permissions on install. The README explains how to install and verify them and what Linux needs (FUSE 2 for the AppImage, a keyring, Speech Dispatcher for read-aloud).
+- **Alerts on Wayland:** Wayland does not let apps place their windows or keep them on top, so there EvEX-MPP shows alerts as system notifications instead of its own pop-ups (fleet pings stay until dismissed and close when you read the pings). With no notification service it falls back to its own pop-ups. Windows and X11 are unchanged.
+- The CI also builds the Linux packages on every change, so a packaging problem shows up before a release.
 - **Linux support in the app** (system integration):
   - *Read aloud* uses the system voices (speech-dispatcher, e.g. espeak-ng).
   - The font list shows the fonts installed on the system (fontconfig).
