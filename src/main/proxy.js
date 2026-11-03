@@ -3,6 +3,7 @@
 import net from "node:net";
 import tls from "node:tls";
 import http from "node:http";
+import crypto from "node:crypto";
 import { once } from "node:events";
 import { t, tk } from "./i18n.js";
 
@@ -278,13 +279,22 @@ export async function createForwarder(proxy, host, port, opts = {}) {
 
 // Proxy HTTP local para Chromium (session.setProxy): atiende CONNECT y peticiones http:// con URI absoluta y las
 // manda por el proxy que devuelva getProxy() en ese momento. Si no hay proxy o falla, responde 502: nunca conecta directo.
-// No pide usuario ni contraseña: en Electron 45, net.fetch del proceso principal no gestiona la autenticación de
-// proxy (no emite «login» ante un 407, y poner Proxy-Authorization a mano da net::ERR_INVALID_ARGUMENT), así que
-// las actualizaciones y los GIFs fallarían. Por eso escucha solo en 127.0.0.1, y la contraseña del proxy real
-// la añade aquí: nunca sale de este proceso. Las cabeceras Proxy-* que lleguen se quitan antes de reenviar.
+// Escucha solo en 127.0.0.1 y exige un usuario y una contraseña aleatorios, creados al arrancar y guardados solo en
+// memoria: otro programa del PC no puede salir por el proxy configurado. La app se los da a Chromium con el evento
+// «login» (ventanas y net.request; net.fetch no lo admite, ver net-fetch.js). La contraseña del proxy real la añade
+// aquí y nunca sale de este proceso. Las cabeceras Proxy-* que lleguen se quitan antes de reenviar.
 export async function startBridge(getProxy) {
   const sockets = new Set();
   const raw502 = "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+  const raw407 = 'HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm="EvEX-MPP"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n';
+  const username = `evex-${crypto.randomBytes(6).toString("hex")}`;
+  const password = crypto.randomBytes(24).toString("base64url");
+  const expected = Buffer.from(`Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`);
+  // Comparación en tiempo constante.
+  const authorized = (req) => {
+    const got = Buffer.from(String(req.headers["proxy-authorization"] || ""));
+    return got.length === expected.length && crypto.timingSafeEqual(got, expected);
+  };
   const upstream = () => {
     try {
       return getProxy() || null;
@@ -298,6 +308,10 @@ export async function startBridge(getProxy) {
   };
 
   const server = http.createServer(async (req, res) => {
+    if (!authorized(req)) {
+      res.writeHead(407, { "Proxy-Authenticate": 'Basic realm="EvEX-MPP"', Connection: "close" });
+      return res.end();
+    }
     let url;
     try {
       url = new URL(req.url);
@@ -341,6 +355,7 @@ export async function startBridge(getProxy) {
 
   server.on("connect", async (req, sock, head) => {
     sock.on("error", () => {});
+    if (!authorized(req)) return sock.end(raw407);
     const m =/^\[?([^\]]+?)\]?:(\d{1,5})$/.exec(req.url || "");
     const p = m && upstream();
     if (!p) return sock.end(raw502);
@@ -363,6 +378,8 @@ export async function startBridge(getProxy) {
   await once(server, "listening");
   return {
     port: server.address().port,
+    username,
+    password,
     close() {
       server.close();
       for (const s of sockets) s.destroy();

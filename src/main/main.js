@@ -20,6 +20,7 @@ import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
 import { startBridge, testProxy, normalizeProxy, openTunnel } from "./proxy.js";
 import { globalProxy, accountProxy } from "./proxy-settings.js";
+import { createNetFetch } from "./net-fetch.js";
 
 import { t, setLanguage, currentLang } from "./i18n.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -77,7 +78,7 @@ const updateNotified = new Set();
 
 function checkLatest() {
   if (!REPO) throw new Error(t("No se conoce el repositorio de la app."));
-  return checkForUpdates({ currentVersion: app.getVersion(), repo: REPO, fetchImpl: (url, opts) => net.fetch(url, opts) });
+  return checkForUpdates({ currentVersion: app.getVersion(), repo: REPO, fetchImpl: netFetch });
 }
 
 // Comprobación automática: avisa una sola vez por versión.
@@ -321,8 +322,8 @@ let bridge = null;
 let bridgeProxy = null; // proxy general con contraseña, ya descifrada, para el puente
 
 // Todo el tráfico web de la app (Chromium y net.fetch) va por un proxy HTTP local que reenvía al proxy general.
-// Así valen SOCKS5 con usuario (Chromium no lo admite) y las contraseñas no salen del proceso principal. El puente no
-// pide credenciales porque net.fetch no sabe dárselas (no dispara el evento «login»); solo escucha en 127.0.0.1.
+// Así valen SOCKS5 con usuario (Chromium no lo admite) y las contraseñas no salen del proceso principal. El puente
+// pide un usuario y una contraseña aleatorios (ver startBridge), que la app da con «login» y con netFetch.
 // Si el proxy general está activado pero falla o está incompleto, el puente responde 502: nunca se va directo.
 async function applyGlobalProxy() {
   const s = store.get().settings;
@@ -349,6 +350,23 @@ async function applyGlobalProxy() {
   // Las conexiones abiertas con la configuración anterior no deben seguir usándose.
   await ses.closeAllConnections().catch(() => {});
 }
+
+// Credenciales del puente local: solo para él (127.0.0.1 y su puerto), nunca para otro proxy ni para un servidor web.
+function bridgeAuth(info) {
+  if (!bridge || !info?.isProxy || Number(info.port) !== bridge.port || !["127.0.0.1", "localhost"].includes(info.host)) return null;
+  return { username: bridge.username, password: bridge.password };
+}
+
+// Ventanas y burbujas: Chromium pide las credenciales del proxy con este evento.
+function onLogin(event, _wc, _details, authInfo, callback) {
+  const auth = bridgeAuth(authInfo);
+  if (!auth) return;
+  event.preventDefault();
+  callback(auth.username, auth.password);
+}
+
+// Descargas del proceso principal (actualizaciones, GIFs): net.fetch no da credenciales al proxy; esto sí.
+const netFetch = createNetFetch(bridgeAuth);
 
 // Reconecta las cuentas conectadas a las que afecta un cambio de proxy. Las reconexiones de una misma cuenta van en
 // cola: con dos cambios seguidos, la segunda cortaba a la primera a medio abrir. Cada conexión lee el proxy al
@@ -652,7 +670,7 @@ function registerIpc() {
   handle("logs:search", (id, opts) => logs.search(id, opts));
   handle("logs:list", (id) => logs.listConversations(id));
 
-  registerMediaIpc(handle, { getWin: () => win, getConn });
+  registerMediaIpc(handle, { getWin: () => win, getConn, fetchImpl: netFetch });
   registerPidginIpc(handle, { logs, send, publicAccount });
 
   // Burbuja propia, notificación de Windows o ambas, según Preferencias → Notificaciones.
@@ -777,6 +795,7 @@ app.whenReady().then(async () => {
   registerIpc();
   popupIpc(handle);
   applySystemSettings(store.get().settings);
+  app.on("login", onLogin);
   await applyGlobalProxy().catch(() => {});
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(["notifications", "clipboard-sanitized-write", "clipboard-read", "media", "fullscreen"].includes(permission)));

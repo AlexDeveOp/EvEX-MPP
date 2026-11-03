@@ -1047,4 +1047,5 @@ export default {
   // proxy (integración)
   "El proxy general está activado pero no tiene servidor.": "The general proxy is turned on but has no server.",
   "El proxy propio de la cuenta no tiene servidor.": "The account's own proxy has no server.",
+  "La respuesta es demasiado grande.": "The response is too large.",
 };

@@ -214,17 +214,29 @@ async function rawRequest(port, text) {
   return { s, text: buf };
 }
 
-test("puente para Chromium: CONNECT y GET absoluto por el proxy, sin pedir credenciales; 502 sin proxy", async () => {
+test("puente para Chromium: exige sus credenciales; CONNECT y GET absoluto por el proxy; 502 sin proxy", async () => {
   const fp = await fake({ type: "socks5", auth: AUTH });
   let current = proxyFor(fp, "socks5", AUTH);
   const bridge = await startBridge(() => current);
   closers.push(bridge.close);
   assert.ok(bridge.port > 0);
-  // Cabecera que alguien pudiera mandar: el puente no la pide y no debe reenviarla.
-  const auth = `Proxy-Authorization: Basic ${Buffer.from("x:y").toString("base64")}\r\n`;
+  assert.ok(bridge.username && bridge.password.length >= 24, "credenciales aleatorias");
+  const basic = (u, p) => `Proxy-Authorization: Basic ${Buffer.from(`${u}:${p}`).toString("base64")}\r\n`;
+  const auth = basic(bridge.username, bridge.password);
+
+  // Sin credenciales o con otras: 407, y no se abre nada en el proxy (otro programa del PC no puede usarlo).
+  for (const extra of ["", basic(bridge.username, "otra"), basic("x", "y")]) {
+    for (const req of [`CONNECT localhost:${echoPort} HTTP/1.1\r\n${extra}\r\n`, `GET http://localhost:${webPort}/ HTTP/1.1\r\nHost: x\r\n${extra}\r\n`]) {
+      const r = await rawRequest(bridge.port, req);
+      assert.match(r.text, /^HTTP\/1\.1 407/);
+      assert.match(r.text, /Proxy-Authenticate: Basic/i);
+      r.s.destroy();
+    }
+  }
+  assert.deepEqual(fp.targets, []);
 
   // CONNECT (HTTPS): túnel hasta el eco por el proxy (con su usuario y contraseña, que pone el puente).
-  const c = await rawRequest(bridge.port, `CONNECT localhost:${echoPort} HTTP/1.1\r\nHost: localhost:${echoPort}\r\n\r\n`);
+  const c = await rawRequest(bridge.port, `CONNECT localhost:${echoPort} HTTP/1.1\r\nHost: localhost:${echoPort}\r\n${auth}\r\n`);
   assert.match(c.text, /^HTTP\/1\.1 200 Connection Established/);
   assert.equal(await roundTrip(c.s, "dentro del túnel"), "dentro del túnel");
   c.s.destroy();
@@ -242,7 +254,7 @@ test("puente para Chromium: CONNECT y GET absoluto por el proxy, sin pedir crede
   // Sin proxy configurado: 502 y nunca conexión directa.
   current = null;
   const before = fp.targets.length;
-  for (const req of [`CONNECT localhost:${echoPort} HTTP/1.1\r\n\r\n`, `GET http://localhost:${webPort}/ HTTP/1.1\r\nHost: x\r\n\r\n`]) {
+  for (const req of [`CONNECT localhost:${echoPort} HTTP/1.1\r\n${auth}\r\n`, `GET http://localhost:${webPort}/ HTTP/1.1\r\nHost: x\r\n${auth}\r\n`]) {
     const r = await rawRequest(bridge.port, req);
     assert.match(r.text, /^HTTP\/1\.1 502/);
     r.s.destroy();
@@ -251,7 +263,7 @@ test("puente para Chromium: CONNECT y GET absoluto por el proxy, sin pedir crede
 
   // El proxy de verdad falla (credenciales malas): también 502.
   current = proxyFor(fp, "socks5", { username: "piloto", password: "mala" });
-  const bad = await rawRequest(bridge.port, `CONNECT localhost:${echoPort} HTTP/1.1\r\n\r\n`);
+  const bad = await rawRequest(bridge.port, `CONNECT localhost:${echoPort} HTTP/1.1\r\n${auth}\r\n`);
   assert.match(bad.text, /^HTTP\/1\.1 502/);
   bad.s.destroy();
 });
