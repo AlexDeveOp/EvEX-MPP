@@ -36,7 +36,15 @@ export function autostartFile(home) {
 const quoteExec = (s) => (/[\s"\\`$]/.test(s) ? `"${s.replace(/(["\\`$])/g, "\\$1")}"` : s);
 
 export function desktopEntry({ exe, args = [] }) {
-  return ["[Desktop Entry]", "Type=Application", "Name=EvEX-MPP", "Comment=XMPP chat client", `Exec=${[exe, ...args].map(quoteExec).join(" ")}`, "Terminal=false", "X-GNOME-Autostart-enabled=true", ""].join("\n");
+  return ["[Desktop Entry]", "Type=Application", "Name=EvEX-MPP", "Comment=XMPP chat client", `Exec=${[exe, ...args].map(quoteExec).join(" ")}`, "Icon=evex-mpp", "Terminal=false", "X-GNOME-Autostart-enabled=true", ""].join("\n");
+}
+
+// Qué ejecutar al iniciar sesión: el fichero .AppImage si se conoce, o el ejecutable instalado (.deb). Un AppImage
+// extraído o montado vive en /tmp y desaparece al cerrar: entonces no hay ruta fiable (null).
+export function autostartExec({ appImage = "", execPath = "" } = {}) {
+  if (appImage) return appImage;
+  if (!execPath || /^\/tmp\/(\.mount_|appimage_extracted_)/.test(execPath)) return null;
+  return execPath;
 }
 
 // Dónde guarda las contraseñas el sistema: "os" en Windows y macOS; en Linux, "keyring" o "basic_text".

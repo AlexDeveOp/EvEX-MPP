@@ -1,7 +1,7 @@
 // Diferencias entre sistemas: rutas de Pidgin, fuentes de fontconfig, inicio automático en Linux y llavero.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { purpleDirFor, pidginSoundDirsFor, parseFcList, autostartFile, desktopEntry, linuxStorageKind, hasSecureStorage } from "../../src/main/platform.js";
+import { purpleDirFor, pidginSoundDirsFor, parseFcList, autostartFile, autostartExec, desktopEntry, linuxStorageKind, hasSecureStorage } from "../../src/main/platform.js";
 
 test("la carpeta de Pidgin es %APPDATA%\\.purple en Windows y ~/.purple en Linux", () => {
   assert.equal(purpleDirFor({ platform: "win32", env: { APPDATA: "C:\\Users\\x\\AppData\\Roaming" } }), "C:\\Users\\x\\AppData\\Roaming\\.purple");
@@ -27,6 +27,14 @@ test("el inicio automático en Linux es un .desktop en ~/.config/autostart que a
   assert.match(entry, /^\[Desktop Entry\]\n/);
   assert.match(entry, /^Exec=\/home\/x\/Apps\/EvEX-MPP-0\.7\.0\.AppImage --hidden$/m);
   assert.match(entry, /^Type=Application$/m);
+  assert.match(entry, /^Icon=evex-mpp$/m, "mismo icono que el .desktop del paquete");
+});
+
+test("el inicio automático apunta al .AppImage original o al ejecutable instalado, nunca a una carpeta temporal", () => {
+  assert.equal(autostartExec({ appImage: "/home/x/Apps/EvEX-MPP.AppImage", execPath: "/tmp/.mount_EvEXabc/evex-mpp" }), "/home/x/Apps/EvEX-MPP.AppImage");
+  assert.equal(autostartExec({ appImage: "", execPath: "/opt/EvEX-MPP/evex-mpp" }), "/opt/EvEX-MPP/evex-mpp", ".deb");
+  assert.equal(autostartExec({ appImage: "", execPath: "/tmp/.mount_EvEXabc/evex-mpp" }), null, "AppImage montado sin APPIMAGE");
+  assert.equal(autostartExec({ appImage: "", execPath: "/tmp/appimage_extracted_123/evex-mpp" }), null, "--appimage-extract-and-run");
 });
 
 test("una ruta con espacios o comillas va entre comillas y escapada en Exec", () => {

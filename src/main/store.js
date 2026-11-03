@@ -226,14 +226,25 @@ export function getAccount(id) {
 
 // Dónde cifra el sistema: "os" en Windows y macOS; en Linux, "keyring" o "basic_text" (sin llavero), según el prefijo
 // de un texto cifrado de prueba (ver linuxStorageKind). Se comprueba una vez, con la app ya lista.
+// La prueba puede abrir la ventana del escritorio para desbloquear el llavero: un fallo o una cancelación no se recuerda,
+// para volver a intentarlo la próxima vez.
 let storageProbe = null;
 export function secretStorage() {
   if (process.platform !== "linux") return Promise.resolve("os");
   storageProbe ||= safeStorage.encryptStringAsync("evex").then(
     (buf) => linuxStorageKind(buf.subarray(0, 3).toString()),
-    () => "basic_text",
+    () => {
+      storageProbe = null;
+      return "basic_text";
+    },
   );
   return storageProbe;
+}
+
+// Para la interfaz al arrancar: no espera a que el usuario conteste a la ventana del llavero. Si no hay respuesta
+// enseguida devuelve "unknown"; la comprobación sigue y se usa al guardar una contraseña.
+export function secretStorageSoon(ms = 1500) {
+  return Promise.race([secretStorage(), new Promise((r) => setTimeout(() => r("unknown"), ms))]);
 }
 
 export class NoKeyringError extends Error {

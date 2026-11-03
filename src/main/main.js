@@ -15,7 +15,7 @@ import { configurePingSync, syncPings } from "./ping-sync.js";
 import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
 import { userData, mediaDir, avatarDir } from "./paths.js";
-import { autostartFile, desktopEntry } from "./platform.js";
+import { autostartFile, autostartExec, desktopEntry } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
 
@@ -432,7 +432,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorage(), trayAvailable },
+      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable },
     };
   });
 
@@ -604,12 +604,14 @@ function openFromNotification(data) {
 }
 
 // Linux no tiene «iniciar con el sistema» en Electron: se crea o se quita el .desktop de ~/.config/autostart.
-// El AppImage se ejecuta desde una carpeta temporal: hay que apuntar al fichero .AppImage original.
+// El AppImage se ejecuta desde una carpeta temporal: hay que apuntar al fichero .AppImage original. Si no se conoce
+// (APPIMAGE vacía), no se escribe nada, porque apuntaría a una carpeta que desaparece al cerrar la app.
 function setLinuxAutostart(enabled) {
   const file = autostartFile(os.homedir());
-  if (!enabled) return fs.rmSync(file, { force: true });
+  const exe = autostartExec({ appImage: process.env.APPIMAGE, execPath: process.execPath });
+  if (!enabled || !exe) return fs.rmSync(file, { force: true });
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, desktopEntry({ exe: process.env.APPIMAGE || process.execPath, args: ["--hidden"] }));
+  fs.writeFileSync(file, desktopEntry({ exe, args: ["--hidden"] }));
 }
 
 function applySystemSettings(s) {
