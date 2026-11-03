@@ -39,4 +39,9 @@ test("testResultText: proxy solo, servidor alcanzable, no alcanzable y respuesta
   assert.equal(bad.kind, "bad");
   assert.match(bad.text, /no se llega \(conexión rechazada\)/);
   assert.match(testResultText({ ms: 40, target: { ok: false } }, dest).text, /error desconocido/);
+  assert.equal(
+    testResultText({ ms: 3, target: { ok: false, error: "El proxy no ha podido conectar con ejemplo.com:5222: fallo general del servidor SOCKS" } }, dest).text,
+    "Proxy: responde (3 ms) · Servidor XMPP ejemplo.com:5222: no se llega (fallo general del servidor SOCKS)",
+    "el destino no se repite",
+  );
 });

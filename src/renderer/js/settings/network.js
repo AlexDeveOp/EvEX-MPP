@@ -29,7 +29,11 @@ export function testResultText(r, target) {
   if (!target || !r?.target) return { kind: "good", text: proxy };
   const server = `${target.host}:${target.port}`;
   if (r.target.ok) return { kind: "good", text: `${proxy} · ${t("Servidor XMPP {server}: se llega ({ms} ms)", { server, ms: Math.round(r.target.ms ?? 0) })}` };
-  return { kind: "bad", text: `${proxy} · ${t("Servidor XMPP {server}: no se llega ({error})", { server, error: r.target.error || t("error desconocido") })}` };
+  // El error del proxy ya nombra el destino («… con ejemplo.com:5222: conexión rechazada»): se deja solo el motivo.
+  const error = String(r.target.error || "");
+  const at = error.lastIndexOf(`${server}: `);
+  const reason = at >= 0 ? error.slice(at + server.length + 2) : error;
+  return { kind: "bad", text: `${proxy} · ${t("Servidor XMPP {server}: no se llega ({error})", { server, error: reason || t("error desconocido") })}` };
 }
 
 // Campos de un proxy: tipo, servidor, puerto, usuario, contraseña (con ojo) y «Probar».
