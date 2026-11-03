@@ -339,7 +339,7 @@ function createTray() {
   tray.on("balloon-click", showWindow);
 }
 
-// Pings sin leer: la bandeja muestra un «!» ámbar (parpadeando si está activado) hasta que se abren los pings.
+// Pings sin leer: la bandeja muestra la sirena sobre un círculo ámbar (parpadeando si está activado) hasta que se abren los pings.
 let pingAlert = 0;
 let blinkTimer = null;
 let blinkOn = false;
