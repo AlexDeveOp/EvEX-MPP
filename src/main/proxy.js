@@ -227,6 +227,27 @@ function certProblem(err) {
   }
 }
 
+// Motivo comprensible de un fallo al llegar al proxy; si no se conoce, el mensaje de Node.
+function netProblem(err) {
+  switch (err?.code) {
+    case "ECONNREFUSED":
+      return t("rechaza la conexión (¿está encendido y es el puerto correcto?)");
+    case "ENOTFOUND":
+    case "EAI_AGAIN":
+      return t("no se encuentra ese servidor");
+    case "ETIMEDOUT":
+      return t("no responde");
+    case "ECONNRESET":
+    case "EPIPE":
+      return t("ha cortado la conexión");
+    case "EHOSTUNREACH":
+    case "ENETUNREACH":
+      return t("no se puede llegar a esa red");
+    default:
+      return err?.message || String(err);
+  }
+}
+
 // Abre un túnel hasta targetHost:targetPort a través del proxy y devuelve el socket ya conectado al destino
 // (para https, el TLSSocket con el proxy). Los errores llevan .code: PROXY_CONNECT, PROXY_AUTH, PROXY_TARGET,
 // PROXY_TIMEOUT o PROXY_PROTOCOL. El nombre del destino nunca se resuelve aquí: lo resuelve el proxy.
@@ -250,7 +271,7 @@ export async function openTunnel(proxy, targetHost, targetPort, { timeout = 1500
           ? proxyError("PROXY_PROTOCOL", t("Respuesta no válida del proxy: {detail}", { detail: err.message }))
           : certProblem(err)
             ? proxyError("PROXY_CONNECT", t("El certificado del proxy {proxy} no es de confianza: {reason}", { proxy: hostPort(p.host, p.port), reason: certProblem(err) }))
-            : proxyError("PROXY_CONNECT", t("No se pudo conectar con el proxy {proxy}: {reason}", { proxy: hostPort(p.host, p.port), reason: err.message })),
+            : proxyError("PROXY_CONNECT", t("No se pudo conectar con el proxy {proxy}: {reason}", { proxy: hostPort(p.host, p.port), reason: netProblem(err) })),
       ),
     );
     timer = setTimeout(() => reject(proxyError("PROXY_TIMEOUT", t("El proxy no ha respondido a tiempo ({seconds} s)", { seconds: Math.round(timeout / 1000) }))), timeout);

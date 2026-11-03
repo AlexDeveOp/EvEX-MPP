@@ -119,7 +119,13 @@ test("SOCKS5: una IP literal de destino va como IPv4 o IPv6 (ATYP 1 o 4), bien c
 
 test("proxy inalcanzable → PROXY_CONNECT; sin servidor → PROXY_CONNECT", async () => {
   const port = await deadPort();
-  await assert.rejects(openTunnel({ type: "socks5", host: "127.0.0.1", port }, "localhost", echoPort), { code: "PROXY_CONNECT" });
+  await assert.rejects(openTunnel({ type: "socks5", host: "127.0.0.1", port }, "localhost", echoPort), (err) => {
+    assert.equal(err.code, "PROXY_CONNECT");
+    // En el idioma de la app, sin «connect ECONNREFUSED …».
+    assert.match(err.message, /rechaza la conexión/);
+    assert.doesNotMatch(err.message, /ECONNREFUSED/);
+    return true;
+  });
   await assert.rejects(openTunnel({ type: "http", host: "" }, "localhost", echoPort), { code: "PROXY_CONNECT" });
 });
 

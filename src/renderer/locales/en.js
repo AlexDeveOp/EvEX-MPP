@@ -1056,4 +1056,9 @@ export default {
   "lo emite una autoridad que este equipo no reconoce": "it is issued by an authority this computer does not recognize",
   "está revocado": "it has been revoked",
   "no se ha podido verificar": "it could not be verified",
+  "rechaza la conexión (¿está encendido y es el puerto correcto?)": "it refuses the connection (is it running, and is the port right?)",
+  "no se encuentra ese servidor": "that server cannot be found",
+  "no responde": "it does not respond",
+  "ha cortado la conexión": "it closed the connection",
+  "no se puede llegar a esa red": "that network cannot be reached",
 };
