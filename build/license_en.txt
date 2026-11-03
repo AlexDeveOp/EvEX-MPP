@@ -1,4 +1,4 @@
-EvEX-MPP - privacy and license
+﻿EvEX-MPP - privacy and license
 
 PRIVACY
 EvEX-MPP has no telemetry, analytics, advertising or crash reporting, and it does not check for updates unless you turn that on. The developer receives no data from the app. Your accounts, encrypted passwords and message history are stored only on this PC.

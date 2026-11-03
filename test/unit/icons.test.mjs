@@ -81,3 +81,13 @@ test("shadeForWhite oscurece el color de aviso lo justo para que la sirena blanc
   assert.equal(shadeForWhite(undefined), shadeForWhite("#f59e0b"));
   assert.equal(shadeForWhite("rgb(1,2,3)"), shadeForWhite("#f59e0b"));
 });
+
+test("las páginas de licencia del instalador llevan exactamente un BOM y ningún CR doble", async () => {
+  const fs = await import("node:fs");
+  for (const lang of ["en", "es"]) {
+    const b = fs.readFileSync(new URL(`../../build/license_${lang}.txt`, import.meta.url));
+    assert.deepEqual([...b.subarray(0, 3)], [0xef, 0xbb, 0xbf], `license_${lang}: falta el BOM (electron-builder lo añadiría y git lo vería cambiado)`);
+    assert.notDeepEqual([...b.subarray(3, 6)], [0xef, 0xbb, 0xbf], `license_${lang}: BOM doble`);
+    assert.ok(!b.includes(Buffer.from("\r\r")), `license_${lang}: CR doble en los saltos de línea`);
+  }
+});
