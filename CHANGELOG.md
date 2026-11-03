@@ -26,7 +26,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - The minimize, maximize and close buttons are now drawn by the app instead of Windows: they follow the theme, are translated, and the maximize button turns into *Restore* while the window is maximized. *Close* still sends the app to the tray when *Close to tray* is on.
 - *Do not disturb* now also lets connection lost/restored sounds through, like fleet pings.
 - Several alerts of the same kind arriving at once ring only once.
-- Fleet ping alerts show the same siren as the pings inside the app instead of an exclamation mark: in the popup, and in the tray and taskbar icons (a filled siren that stays readable at 16 px). The popup siren turns white when the theme's warning color is too dark for a dark one.
+- Fleet ping alerts show the same siren as the pings inside the app instead of an exclamation mark, in white: in the popup, in the tray and taskbar icons (a filled siren that stays readable at 16 px) and in the Windows notification. In the popup, a light warning color (Nord, Dracula...) is darkened just enough for the white siren to be readable.
 
 ### Fixed
 - In the new background editor (not released before), a pasted image went to every open editor at once and could not be undone, and the import buttons only appeared with the *Image* type. Ctrl+V now goes only to the editor you clicked last, or the only one open ([#11](https://github.com/AlexDeveOp/EvEX-MPP/issues/11)).

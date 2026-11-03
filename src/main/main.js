@@ -905,7 +905,7 @@ function registerIpc() {
     if (style === "custom" || style === "both") showPopup(data);
     if ((style === "windows" || style === "both") && Notification.isSupported()) {
       const body = [data.text, ...(data.fields || []).map((f) => `${f.key}: ${f.value}`)].filter(Boolean).join("\n");
-      const toast = new Notification({ title: data.title, body: body.slice(0, 400), silent: true, icon: nativeImage.createFromBuffer(renderIcon(128)), urgency: data.kind === "ping" ? "critical" : "normal" });
+      const toast = new Notification({ title: data.title, body: body.slice(0, 400), silent: true, icon: nativeImage.createFromBuffer(data.kind === "ping" ? renderAlertIcon(128) : renderIcon(128)), urgency: data.kind === "ping" ? "critical" : "normal" });
       toast.on("click", () => openFromNotification(data));
       toast.show();
     }

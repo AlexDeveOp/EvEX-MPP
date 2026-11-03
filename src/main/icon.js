@@ -51,10 +51,9 @@ function sdSegment(x, y, ax, ay, bx, by, r) {
   return Math.hypot(pax - bax * h, pay - bay * h) - r;
 }
 
-// Icono de aviso de ping: la sirena de los pings, rellena y oscura sobre un círculo ámbar.
-// Va rellena y con solo tres rayos porque la sirena de trazo fino de la app no se distingue a 16 px en la bandeja;
-// oscura porque el blanco sobre ámbar apenas contrasta (2,2:1).
-export function renderAlertIcon(size = 64, color = "#f59e0b", glyph = "#1a1205") {
+// Icono de aviso de ping: la sirena de los pings, rellena y blanca sobre un círculo ámbar.
+// Va rellena y con solo tres rayos porque la sirena de trazo fino de la app no se distingue a 16 px en la bandeja.
+export function renderAlertIcon(size = 64, color = "#f59e0b", glyph = "#ffffff") {
   const buf = Buffer.alloc(size * size * 4);
   const c = hex(color);
   const g = hex(glyph);
