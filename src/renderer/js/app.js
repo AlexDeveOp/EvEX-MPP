@@ -271,6 +271,7 @@ const HANDLERS = {
       });
     }
     if (ev.condition === "not-authorized") actions.push({ label: t("Contraseña"), primary: true, action: () => openJoinRoom(id, { room: ev.room }) });
+    if (ev.condition === "timeout") actions.push({ label: t("Reintentar"), primary: true, action: () => api("room:join", id, ev.room).catch(() => {}) });
     toast(`${displayName(id, ev.room)}: ${ev.message}`, { kind: "error", timeout: actions.length ? 0 : 8000, actions });
     emit("room", { accountId: id, room: ev.room });
   },
@@ -289,6 +290,10 @@ const HANDLERS = {
       if (!o.available) c.typing.delete(o.nick);
     }
     emitRoomSoon(id, ev.room);
+  },
+  // Lote de cambios de participantes (el proceso principal los agrupa cada ~120 ms).
+  occupants(id, ev) {
+    for (const o of ev.events) HANDLERS.occupant(id, o);
   },
   "occupant-nick"(id, ev) {
     const r = roomState(id, ev.room);

@@ -288,8 +288,16 @@ function nativeContextMenu(params) {
 
 // ---------- bandeja ----------
 
+// Los iconos se dibujan píxel a píxel: se hace una vez y se reutilizan (el parpadeo de la bandeja los cambia cada 650 ms).
+const iconCache = new Map();
+function cachedIcon(key, make) {
+  if (!iconCache.has(key)) iconCache.set(key, make());
+  return iconCache.get(key);
+}
+
 function trayImage() {
-  return nativeImage.createFromBuffer(renderIcon(64, { badge: unread > 0 })).resize({ width: 16, height: 16, quality: "best" });
+  const badge = unread > 0;
+  return cachedIcon(`tray:${badge}`, () => nativeImage.createFromBuffer(renderIcon(64, { badge })).resize({ width: 16, height: 16, quality: "best" }));
 }
 
 function buildTrayMenu() {
@@ -343,7 +351,7 @@ function createTray() {
 let pingAlert = 0;
 let blinkTimer = null;
 let blinkOn = false;
-const alertImage = () => nativeImage.createFromBuffer(renderAlertIcon(64)).resize({ width: 16, height: 16, quality: "best" });
+const alertImage = () => cachedIcon("alert", () => nativeImage.createFromBuffer(renderAlertIcon(64)).resize({ width: 16, height: 16, quality: "best" }));
 
 function refreshTray() {
   if (!tray) return;
@@ -365,17 +373,24 @@ function refreshTray() {
     tray.setToolTip(unread ? t("EvEX-MPP — {unread} sin leer", { unread }) : "EvEX-MPP");
   }
   if (win && process.platform === "win32") {
-    const overlay = pingAlert ? renderAlertIcon(32) : unread ? renderBadge() : null;
-    win.setOverlayIcon(overlay ? nativeImage.createFromBuffer(overlay) : null, pingAlert ? t("Ping de flota") : unread ? t("{unread} sin leer", { unread }) : "");
+    const overlay = pingAlert ? cachedIcon("overlay:alert", () => nativeImage.createFromBuffer(renderAlertIcon(32))) : unread ? cachedIcon("overlay:badge", () => nativeImage.createFromBuffer(renderBadge())) : null;
+    win.setOverlayIcon(overlay, pingAlert ? t("Ping de flota") : unread ? t("{unread} sin leer", { unread }) : "");
   }
 }
 
+// La interfaz avisa en cada mensaje: los cambios seguidos se juntan en una sola actualización de la bandeja.
+let trayRefreshTimer = null;
 function setUnread(count, pings = 0) {
   const changed = count !== unread || pings !== pingAlert;
   unread = count;
   if (pings === 0 && pingAlert) closeAllPopups("ping");
+  // El primer ping se ve al momento; el resto de cambios espera un poco por si llegan más.
+  const urgent = pings > 0 && !pingAlert;
   pingAlert = pings;
-  if (changed) refreshTray();
+  if (!changed) return;
+  clearTimeout(trayRefreshTimer);
+  if (urgent) refreshTray();
+  else trayRefreshTimer = setTimeout(refreshTray, 150);
 }
 
 function renderBadge() {

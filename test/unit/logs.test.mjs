@@ -72,15 +72,31 @@ test("mergeImport añade lo nuevo en orden y no repite lo que ya había", (t) =>
   assert.equal(logs.mergeImport("a", conv, [{ ts: 1000, nick: "bob", body: "primero" }]), 0);
 });
 
-test("search busca por texto y por apodo en todas las conversaciones", (t) => {
+// Cargar mensajes antiguos lee hacia atrás por bloques: mismas entradas que leyendo todo, y caracteres de varios bytes
+// partidos entre dos bloques llegan enteros.
+test("tail con beforeTs devuelve las entradas anteriores sin perder texto entre bloques", (t) => {
+  const logs = new Logs(tempDir(t));
+  const file = logs.file("a", "larga@example.com");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const all = Array.from({ length: 3000 }, (_, i) => ({ ts: 1000 + i, nick: "n", body: `ñandú 🚀 ${i} ${"á".repeat(i % 97)}` }));
+  fs.writeFileSync(file, all.map((e) => JSON.stringify(e)).join("\n") + "\n");
+  assert.ok(fs.statSync(file).size > 3 * 64 * 1024);
+  const page = logs.tail("a", "larga@example.com", 200, 1000 + 1500);
+  assert.deepEqual(page, all.slice(1300, 1500));
+  assert.deepEqual(logs.tail("a", "larga@example.com", 5000), all);
+  assert.equal(logs.lastTimestamp("a", "larga@example.com"), 1000 + 2999);
+  assert.deepEqual(logs.tail("a", "larga@example.com", 10, 1000), []);
+});
+
+test("search busca por texto y por apodo en todas las conversaciones", async (t) => {
   const logs = new Logs(tempDir(t));
   logs.append("a", "sala1@example.com", { ts: 1, nick: "ana", body: "Formup en Jita" });
   logs.append("a", "sala2@example.com", { ts: 2, nick: "bob", body: "jita otra vez" });
   logs.append("a", "sala2@example.com", { ts: 3, nick: "bob", body: "nada que ver" });
-  const r = logs.search("a", { query: "JITA" });
+  const r = await logs.search("a", { query: "JITA" });
   assert.deepEqual(
     r.map((e) => e.conv),
     ["sala2@example.com", "sala1@example.com"],
   );
-  assert.equal(logs.search("a", { query: "jita", nick: "ana" }).length, 1);
+  assert.equal((await logs.search("a", { query: "jita", nick: "ana" })).length, 1);
 });
