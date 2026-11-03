@@ -1,6 +1,6 @@
 // Vista de conversación: pestañas, cabecera, lista de mensajes, compositor y comandos.
 import { S, api, on, emit, account, roomState, contact, bestPresence, avatarUrl, nickColor, initials, updateSettings, saveRooms, conn, SHOW_LABEL } from "./state.js";
-import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, debounce } from "./dom.js";
+import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, debounce, rafThrottle } from "./dom.js";
 import { formatBody, previewHtml, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes } from "./format.js";
 import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
 import { playSound } from "./sounds.js";
@@ -18,13 +18,14 @@ import { t } from "./i18n.js";
 const panes = new Map();
 
 export function initChat() {
-  on("tabs", renderTabs);
+  // Las pestañas se pintan como mucho una vez por fotograma (antes, una vez por cada mensaje no leído).
+  on("tabs", rafThrottle(renderTabs));
   on("active", showActive);
   on("message", ({ conv, msg }) => appendMessage(conv, msg));
   on("message-updated", ({ conv, msg }) => updateMessage(conv, msg));
   on("history", ({ conv, prepended }) => {
     const p = panes.get(conv.key);
-    if (p) renderAllMessages(conv, p, prepended);
+    if (p && !skipHidden(conv, p)) renderAllMessages(conv, p, prepended);
   });
   on("accounts", () => {
     for (const [key, p] of panes) {
@@ -49,10 +50,15 @@ export function initChat() {
     if (p) applyConvBackground(S.convs.get(key), p);
   });
   on("settings", () => rerenderAll());
+  // Al cambiar un ajuste solo se repinta la pestaña visible; las demás se repintan cuando se abren.
   function rerenderAllNow() {
     for (const [key, p] of panes) {
       const c = S.convs.get(key);
       if (!c) continue;
+      if (key !== S.active) {
+        p.dirty = true;
+        continue;
+      }
       applyConvBackground(c, p);
       renderAllMessages(c, p);
       renderHeader(c, p);
@@ -149,7 +155,10 @@ function renderTabs() {
       { passive: false },
     );
   }
-  bar.querySelector(".tab.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  if (bar.dataset.shown !== (S.active || "")) {
+    bar.dataset.shown = S.active || "";
+    bar.querySelector(".tab.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
 }
 
 function tabIcon(c) {
@@ -318,6 +327,13 @@ function applyConvBackground(c, p) {
   p.root.classList.toggle("has-conv-bg", !!bg);
 }
 
+// Una pestaña oculta no pinta mensajes: se marca y se repinta entera al abrirla.
+function skipHidden(c, p) {
+  if (c.key === S.active || c.type === "pings") return false;
+  p.dirty = true;
+  return true;
+}
+
 function showActive() {
   const c = S.active ? S.convs.get(S.active) : null;
   for (const [key, p] of panes) {
@@ -330,6 +346,11 @@ function showActive() {
   for (const p of panes.values()) p.root.classList.remove("active");
   if (!c) return;
   const p = pane(c);
+  if (p.dirty) {
+    p.dirty = false;
+    applyConvBackground(c, p);
+    renderAllMessages(c, p);
+  }
   p.root.classList.add("active");
   renderHeader(c, p);
   if (c.firstUnreadKey) {
@@ -591,6 +612,7 @@ function appendMessage(c, m) {
     return;
   }
   if (m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave) return;
+  if (p.dirty || skipHidden(c, p)) return;
   // Mensajes de historial que llegan fuera de orden (historial de la sala, archivo del servidor…): se colocan
   // en su sitio. Antes se repintaba la sala entera por cada uno y una tanda podía colgar la ventana.
   if (p.lastRendered && m.ts < p.lastRendered.ts - 1000) return insertOlder(c, p, m);
@@ -613,6 +635,7 @@ function appendMessage(c, m) {
 
 function updateMessage(c, m) {
   const p = panes.get(c.key);
+  if (p?.dirty) return;
   const el = p?.list.querySelector(`.msg[data-key="${CSS.escape(m.key)}"]`);
   if (!el) return;
   const prevEl = el.previousElementSibling;
