@@ -18,6 +18,8 @@ import { userData, mediaDir, avatarDir } from "./paths.js";
 import { autostartFile, autostartExec, desktopEntry } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
+import { startBridge, testProxy, normalizeProxy } from "./proxy.js";
+import { globalProxy, accountProxy } from "./proxy-settings.js";
 
 import { t, setLanguage, currentLang } from "./i18n.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -309,7 +311,56 @@ function nativeContextMenu(params) {
 // ---------- cuentas ----------
 
 function publicAccount(a) {
-  return { ...a, rooms: a.rooms.map(({ password, ...r }) => ({ ...r, hasPassword: !!password })), hasPassword: store.hasPassword(a.id) };
+  return { ...a, rooms: a.rooms.map(({ password, ...r }) => ({ ...r, hasPassword: !!password })), hasPassword: store.hasPassword(a.id), hasProxyPassword: store.hasPassword(store.proxySecretKey(a.id)) };
+}
+
+// ---------- proxy ----------
+
+const proxyPassword = (id) => store.getPassword(store.proxySecretKey(id));
+let bridge = null;
+let bridgeProxy = null; // proxy general con contraseña, ya descifrada, para el puente
+
+// Todo el tráfico web de la app (Chromium y net.fetch) va por un proxy HTTP local que reenvía al proxy general.
+// Así valen SOCKS5 con usuario (Chromium no lo admite) y las contraseñas no salen del proceso principal. El puente no
+// pide credenciales porque net.fetch no sabe dárselas (no dispara el evento «login»); solo escucha en 127.0.0.1.
+// Si el proxy general está activado pero falla o está incompleto, el puente responde 502: nunca se va directo.
+async function applyGlobalProxy() {
+  const s = store.get().settings;
+  try {
+    bridgeProxy = await globalProxy(s, proxyPassword);
+  } catch {
+    bridgeProxy = null; // incompleto: el puente responde 502
+  }
+  const ses = session.defaultSession;
+  if (s.proxy.enabled) {
+    try {
+      bridge ||= await startBridge(() => bridgeProxy);
+    } catch {
+      bridge = null;
+    }
+    // Sin puente, un proxy local que no existe (puerto 9, «discard»): todo falla en vez de salir directo.
+    await ses.setProxy({ proxyRules: bridge ? `http://127.0.0.1:${bridge.port}` : "http://127.0.0.1:9" });
+  } else {
+    await ses.setProxy({ mode: "direct" });
+    // Sin proxy general, el puente no se queda escuchando.
+    bridge?.close();
+    bridge = null;
+  }
+  // Las conexiones abiertas con la configuración anterior no deben seguir usándose.
+  await ses.closeAllConnections().catch(() => {});
+}
+
+// Reconecta las cuentas conectadas a las que afecta un cambio de proxy.
+function reconnectWithNewProxy(filter) {
+  for (const [id, x] of accounts) {
+    if (!x.wantOnline || !filter(x.acc)) continue;
+    x.disconnect(true).then(() => connectAccount(id)).catch((e) => sendXmpp({ accountId: id, type: "error", message: e.message }));
+  }
+}
+
+async function saveProxyPassword(key, password) {
+  if (password === undefined) return;
+  await store.setPassword(store.proxySecretKey(key), password || null);
 }
 
 function accountSnapshot(id) {
@@ -341,7 +392,7 @@ function getConn(id) {
   const acc = store.getAccount(id);
   if (!acc) throw new Error(t("Cuenta no encontrada"));
   if (!x) {
-    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion() });
+    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion(), getProxy: () => accountProxy(x.acc, store.get().settings, proxyPassword) });
     x.historyOptions = (roomJid) => historyOptions(id, roomJid);
     x.on("event", (ev) => onAccountEvent(x, ev));
     accounts.set(id, x);
@@ -432,7 +483,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable },
+      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, hasProxyPassword: store.hasPassword(store.proxySecretKey(store.GLOBAL_PROXY)) },
     };
   });
 
@@ -456,9 +507,14 @@ function registerIpc() {
   // Comprobación pedida a mano (botón «Comprobar ahora»): la interfaz muestra el resultado.
   handle("updates:check", () => checkLatest());
 
-  handle("settings:set", (settings) => {
+  handle("settings:set", async (settings) => {
     const before = currentLang();
+    const proxyBefore = JSON.stringify(store.get().settings.proxy);
     const s = store.setSettings(settings);
+    if (JSON.stringify(s.proxy) !== proxyBefore) {
+      await applyGlobalProxy();
+      reconnectWithNewProxy((acc) => acc.proxy?.mode === "global");
+    }
     setLanguage(s.language);
     applySystemSettings(s);
     // El menú de la bandeja se construye con textos traducidos: rehacerlo si cambia el idioma.
@@ -466,8 +522,9 @@ function registerIpc() {
     return s;
   });
 
-  handle("account:save", async ({ account, password }) => {
+  handle("account:save", async ({ account, password, proxyPassword: newProxyPassword }) => {
     const prev = account.id ? store.getAccount(account.id) : null;
+    const proxyBefore = JSON.stringify(prev?.proxy);
     const merged = prev ? { ...prev, ...account, rooms: account.rooms ? account.rooms.map((r) => ({ ...r, password: r.password ?? prev.rooms.find((p) => p.jid === r.jid)?.password })) : prev.rooms } : account;
     const acc = store.upsertAccount(merged);
     let passwordNotSaved;
@@ -479,8 +536,15 @@ function registerIpc() {
       passwordNotSaved = "no-keyring";
     }
     if (!acc.savePassword) await store.setPassword(acc.id, null);
+    try {
+      await saveProxyPassword(acc.id, newProxyPassword);
+    } catch (err) {
+      if (err.code !== "NO_KEYRING") throw err;
+      passwordNotSaved = "no-keyring";
+    }
     const x = accounts.get(acc.id);
     if (x) x.acc = acc;
+    if (prev && (JSON.stringify(acc.proxy) !== proxyBefore || newProxyPassword !== undefined)) reconnectWithNewProxy((a) => a.id === acc.id);
     return { ...publicAccount(acc), ...(passwordNotSaved ? { passwordNotSaved } : {}) };
   });
 
@@ -492,6 +556,22 @@ function registerIpc() {
   });
 
   handle("account:connect", (id, password) => connectAccount(id, password));
+
+  // Contraseña del proxy general: "" la borra.
+  handle("proxy:password", async (password) => {
+    await saveProxyPassword(store.GLOBAL_PROXY, password ?? "");
+    await applyGlobalProxy();
+    reconnectWithNewProxy((acc) => acc.proxy?.mode === "global");
+    return { hasProxyPassword: store.hasPassword(store.proxySecretKey(store.GLOBAL_PROXY)) };
+  });
+
+  // Botón «Probar»: abre un túnel hasta un sitio conocido. Sin contraseña nueva, se usa la guardada.
+  handle("proxy:test", async ({ proxy, password, accountId, global } = {}) => {
+    const p = normalizeProxy(proxy || {});
+    if (!p.host) throw new Error(t("Falta el servidor del proxy"));
+    const saved = password === undefined && p.username ? await proxyPassword(global ? store.GLOBAL_PROXY : accountId) : null;
+    return testProxy({ ...p, password: password ?? saved ?? "" });
+  });
   handle("account:disconnect", (id) => accounts.get(id)?.disconnect());
   handle("account:snapshot", (id) => accountSnapshot(id));
 
@@ -674,6 +754,7 @@ app.whenReady().then(async () => {
   registerIpc();
   popupIpc(handle);
   applySystemSettings(store.get().settings);
+  await applyGlobalProxy().catch(() => {});
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(["notifications", "clipboard-sanitized-write", "clipboard-read", "media", "fullscreen"].includes(permission)));
   // Las imágenes externas (vistas previas, emojis animados) no deben enviar cookies ni referer.
@@ -709,6 +790,7 @@ app.on("before-quit", () => {
 });
 
 app.on("will-quit", (e) => {
+  bridge?.close();
   if (accounts.size && !app.__disconnected) {
     e.preventDefault();
     app.__disconnected = true;

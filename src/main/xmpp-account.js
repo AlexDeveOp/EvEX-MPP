@@ -6,6 +6,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { t, tk } from "./i18n.js";
+import ConnectionTLS from "@xmpp/tls/lib/Connection.js";
+import { createForwarder } from "./proxy.js";
 const NS = {
   ROSTER: "jabber:iq:roster",
   DISCO_INFO: "http://jabber.org/protocol/disco#info",
@@ -79,9 +81,47 @@ function stanzaErrorText(el) {
   return { condition: cond?.name || "undefined-condition", text: text || "" };
 }
 
+// ---------- proxy ----------
+
+// Con proxy, xmpp.js se conecta a un puerto local de un solo uso que reenvía por el túnel del proxy (ver proxy.js).
+// Así el socket sigue siendo un net.Socket normal (STARTTLS funciona) y el nombre del servidor lo resuelve el proxy.
+// Con TLS directo, el certificado se comprueba contra el nombre real del servidor, no contra 127.0.0.1.
+const tlsNames = new Map(); // puerto local -> nombre del servidor
+
+class ProxiedTLS extends ConnectionTLS {
+  socketParameters(service) {
+    const params = super.socketParameters(service);
+    const name = params && tlsNames.get(Number(params.port));
+    return name ? { ...params, servername: name } : params;
+  }
+}
+
+export function useProxy(xmpp, getProxy) {
+  xmpp.transports = xmpp.transports.map((T) => (T === ConnectionTLS ? ProxiedTLS : T));
+  const direct = xmpp.connect;
+  // También vale para las reconexiones: xmpp.js vuelve a llamar a connect() con el servicio original.
+  xmpp.connect = async function connect(service) {
+    const proxy = await getProxy();
+    if (!proxy) return direct.call(this, service);
+    const url = new URL(service);
+    const host = url.hostname.replace(/^\[(.*)\]$/, "$1");
+    const fwd = await createForwarder(proxy, host, Number(url.port), { timeout: 20000 });
+    tlsNames.set(fwd.port, host);
+    try {
+      return await direct.call(this, `${url.protocol}//127.0.0.1:${fwd.port}`);
+    } catch (err) {
+      fwd.close();
+      throw err;
+    } finally {
+      tlsNames.delete(fwd.port);
+    }
+  };
+}
+
 export class XmppAccount extends EventEmitter {
-  constructor(acc, { avatarDir, version = "" }) {
+  constructor(acc, { avatarDir, version = "", getProxy = null }) {
     super();
+    this.getProxy = getProxy; // async () => proxy con contraseña, o null para conectar directo
     this.acc = acc;
     this.avatarDir = avatarDir;
     this.version = version; // se responde a las consultas de versión (XEP-0092)
@@ -163,6 +203,7 @@ export class XmppAccount extends EventEmitter {
       },
     });
     this.xmpp = xmpp;
+    if (this.getProxy) useProxy(xmpp, this.getProxy);
 
     xmpp.iqCallee.get(NS.VERSION, "query", () =>
       xml("query", { xmlns: NS.VERSION }, xml("name", {}, "EvEX-MPP"), xml("version", {}, this.version), xml("os", {}, process.platform)),

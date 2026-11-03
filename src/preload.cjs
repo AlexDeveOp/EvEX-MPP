@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer, webUtils } = require("electron");
 const CHANNELS = [
   "init", "ready", "settings:set",
   "account:save", "account:delete", "account:connect", "account:disconnect", "account:snapshot",
+  "proxy:password", "proxy:test",
   "presence:set", "msg:send", "chatstate:send",
   "room:join", "room:leave", "room:list", "room:info", "room:nick", "room:subject", "room:moderate", "room:invite", "disco:items",
   "rooms:update", "rooms:pushBookmarks", "rooms:fetchBookmarks",

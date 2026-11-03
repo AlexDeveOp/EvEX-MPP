@@ -1033,11 +1033,13 @@ export default {
   "Probando…": "Testing…",
   "Funciona ({ms} ms)": "Works ({ms} ms)",
   "Escribe el servidor del proxy": "Type the proxy server",
-  "Falta el servidor del proxy": "The proxy server is missing",
   "Se usa en las cuentas que tienen «Usar el proxy general» (la opción por defecto), en la comprobación de actualizaciones, en la búsqueda de GIFs, en los emojis que se descargan y en las vistas previas de enlaces.":
     "Used by accounts set to “Use the general proxy” (the default), the update check, GIF search, downloaded emoji and link previews.",
   "La conexión con el servidor sigue cifrada de extremo a extremo con TLS, y el nombre del servidor se resuelve a través del proxy.":
     "The connection to the server stays end-to-end encrypted with TLS, and the server name is resolved through the proxy.",
   "Si el proxy no responde, EvEX-MPP no se conecta directamente sin él: verás el error. La conexión con el servidor XMPP sigue cifrada de extremo a extremo con TLS, y el nombre del servidor se resuelve a través del proxy.":
     "If the proxy does not respond, EvEX-MPP does not fall back to a direct connection: you will see the error. The connection to the XMPP server stays end-to-end encrypted with TLS, and the server name is resolved through the proxy.",
+  // proxy (integración)
+  "El proxy general está activado pero no tiene servidor.": "The general proxy is turned on but has no server.",
+  "El proxy propio de la cuenta no tiene servidor.": "The account's own proxy has no server.",
 };
