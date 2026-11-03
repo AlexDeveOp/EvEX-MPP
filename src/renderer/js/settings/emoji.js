@@ -4,6 +4,7 @@ import { h, icon, iconButton, field, toggle, select, range, clear, toast } from 
 import { addCustomEmoji, emojifyHtml } from "../emoji.js";
 import { BUNDLED_ANIMATED } from "../data/emoji-anim.js";
 import { t } from "../i18n.js";
+import { onWindows } from "../system.js";
 import { look, full, group } from "./common.js";
 
 export const emojiTabs = {
@@ -44,7 +45,7 @@ export const emojiTabs = {
               ["noto-animated", t("Noto animados (Google) — con movimiento")],
               ["noto", t("Noto estáticos (Google)")],
               ["twemoji", t("Twemoji (estilo Twitter/Discord)")],
-              ["native", t("Nativos de Windows (sin conexión)")],
+              ["native", onWindows(t("Nativos de Windows (sin conexión)"), t("Nativos del sistema (sin conexión)"))],
             ],
             s.emojiStyle,
             (v) => {
@@ -62,7 +63,7 @@ export const emojiTabs = {
             preview.innerHTML = emojifyHtml(sample);
           },
           t("Descargar de Internet los emojis animados que no vienen con la app"),
-          t("Se piden a Google (fonts.gstatic.com), que ve tu IP. Desactivado: esos emojis se muestran con el estilo de Windows."),
+          onWindows(t("Se piden a Google (fonts.gstatic.com), que ve tu IP. Desactivado: esos emojis se muestran con el estilo de Windows."), t("Se piden a Google (fonts.gstatic.com), que ve tu IP. Desactivado: esos emojis se muestran con el estilo del sistema.")),
         ),
         field(t("Tamaño en el texto"), range(1, 2, 0.05, s.emojiSize, (v) => look((x) => (x.emojiSize = v)), (v) => `${Math.round(v * 100)}%`)),
         toggle(s.jumboEmoji, (v) => full((x) => (x.jumboEmoji = v)), t("Emojis grandes cuando el mensaje solo tiene emojis")),

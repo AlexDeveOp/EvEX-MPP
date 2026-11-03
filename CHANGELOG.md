@@ -16,6 +16,14 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **Passwords are only saved when the system can really encrypt them.** On Linux they go to the desktop keyring (GNOME Keyring or KWallet). Without a keyring the account is saved without the password, which is asked for when connecting, instead of keeping it with Chromium's fixed, publicly known key.
 - On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
 
+### Changed
+- **Linux in the interface:**
+  - Before saving a password, the app explains that Linux will ask you to create or unlock your keyring.
+  - Without a keyring, the *Remember password* boxes are disabled with the reason, and the app explains why the password was not saved.
+  - Windows-only options are hidden (taskbar flash), and texts that named Windows say "system".
+  - Without a system tray, the tray options are disabled and say why.
+  - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
+
 ## [0.6.0] - 2026-11-03
 
 A big feature release (sounds, backgrounds, GIFs, keyword rules, recovered and spoken fleet pings, formup countdown) that is also much lighter. Measured on the same PC with the same test profile and mock server, before and after the performance work:
