@@ -133,14 +133,22 @@ If you run Pidgin at the same time, pings are delivered to the client with the *
 
 ## Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). *The application has been submitted; releases are not signed yet. This section will say so when they are.*
+**Executables are not code-signed yet.** We applied to the [SignPath Foundation](https://signpath.org) program for free code signing for open-source projects. The application was declined because the project is still new and does not yet have enough public traction (stars, forks, contributors, external mentions); it was not a judgement on the code. We will reapply once the app has more traction, and meanwhile we are exploring other options, such as the Microsoft Store. Until then, please verify your download as described in [How to verify your download](#how-to-verify-your-download).
 
-- **Committers and reviewers:** [AlexDeveOp](https://github.com/AlexDeveOp)
-- **Approvers:** [AlexDeveOp](https://github.com/AlexDeveOp)
-- Only executables built by GitHub Actions on GitHub-hosted runners, from a signed release tag of this repository ([release.yml](.github/workflows/release.yml)), are submitted for signing. Every signing request is approved manually.
-- Changes from people who are not committers (pull requests) are reviewed before they are merged. Commits on `main` must be signed, and `main` cannot be force-pushed or deleted.
-- All team members use multi-factor authentication on GitHub and SignPath.
-- **Privacy:** this program does not send any information to the developer. It connects only to the XMPP servers you configure, and to the emoji, link-preview and spell-check sources listed in the [privacy policy](PRIVACY.md). Each of them can be turned off.
+What already applies to every release:
+
+- Executables are built only by GitHub Actions on GitHub-hosted runners, from a signed release tag of this repository ([release.yml](.github/workflows/release.yml)), and published with SHA-256 checksums and a build provenance attestation.
+- Every change reaches `main` through a pull request that must pass the CI (tests, ESLint, translations and a dependency audit, on Windows and Linux). Commits on `main` must be signed, and `main` cannot be force-pushed or deleted. Changes from people who are not maintainers are reviewed before they are merged.
+- Maintainers use multi-factor authentication on GitHub.
+
+When releases are signed (and for a future application), these rules will also apply:
+
+- **Committers, reviewers and approvers:** [AlexDeveOp](https://github.com/AlexDeveOp).
+- Only the executables built as described above are submitted for signing, and every signing request is approved manually.
+- Multi-factor authentication is also used on the signing service.
+- This section will say which releases are signed and by whom.
+
+**Privacy:** this program does not send any information to the developer. It connects only to the XMPP servers you configure, and to the emoji, link-preview and spell-check sources listed in the [privacy policy](PRIVACY.md). Each of them can be turned off.
 
 ## Development
 
