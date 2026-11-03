@@ -49,7 +49,10 @@ function voiceGroup() {
   const body = h("div", { class: `voice-options ${v.enabled ? "" : "off"}` });
   const voiceSel = select([["", t("Automática (una voz en inglés, si está instalada)")]], v.voice, (x) => set({ voice: x }));
   listVoices().then((list) => {
-    for (const voice of list) voiceSel.append(h("option", { value: voice.name }, `${voice.name} (${voice.lang})`));
+    // espeak-ng (Linux) da una voz por idioma y variante («Afrikaans+Adam»…): más de 13 000. Se listan solo las de
+    // base, más la elegida si es una variante.
+    const shown = list.length > 300 ? list.filter((x) => !x.name.includes("+") || x.name === v.voice) : list;
+    for (const voice of shown) voiceSel.append(h("option", { value: voice.name }, `${voice.name} (${voice.lang})`));
     voiceSel.value = list.some((x) => x.name === v.voice) ? v.voice : "";
     if (!list.length) voiceSel.after(noVoicesHelp());
   });
