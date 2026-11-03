@@ -56,17 +56,17 @@ export function compileRule(rule) {
   return { re: mentionRegex(words) };
 }
 
-// Las reglas compiladas se guardan mientras no cambien los ajustes.
-let cache = { json: "", list: [] };
+// Las reglas compiladas se guardan mientras no cambie la lista. Preferencias siempre guarda una lista nueva al
+// editar, así que basta con comparar la referencia (antes se serializaba todo a JSON dos veces por mensaje).
+let cache = { src: undefined, list: [] };
 export function activeRules(rules = S.settings?.notifications?.keywordRules) {
-  const json = JSON.stringify(rules || []);
-  if (json !== cache.json) {
+  if (rules !== cache.src) {
     const list = (rules || [])
       .map(normalizeRule)
       .filter((r) => r.enabled)
       .map((r) => ({ rule: r, re: compileRule(r).re }))
       .filter((x) => x.re);
-    cache = { json, list };
+    cache = { src: rules, list };
   }
   return cache.list;
 }

@@ -96,3 +96,9 @@ test("fmtTime sigue los ajustes de 12/24 h y segundos aunque los formateadores s
   Object.assign(S.settings, { timeFormat: "24", showSeconds: false });
   assert.equal(fmtTime(ts), "21:05", "volver a 24 h no reutiliza el formateador de 12 h");
 });
+
+test("formatBody detecta la mención en mensajes seguidos aunque la expresión se reutilice", () => {
+  assert.equal(mentionRegex(["bob", "alice"]), mentionRegex(["bob", "alice"]), "misma lista, misma expresión");
+  for (let i = 0; i < 3; i++) assert.equal(formatBody("hola bob", { mentionWords: ["bob", "alice"] }).mention, true);
+  assert.equal(formatBody("nada", { mentionWords: ["bob", "alice"] }).mention, false);
+});

@@ -8,7 +8,19 @@ const TOKEN_RE = /```([\s\S]*?)```|`([^`\n]+)`|\b((?:https?:\/\/|www\.)[^\s<>"']
 const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif)(\?[^#]*)?(#.*)?$/i;
 const YT_RE = /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{11})/i;
 
+// Se guardan por lista de palabras: cada mensaje pedía la misma expresión dos veces. Es global (flag g), así que
+// quien use .test() debe poner antes lastIndex a 0.
+const mentionCache = new Map();
 export function mentionRegex(words) {
+  const key = words.join("|");
+  if (mentionCache.has(key)) return mentionCache.get(key);
+  if (mentionCache.size > 200) mentionCache.clear();
+  const re = buildMentionRegex(words);
+  mentionCache.set(key, re);
+  return re;
+}
+
+function buildMentionRegex(words) {
   const list = words.filter((w) => w && w.trim().length > 1).map((w) => w.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   if (!list.length) return null;
   return new RegExp(`(?<![\\p{L}\\p{N}_])(${list.join("|")})(?![\\p{L}\\p{N}_])`, "giu");
@@ -82,7 +94,8 @@ export function formatBody(body, { mentionWords = [], rules = [] } = {}) {
   }
   if (last < body.length) html += plainToHtml(body.slice(last), { mentionRe, rules, custom });
 
-  const mention = !!mentionRe && new RegExp(mentionRe.source, "iu").test(body);
+  if (mentionRe) mentionRe.lastIndex = 0;
+  const mention = !!mentionRe && mentionRe.test(body);
   const jumbo = S.settings.jumboEmoji && isEmojiOnly(replaceShortcodes(body));
   return { html, previews, mention, jumbo };
 }

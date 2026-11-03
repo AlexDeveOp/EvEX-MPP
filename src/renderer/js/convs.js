@@ -268,6 +268,7 @@ export function ingestMessage(ev) {
     subject: ev.subject || "",
   };
   const mre = mentionRegex(mentionWords(c));
+  if (mre) mre.lastIndex = 0;
   msg.mention = !msg.out && !msg.sys && !!mre && mre.test(msg.body);
   // Una regla por palabra clave puede contar como mención y decide el sonido y la burbuja del aviso.
   const rule = !msg.out && !msg.sys ? matchRule(msg.body, isPingSender(ev.conv) ? "pings" : type === "chat" ? "private" : "rooms") : null;

@@ -54,3 +54,12 @@ test("formatBody resalta con el color de la regla sin tocar etiquetas, enlaces n
   assert.match(html, /href="https:\/\/example\.com"/, "el enlace no se marca");
   assert.equal((html.match(/class="kw"/g) || []).length, 2);
 });
+
+test("activeRules reutiliza la compilación mientras la lista sea la misma y la rehace con una lista nueva", () => {
+  const list = [rule({ id: "a", words: ["titan"] })];
+  assert.equal(matchRule("titan", "rooms", list)?.id, "a");
+  assert.equal(matchRule("titan", "rooms", list)?.id, "a");
+  const next = [rule({ id: "b", words: ["cyno"] })];
+  assert.equal(matchRule("titan", "rooms", next), null);
+  assert.equal(matchRule("cyno", "rooms", next)?.id, "b");
+});
