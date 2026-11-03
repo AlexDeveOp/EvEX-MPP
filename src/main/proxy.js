@@ -187,6 +187,22 @@ async function httpConnectHandshake(sock, rd, proxy, host, port) {
   }
 }
 
+// Autoridades con las que se comprueba el certificado de un proxy HTTPS: las que trae Node y, además, las raíces
+// instaladas en el sistema (almacén de Windows, llavero de macOS o /etc/ssl en Linux), como hace el navegador.
+// Así vale el proxy de una empresa con su propia autoridad instalada en el PC; un certificado autofirmado sigue fallando.
+// Se calcula una vez: leer el almacén del sistema cuesta un poco.
+let trustedCAs = null;
+export function proxyCAs() {
+  if (!trustedCAs) {
+    try {
+      trustedCAs = [...new Set([...tls.getCACertificates("default"), ...tls.getCACertificates("system")])];
+    } catch {
+      trustedCAs = undefined; // Node sin getCACertificates: las raíces por defecto de Node
+    }
+  }
+  return trustedCAs || undefined;
+}
+
 // Abre un túnel hasta targetHost:targetPort a través del proxy y devuelve el socket ya conectado al destino
 // (para https, el TLSSocket con el proxy). Los errores llevan .code: PROXY_CONNECT, PROXY_AUTH, PROXY_TARGET,
 // PROXY_TIMEOUT o PROXY_PROTOCOL. El nombre del destino nunca se resuelve aquí: lo resuelve el proxy.
@@ -198,7 +214,7 @@ export async function openTunnel(proxy, targetHost, targetPort, { timeout = 1500
   const connectEvent = p.type === "https" ? "secureConnect" : "connect";
   const sock =
     p.type === "https"
-      ? tls.connect({ host: p.host, port: p.port, servername: net.isIP(p.host) ? undefined : p.host, ALPNProtocols: ["http/1.1"], ...tlsOptions })
+      ? tls.connect({ host: p.host, port: p.port, servername: net.isIP(p.host) ? undefined : p.host, ALPNProtocols: ["http/1.1"], ca: proxyCAs(), ...tlsOptions })
       : net.connect({ host: p.host, port: p.port });
   let connected = false;
   let timer;

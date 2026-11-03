@@ -12,6 +12,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Preferences → Network and proxy* sets a general proxy, used by accounts set to *Use the general proxy* (the default) and by all of the app's web traffic: update checks, GIF search, downloaded emoji, link previews and spell-check dictionaries.
   - Each account can use the general proxy, no proxy, or its own one (in the account's *Proxy* section).
   - The server name is resolved by the proxy, not on your computer, and the connection to the XMPP server is still encrypted end to end with TLS (STARTTLS or direct TLS).
+  - An HTTPS proxy's certificate is checked against the public authorities and the ones installed on the system, so a company proxy with its own authority works; self-signed certificates are still rejected.
   - If the proxy fails or is incomplete, the app shows the error and never connects directly. A dropped proxy is retried until it comes back; a rejected proxy username stops retrying, like a wrong password.
   - *Test proxy* checks the proxy and, optionally, that the account's XMPP server can be reached through it.
   - Proxy passwords are encrypted like account passwords. Changing the proxy reconnects only the affected accounts.

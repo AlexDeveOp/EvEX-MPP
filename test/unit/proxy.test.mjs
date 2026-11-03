@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import net from "node:net";
 import http from "node:http";
 import { once } from "node:events";
-import { PROXY_TYPES, DEFAULT_PORTS, normalizeProxy, openTunnel, createForwarder, startBridge, testProxy } from "../../src/main/proxy.js";
+import { PROXY_TYPES, DEFAULT_PORTS, normalizeProxy, openTunnel, createForwarder, startBridge, testProxy, proxyCAs } from "../../src/main/proxy.js";
 import { startFakeProxy, makeSelfSignedCert } from "../fake-proxy.mjs";
 
 const AUTH = { username: "piloto", password: "s3cr3to" };
@@ -273,4 +273,13 @@ test("testProxy mide el tiempo del túnel y lanza el mismo error que openTunnel"
   const { ms } = await testProxy(proxyFor(fp, "http"), "localhost", echoPort);
   assert.ok(Number.isInteger(ms) && ms >= 0 && ms < 5000);
   await assert.rejects(testProxy(proxyFor(fp, "http"), "localhost", await deadPort()), { code: "PROXY_TARGET" });
+});
+
+test("el certificado de un proxy HTTPS se comprueba también con las raíces del sistema (CA de empresa)", async () => {
+  const tls = await import("node:tls");
+  const cas = proxyCAs();
+  assert.ok(Array.isArray(cas) && cas.length > 0);
+  for (const c of tls.getCACertificates("default")) assert.ok(cas.includes(c), "incluye las de Node");
+  for (const c of tls.getCACertificates("system")) assert.ok(cas.includes(c), "incluye las del sistema");
+  assert.equal(proxyCAs(), cas, "se calcula una sola vez");
 });
