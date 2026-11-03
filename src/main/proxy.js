@@ -340,6 +340,9 @@ export async function createForwarder(proxy, host, port, opts = {}) {
   return { port: server.address().port, close };
 }
 
+// Nombre de cabecera HTTP válido (token de RFC 9110).
+const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+
 // Proxy HTTP local para Chromium (session.setProxy): atiende CONNECT y peticiones http:// con URI absoluta y las
 // manda por el proxy que devuelva getProxy() en ese momento. Si no hay proxy o falla, responde 502: nunca conecta directo.
 // Escucha solo en 127.0.0.1 y exige un usuario y una contraseña aleatorios, creados al arrancar y guardados solo en
@@ -405,9 +408,14 @@ export async function startBridge(getProxy) {
     // Sin host ni puerto en las opciones, por si acaso, para que no haya destino al que ir que no sea el túnel.
     const out = http.request({ method: req.method, path: `${url.pathname}${url.search}`, headers, createConnection: () => tunnel });
     out.on("response", (up) => {
-      // La lista original [nombre, valor, …] y no up.headers: los nombres vienen del servidor remoto y así no pasan
-      // por las propiedades de un objeto (p. ej. «__proto__»); además se conservan las cabeceras repetidas.
-      res.writeHead(up.statusCode, up.statusMessage, up.rawHeaders);
+      // Los nombres vienen del servidor remoto: se reenvía la lista [nombre, valor, …] (sin pasar por las propiedades de
+      // un objeto, y conservando las repetidas) y solo con nombres válidos según HTTP (token de RFC 9110).
+      const back = [];
+      for (let i = 0; i + 1 < up.rawHeaders.length; i += 2) {
+        const name = up.rawHeaders[i];
+        if (HEADER_NAME.test(name)) back.push(name, up.rawHeaders[i + 1]);
+      }
+      res.writeHead(up.statusCode, up.statusMessage, back);
       up.pipe(res);
     });
     out.on("error", () => {
