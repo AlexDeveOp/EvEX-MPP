@@ -1061,4 +1061,8 @@ export default {
   "no responde": "it does not respond",
   "ha cortado la conexión": "it closed the connection",
   "no se puede llegar a esa red": "that network cannot be reached",
+  "No se ha podido salir por el proxy configurado. Pruébalo en Preferencias → Red y proxy.": "Could not get out through the configured proxy. Test it in Preferences → Network and proxy.",
+  "No se encuentra el servidor.": "The server cannot be found.",
+  "No hay conexión a Internet.": "There is no Internet connection.",
+  "Tiempo de espera agotado.": "The connection timed out.",
 };

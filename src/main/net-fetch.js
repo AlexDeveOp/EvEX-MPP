@@ -4,6 +4,7 @@
 // Devuelve un Response estándar con el cuerpo ya leído (como mucho maxBytes).
 import { net } from "electron";
 import { t } from "./i18n.js";
+import { describeNetError } from "./net-errors.js";
 
 const NO_BODY = new Set([101, 204, 205, 304]);
 
@@ -55,7 +56,7 @@ export function createNetFetch(getProxyAuth, { maxBytes = 64 * 1024 * 1024 } = {
         });
         res.on("error", fail);
       });
-      req.on("error", fail);
+      req.on("error", (err) => fail(describeNetError(err)));
       req.end();
     });
 }
