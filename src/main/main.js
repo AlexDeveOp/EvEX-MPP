@@ -2,6 +2,8 @@
 import { app, BrowserWindow, ipcMain, protocol, net, shell, Menu, nativeImage, Notification, powerMonitor, session, clipboard } from "electron";
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
+import { execFile } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as store from "./store.js";
 import { XmppAccount } from "./xmpp-account.js";
@@ -13,6 +15,7 @@ import { configurePingSync, syncPings } from "./ping-sync.js";
 import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
 import { userData, mediaDir, avatarDir } from "./paths.js";
+import { autostartFile, desktopEntry } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
 
@@ -30,6 +33,8 @@ if (process.env.EVEX_USERDATA) app.setPath("userData", path.resolve(process.env.
 // Versión portable: los datos viajan junto al .exe (las contraseñas cifradas solo valen en el PC donde se guardaron).
 else if (process.env.PORTABLE_EXECUTABLE_DIR) app.setPath("userData", path.join(process.env.PORTABLE_EXECUTABLE_DIR, "EvEX-MPP-datos"));
 if (!app.requestSingleInstanceLock()) app.quit();
+// Linux: Chromium solo usa las voces del sistema (speech-dispatcher) para «Leer en voz alta» si se le pide al arrancar.
+if (process.platform === "linux") app.commandLine.appendSwitch("enable-speech-dispatcher");
 
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true } },
@@ -202,7 +207,8 @@ function createWindow() {
     }
   });
   win.on("minimize", (e) => {
-    if (store.get().settings.behavior.minimizeToTray) {
+    // Sin bandeja no se oculta: la ventana se quedaría sin forma de volver a abrirla.
+    if (store.get().settings.behavior.minimizeToTray && trayAvailable) {
       e.preventDefault();
       hideToTray();
     }
@@ -229,7 +235,19 @@ function createWindow() {
   win.loadURL("app://evex/index.html");
 }
 
+// En Linux la bandeja depende del escritorio (StatusNotifierItem): en GNOME sin extensión de indicadores no aparece.
+// Mientras no se sepa, se da por ausente para no ocultar nunca la ventana sin forma de volver.
+let trayAvailable = process.platform !== "linux";
+let trayCheck = Promise.resolve();
+
+function detectTray() {
+  if (process.platform !== "linux") return Promise.resolve(true);
+  const args = ["--session", "--dest=org.freedesktop.DBus", "--type=method_call", "--print-reply", "/org/freedesktop/DBus", "org.freedesktop.DBus.NameHasOwner", "string:org.kde.StatusNotifierWatcher"];
+  return new Promise((resolve) => execFile("dbus-send", args, { timeout: 3000 }, (err, out) => resolve(!err && /boolean true/.test(out))));
+}
+
 function hideToTray() {
+  if (!trayAvailable) return win.minimize();
   win.hide();
   const cfg = store.get();
   // La primera vez se avisa de dónde ha ido la ventana.
@@ -399,7 +417,8 @@ function handle(channel, fn) {
 }
 
 function registerIpc() {
-  handle("init", () => {
+  handle("init", async () => {
+    await trayCheck;
     const cfg = store.get();
     return {
       accounts: cfg.accounts.map(publicAccount),
@@ -409,6 +428,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
+      system: { platform: process.platform, secretStorage: store.secretStorage(), trayAvailable },
     };
   });
 
@@ -446,11 +466,18 @@ function registerIpc() {
     const prev = account.id ? store.getAccount(account.id) : null;
     const merged = prev ? { ...prev, ...account, rooms: account.rooms ? account.rooms.map((r) => ({ ...r, password: r.password ?? prev.rooms.find((p) => p.jid === r.jid)?.password })) : prev.rooms } : account;
     const acc = store.upsertAccount(merged);
-    if (password && acc.savePassword) await store.setPassword(acc.id, password);
+    let passwordNotSaved;
+    try {
+      if (password && acc.savePassword) await store.setPassword(acc.id, password);
+    } catch (err) {
+      // Sin llavero, la cuenta se guarda sin la contraseña y la interfaz explica por qué.
+      if (err.code !== "NO_KEYRING") throw err;
+      passwordNotSaved = "no-keyring";
+    }
     if (!acc.savePassword) await store.setPassword(acc.id, null);
     const x = accounts.get(acc.id);
     if (x) x.acc = acc;
-    return publicAccount(acc);
+    return { ...publicAccount(acc), ...(passwordNotSaved ? { passwordNotSaved } : {}) };
   });
 
   handle("account:delete", async (id) => {
@@ -572,6 +599,15 @@ function openFromNotification(data) {
   send("nav", { accountId: data.accountId, conv: data.conv, convType: data.convType });
 }
 
+// Linux no tiene «iniciar con el sistema» en Electron: se crea o se quita el .desktop de ~/.config/autostart.
+// El AppImage se ejecuta desde una carpeta temporal: hay que apuntar al fichero .AppImage original.
+function setLinuxAutostart(enabled) {
+  const file = autostartFile(os.homedir());
+  if (!enabled) return fs.rmSync(file, { force: true });
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, desktopEntry({ exe: process.env.APPIMAGE || process.execPath, args: ["--hidden"] }));
+}
+
 function applySystemSettings(s) {
   scheduleUpdateChecks(!!s.behavior.checkUpdates);
   configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
@@ -579,7 +615,8 @@ function applySystemSettings(s) {
   try {
     // El portable se descomprime en una carpeta temporal: hay que registrar el .exe original.
     const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
-    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: !!s.behavior.startWithWindows, path: exe, args: ["--hidden"] });
+    if (app.isPackaged && process.platform === "linux") setLinuxAutostart(!!s.behavior.startWithWindows);
+    else if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: !!s.behavior.startWithWindows, path: exe, args: ["--hidden"] });
   } catch {}
   try {
     const langs = s.behavior.spellcheck ? s.behavior.spellLanguages.filter((l) => session.defaultSession.availableSpellCheckerLanguages.includes(l)) : [];
@@ -640,6 +677,7 @@ app.whenReady().then(async () => {
     cb({ requestHeaders: h });
   });
 
+  trayCheck = detectTray().then((ok) => (trayAvailable = ok));
   createWindow();
   tray = createTray({
     getWin: () => win,

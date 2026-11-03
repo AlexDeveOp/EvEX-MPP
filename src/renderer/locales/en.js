@@ -646,6 +646,7 @@ export default {
   "Esto es una notificación de prueba 👋": "This is a test notification 👋",
   "Ausente (inactivo)": "Away (idle)",
   "El cifrado del sistema no está disponible; no se puede guardar la contraseña de forma segura.": "System encryption is not available; the password cannot be stored securely.",
+  "No hay un llavero del sistema para cifrar la contraseña; no se guardará.": "There is no system keyring to encrypt the password; it will not be saved.",
 
   // ---------- Conexión XMPP ----------
   "Ese apodo ya está en uso en la sala.": "That nickname is already in use in the room.",

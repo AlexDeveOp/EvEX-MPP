@@ -1,11 +1,13 @@
-// Importa cuentas XMPP, salas guardadas y registros de conversación desde Pidgin (%APPDATA%\.purple).
+// Importa cuentas XMPP, salas guardadas y registros de conversación desde Pidgin (%APPDATA%\.purple o ~/.purple).
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { parse } from "ltx";
+import { purpleDirFor, pidginSoundDirsFor } from "./platform.js";
 
 // EVEX_PURPLE_DIR permite probar con un perfil de Pidgin de mentira sin tocar el real.
 export function purpleDir() {
-  return process.env.EVEX_PURPLE_DIR || path.join(process.env.APPDATA || "", ".purple");
+  return purpleDirFor({ home: os.homedir() });
 }
 
 function readXml(file) {
@@ -91,11 +93,9 @@ const PIDGIN_SOUNDS = {
   contactOffline: ["logout", "logout.wav"],
 };
 
-// Carpetas donde el instalador de Pidgin deja sus sonidos.
+// Carpetas donde Pidgin deja sus sonidos (el instalador en Windows, el paquete del sistema en Linux).
 export function pidginSoundDirs() {
-  return [process.env["ProgramFiles(x86)"], process.env.ProgramFiles, process.env.ProgramW6432]
-    .filter(Boolean)
-    .map((p) => path.join(p, "Pidgin", "sounds", "purple"));
+  return pidginSoundDirsFor();
 }
 
 // Busca los sonidos de Pidgin sin copiar nada: los personalizados de prefs.xml y, si no, los que trae Pidgin.

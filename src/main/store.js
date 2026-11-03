@@ -1,5 +1,7 @@
-// Persistencia de configuración (JSON en userData) y contraseñas cifradas con safeStorage (DPAPI en Windows).
+// Persistencia de configuración (JSON en userData) y contraseñas cifradas con safeStorage (DPAPI en Windows, el llavero
+// del escritorio en Linux).
 import { app, safeStorage } from "electron";
+import { secretStorageKind, hasSecureStorage } from "./platform.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -222,9 +224,28 @@ export function getAccount(id) {
 
 // ---- contraseñas ----
 
+// Dónde cifra el sistema: "os" en Windows y macOS, o el llavero de Linux ("gnome_libsecret", "kwallet6"…, "basic_text" si
+// no hay ninguno). Solo se puede consultar con la app ya lista.
+export function secretStorage() {
+  let backend = "";
+  try {
+    if (process.platform === "linux") backend = safeStorage.getSelectedStorageBackend();
+  } catch {}
+  return secretStorageKind({ backend });
+}
+
+export class NoKeyringError extends Error {
+  constructor() {
+    super(t("No hay un llavero del sistema para cifrar la contraseña; no se guardará."));
+    this.code = "NO_KEYRING";
+  }
+}
+
 export async function setPassword(accountId, password) {
   let enc = null;
   if (password) {
+    // Sin llavero (Linux sin GNOME Keyring ni KWallet), Chromium solo ofusca la contraseña con una clave fija: no se guarda.
+    if (!hasSecureStorage(secretStorage())) throw new NoKeyringError();
     try {
       enc = (await safeStorage.encryptStringAsync(password)).toString("base64");
     } catch {
