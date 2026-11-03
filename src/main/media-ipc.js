@@ -9,6 +9,7 @@ import * as store from "./store.js";
 import { scanPidginSounds } from "./pidgin-import.js";
 import { searchGifs, downloadGif } from "./gifs.js";
 import { mediaDir } from "./paths.js";
+import { parseFcList } from "./platform.js";
 import { t, tk, currentLang } from "./i18n.js";
 
 // Los nombres se traducen al abrir el diálogo (el idioma puede cambiar en marcha).
@@ -36,7 +37,11 @@ function copyToMedia(src, sub = "files") {
   return `media://evex/${sub}/${name}`;
 }
 
+// Fuentes instaladas: el registro de Windows, o fontconfig (`fc-list`) en Linux.
 function listSystemFonts() {
+  if (process.platform !== "win32") {
+    return new Promise((resolve) => execFile("fc-list", [":", "family"], { maxBuffer: 8 * 1024 * 1024 }, (err, out) => resolve(err ? [] : parseFcList(out))));
+  }
   const keys = ["HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", "HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"];
   const query = (k) =>
     new Promise((resolve) => execFile("reg", ["query", k], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => resolve(err ? "" : out)));

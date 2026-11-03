@@ -7,6 +7,15 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **Linux support in the app** (system integration):
+  - *Read aloud* uses the system voices (speech-dispatcher, e.g. espeak-ng).
+  - The font list shows the fonts installed on the system (fontconfig).
+  - Pidgin import and Pidgin sounds look in `~/.purple` and `/usr/share/sounds/purple`.
+  - *Start with the system* adds the app to `~/.config/autostart`.
+- **Passwords are only saved when the system can really encrypt them.** On Linux they go to the desktop keyring (GNOME Keyring or KWallet). Without a keyring the account is saved without the password, which is asked for when connecting, instead of keeping it with Chromium's fixed, publicly known key.
+- On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
+
 ### Changed
 - **Linux in the interface:**
   - Before saving a password, the app explains that Linux will ask you to create or unlock your keyring.
