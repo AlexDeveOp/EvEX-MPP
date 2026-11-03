@@ -46,6 +46,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - The room header buttons stay at the top, level with the room name, instead of moving down when the topic is long.
 - The whole window could shift up by about 30 px, hiding the title bar: the window could no longer be moved and Preferences could not be opened. The blurred background layers were slightly taller than the window, which made the page scrollable ([#3](https://github.com/AlexDeveOp/EvEX-MPP/issues/3)).
 - The room invitation notice was not translated.
+- Joining a room that never answers left it in *Joining…* forever. After 30 seconds it now says the room is not responding, with a *Retry* button, and it is tried again after a reconnection.
+- Busy rooms are lighter: presence changes reach the window in small batches instead of one by one, and entering a room no longer sends every participant separately.
+- Loading older messages, and the history kept for rooms, no longer reads the whole log file: it reads from the end only what is needed, so large histories (like those imported from Pidgin) open quickly. Searching the history no longer freezes the app while it reads.
+- The blinking tray icon and the unread counter use less CPU, and the siren on a ping popup pulses a few times and then stays still instead of pulsing (and using the GPU) until the popup is closed.
 
 ## [0.5.0] - 2026-11-02
 

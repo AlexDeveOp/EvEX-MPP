@@ -4,6 +4,30 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 const NEAR_MS = 120000;
+// Los historiales se leen desde el final en bloques de este tamaño: cargar mensajes recientes o antiguos no lee el fichero entero.
+const CHUNK = 64 * 1024;
+const TS_PREFIX = /^\{"ts":(\d+)[,}]/;
+
+// Líneas del fichero de la última a la primera. Se corta por el byte \n, que en UTF-8 nunca va dentro de otro carácter.
+function* linesBackward(fd, size) {
+  let pos = size;
+  let rest = null;
+  while (pos > 0) {
+    const len = Math.min(CHUNK, pos);
+    pos -= len;
+    const chunk = Buffer.alloc(len);
+    fs.readSync(fd, chunk, 0, len, pos);
+    const data = rest ? Buffer.concat([chunk, rest]) : chunk;
+    let end = data.length;
+    for (let i = data.length - 1; i >= 0; i--) {
+      if (data[i] !== 10) continue;
+      if (end > i + 1) yield data.toString("utf8", i + 1, end);
+      end = i;
+    }
+    rest = data.subarray(0, end);
+  }
+  if (rest?.length) yield rest.toString("utf8");
+}
 
 function remember(idx, e, src) {
   idx.keys.add(e.key || Logs.key(e));
@@ -135,37 +159,28 @@ export class Logs {
     return true;
   }
 
+  // Las últimas `limit` entradas (anteriores a `beforeTs`, si se indica), ordenadas por fecha.
   tailFile(file, limit, beforeTs) {
-    let text;
+    const out = [];
     let fd;
     try {
       // Se abre una sola vez y todo se lee del mismo descriptor, sin volver a buscar el fichero por su ruta.
       fd = fs.openSync(file, "r");
       const { size } = fs.fstatSync(fd);
-      // Leer solo el final del fichero cuando es grande.
-      const max = 4 * 1024 * 1024;
-      if (size > max && !beforeTs && limit !== Infinity) {
-        const buf = Buffer.alloc(max);
-        fs.readSync(fd, buf, 0, max, size - max);
-        text = buf.toString("utf8");
-        text = text.slice(text.indexOf("\n") + 1);
-      } else {
-        text = fs.readFileSync(fd, "utf8");
+      for (const line of linesBackward(fd, size)) {
+        if (out.length >= limit) break;
+        // Las entradas empiezan por {"ts":…: las posteriores a beforeTs se saltan sin analizar la línea entera.
+        if (beforeTs && Number(TS_PREFIX.exec(line)?.[1]) >= beforeTs) continue;
+        try {
+          const e = JSON.parse(line);
+          if (beforeTs && e.ts >= beforeTs) continue;
+          out.push(e);
+        } catch {}
       }
     } catch {
       return [];
     } finally {
       if (fd !== undefined) fs.closeSync(fd);
-    }
-    const out = [];
-    const lines = text.split("\n");
-    for (let i = lines.length - 1; i >= 0 && out.length < limit; i--) {
-      if (!lines[i]) continue;
-      try {
-        const e = JSON.parse(lines[i]);
-        if (beforeTs && e.ts >= beforeTs) continue;
-        out.push(e);
-      } catch {}
     }
     return out.reverse().sort((a, b) => a.ts - b.ts);
   }
@@ -195,7 +210,8 @@ export class Logs {
     }
   }
 
-  search(accountId, { query, conv, nick, limit = 300 }) {
+  // Asíncrona: lee cada fichero sin bloquear el proceso principal y le cede el turno entre uno y otro.
+  async search(accountId, { query, conv, nick, limit = 300 }) {
     const q = String(query || "").toLowerCase();
     const n = String(nick || "").toLowerCase();
     const files = conv ? [{ conv }] : this.listConversations(accountId);
@@ -203,10 +219,11 @@ export class Logs {
     for (const f of files) {
       let text;
       try {
-        text = fs.readFileSync(this.file(accountId, f.conv), "utf8");
+        text = await fs.promises.readFile(this.file(accountId, f.conv), "utf8");
       } catch {
         continue;
       }
+      await new Promise((r) => setImmediate(r));
       for (const line of text.split("\n")) {
         if (!line) continue;
         const low = line.toLowerCase();

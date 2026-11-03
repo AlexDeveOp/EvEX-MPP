@@ -44,8 +44,14 @@ const MUC_ERRORS = {
   "item-not-found": tk("La sala no existe."),
   "not-allowed": tk("No tienes permiso para crear o entrar en esta sala."),
   "service-unavailable": tk("La sala está llena o no disponible."),
+  timeout: tk("La sala no responde."),
   "jid-malformed": tk("Apodo no válido."),
 };
+
+// Sin respuesta del servidor en este tiempo, la entrada en una sala se da por fallida.
+export const JOIN_TIMEOUT = 30000;
+// Los cambios de presencia en las salas se mandan a la interfaz en lotes cada este tiempo.
+export const OCCUPANT_BATCH_MS = 120;
 
 const bare = (j) => String(j || "").split("/")[0].toLowerCase();
 const resourceOf = (j) => {
@@ -96,10 +102,35 @@ export class XmppAccount extends EventEmitter {
     this.avatarActive = 0;
     this.pingTimer = null;
     this.wantOnline = false;
+    this.occBatch = [];
+    this.occTimer = null;
   }
 
   event(type, data = {}) {
+    // Los participantes pendientes salen antes que cualquier otro evento, para no alterar el orden.
+    if (this.occBatch.length) this.flushOccupants();
     this.emit("event", { accountId: this.acc.id, type, ...data });
+  }
+
+  // Un cambio de participante va al lote, que sale como un solo evento «occupants»: { events: [{ room, occupant, … }] }.
+  queueOccupant(e) {
+    this.occBatch.push(e);
+    this.occTimer ||= setTimeout(() => this.flushOccupants(), OCCUPANT_BATCH_MS);
+  }
+
+  flushOccupants() {
+    clearTimeout(this.occTimer);
+    this.occTimer = null;
+    const events = this.occBatch;
+    if (!events.length) return;
+    this.occBatch = [];
+    this.emit("event", { accountId: this.acc.id, type: "occupants", events });
+  }
+
+  joinDone(room) {
+    room.joining = false;
+    clearTimeout(room.joinTimer);
+    room.joinTimer = null;
   }
 
   setState(state, error) {
@@ -153,7 +184,7 @@ export class XmppAccount extends EventEmitter {
         // Tras un corte hay que volver a entrar en las salas: la sesión MUC anterior ya no existe.
         for (const r of this.rooms.values()) {
           r.joined = false;
-          r.joining = false;
+          this.joinDone(r);
           r.occupants.clear();
         }
         if (this.wantOnline && this.state === "online") this.setState("reconnecting");
@@ -437,7 +468,7 @@ export class XmppAccount extends EventEmitter {
     if (type === "error") {
       const { condition, text } = stanzaErrorText(st);
       room.joined = false;
-      room.joining = false;
+      this.joinDone(room);
       if (condition !== "conflict") room.wanted = false;
       this.event("room-error", { room: roomJid, condition, message: text || (MUC_ERRORS[condition] ? t(MUC_ERRORS[condition]) : condition) });
       return;
@@ -477,14 +508,14 @@ export class XmppAccount extends EventEmitter {
         this.event("room-left", { room: roomJid, kicked: codes.has("307"), banned: codes.has("301"), actor, reason, shutdown: codes.has("332") });
         return;
       }
-      this.event("occupant", { room: roomJid, occupant: occ, kicked: codes.has("307"), banned: codes.has("301") });
+      this.queueOccupant({ room: roomJid, occupant: occ, kicked: codes.has("307"), banned: codes.has("301") });
       return;
     }
 
     room.occupants.set(nick, occ);
     if (isSelf && !room.joined) {
       room.joined = true;
-      room.joining = false;
+      this.joinDone(room);
       room.nick = nick;
       this.event("room-joined", {
         room: roomJid,
@@ -500,7 +531,8 @@ export class XmppAccount extends EventEmitter {
       }
       return;
     }
-    this.event("occupant", { room: roomJid, occupant: occ, initial: !room.joined });
+    // Antes de entrar no se avisa: la lista completa llega con «room-joined».
+    if (room.joined) this.queueOccupant({ room: roomJid, occupant: occ });
   }
 
   onMessage(st) {
@@ -675,6 +707,12 @@ export class XmppAccount extends EventEmitter {
     if (!this.online) return;
     room.joining = true;
     room.occupants.clear();
+    clearTimeout(room.joinTimer);
+    room.joinTimer = setTimeout(() => {
+      if (!room.joining || this.rooms.get(roomJid) !== room) return;
+      this.joinDone(room);
+      this.event("room-error", { room: roomJid, condition: "timeout", message: t(MUC_ERRORS.timeout) });
+    }, JOIN_TIMEOUT);
     const hist = {};
     if (historySince) hist.since = new Date(historySince).toISOString();
     hist.maxstanzas = String(maxStanzas ?? 50);
@@ -690,6 +728,7 @@ export class XmppAccount extends EventEmitter {
     const room = this.rooms.get(roomJid);
     if (!room) return;
     room.wanted = false;
+    clearTimeout(room.joinTimer);
     if (this.online && (room.joined || room.joining)) {
       await this.send(xml("presence", { to: `${roomJid}/${room.nick}`, type: "unavailable" }, reason ? xml("status", {}, reason) : null)).catch(() => {});
     }
