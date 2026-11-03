@@ -47,7 +47,9 @@ It succeeds only if the file was built by a GitHub Actions workflow of this repo
 
 | Version | Installer | Portable |
 |---|---|---|
-| 0.6.0 | *(added after the release)* | *(added after the release)* |
+| 0.6.0 | [0/67](https://www.virustotal.com/gui/file/73c6d029cd613e649813136a0f6f1f5deaadcc8e87250ef349b02fc042556cb4) | [1/65](https://www.virustotal.com/gui/file/1164e5e2f11ee938d31d706c0d848505102279aaf65477cbf4b2eace555c59a0) ¹ |
+
+¹ McAfee flags the 0.6.0 portable with a generic reputation detection (`Ti!` followed by the start of the file's hash), which is common for new, unsigned executables. No other engine flags it, and the installer, which contains the same app, is clean in all 67.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
