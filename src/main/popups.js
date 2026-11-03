@@ -41,15 +41,18 @@ function layout() {
 // (setBounds y setAlwaysOnTop no tienen efecto): la burbuja saldría donde decida el compositor, normalmente
 // en el centro y detrás de la ventana activa. Las notificaciones del sistema (org.freedesktop.Notifications)
 // sí aparecen en su sitio y por encima, y respetan el «No molestar» del escritorio.
-// Electron usa Wayland si hay sesión Wayland (WAYLAND_DISPLAY o XDG_SESSION_TYPE=wayland) salvo que se le fuerce
-// X11 con --ozone-platform=x11; en X11 la burbuja propia funciona. EVEX_POPUPS=custom|system lo fuerza (pruebas).
+// En X11 (también XWayland) la burbuja propia funciona. Electron deja en el interruptor ozone-platform la
+// plataforma que eligió («x11» o «wayland»; p. ej. WSLg da x11 porque no define XDG_SESSION_TYPE). Si no lo
+// indica, se mira la sesión (WAYLAND_DISPLAY o XDG_SESSION_TYPE=wayland). EVEX_POPUPS=custom|system lo fuerza.
+// Si la notificación falla (no hay servicio de notificaciones), se muestra la burbuja propia como reserva.
 export function systemPopups() {
   const forced = process.env.EVEX_POPUPS;
   if (forced === "custom") return false;
   if (forced !== "system") {
     if (process.platform !== "linux") return false;
-    if (app.commandLine.getSwitchValue("ozone-platform") === "x11") return false;
-    if (!process.env.WAYLAND_DISPLAY && process.env.XDG_SESSION_TYPE !== "wayland") return false;
+    const ozone = app.commandLine.getSwitchValue("ozone-platform");
+    if (ozone === "x11") return false;
+    if (ozone !== "wayland" && !process.env.WAYLAND_DISPLAY && process.env.XDG_SESSION_TYPE !== "wayland") return false;
   }
   return Notification.isSupported();
 }
@@ -70,6 +73,11 @@ function showSystemNotification(id, data) {
   });
   note.on("click", () => options.onClick(data));
   note.on("close", () => systemNotes.delete(id));
+  // Sin servicio de notificaciones (p. ej. un escritorio mínimo) no se pierde el aviso: sale la burbuja propia.
+  note.on("failed", () => {
+    systemNotes.delete(id);
+    showCustomPopup(id, data);
+  });
   systemNotes.set(id, { note, data });
   note.show();
   return id;
@@ -78,6 +86,10 @@ function showSystemNotification(id, data) {
 export function showPopup(data) {
   const id = nextId++;
   if (systemPopups()) return showSystemNotification(id, data);
+  return showCustomPopup(id, data);
+}
+
+function showCustomPopup(id, data) {
   const p = { id, data: { ...data, corner: options.corner }, height: 120, win: null, timer: null };
   const win = new BrowserWindow({
     width: WIDTH,

@@ -1,6 +1,6 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { app, Notification } from "electron";
+import { app, Notification, BrowserWindow } from "electron";
 import { systemPopups, showPopup, closeAllPopups, configurePopups } from "../../src/main/popups.js";
 
 const saved = { platform: process.platform, env: { ...process.env } };
@@ -11,6 +11,7 @@ beforeEach(() => {
   delete app.testSwitches;
   Notification.supported = true;
   Notification.created.length = 0;
+  BrowserWindow.created.length = 0;
 });
 afterEach(() => {
   setPlatform(saved.platform);
@@ -35,7 +36,10 @@ test("systemPopups: notificaciones del sistema solo en Linux con Wayland", () =>
   assert.equal(systemPopups(), true, "WAYLAND_DISPLAY (p. ej. WSLg)");
 
   app.testSwitches = { "ozone-platform": "x11" };
-  assert.equal(systemPopups(), false, "forzado a X11 con --ozone-platform=x11");
+  assert.equal(systemPopups(), false, "Electron eligió X11 (p. ej. WSLg sin XDG_SESSION_TYPE, o --ozone-platform=x11)");
+  delete process.env.WAYLAND_DISPLAY;
+  app.testSwitches = { "ozone-platform": "wayland" };
+  assert.equal(systemPopups(), true, "Electron eligió Wayland aunque falten las variables");
   delete app.testSwitches;
 
   Notification.supported = false;
@@ -80,4 +84,16 @@ test("en Wayland, un aviso es una notificación del sistema que abre la conversa
   assert.ok(!mn.closed, "las de mensajes siguen");
   closeAllPopups();
   assert.equal(mn.closed, true);
+});
+
+test("si la notificación del sistema falla (sin servicio de notificaciones), sale la burbuja propia", () => {
+  setPlatform("linux");
+  process.env.WAYLAND_DISPLAY = "wayland-0";
+  configurePopups({ pingSticky: true, onClick: () => {} });
+  showPopup({ kind: "ping", title: "Ping" });
+  assert.equal(BrowserWindow.created.length, 0, "primero se intenta la notificación del sistema");
+  Notification.created.at(-1).handlers.failed();
+  assert.equal(BrowserWindow.created.length, 1, "y al fallar, la burbuja propia");
+  assert.match(BrowserWindow.created[0].url, /^app:\/\/evex\/popup\.html\?id=\d+$/);
+  closeAllPopups();
 });
