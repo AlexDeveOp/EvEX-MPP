@@ -18,8 +18,7 @@ const ROOMS = {
   secret: { name: "secret", subject: "", occupants: [], password: "pw" },
 };
 // Lo que se registra puede venir del cliente: se quitan los saltos de línea para que no pueda fingir líneas del registro.
-const clean = (v) => (typeof v === "string" ? v.replace(/\n|\r/g, "") : v);
-const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a.map(clean));
+const log = (...a) => console.log(`${new Date().toISOString().slice(11, 19)} ${a.map(String).join(" ")}`.replace(/\n|\r/g, ""));
 const MAM = "urn:xmpp:mam:2";
 const ARCHIVE = process.env.MOCK_MAM
   ? [{ id: "arch-1", from: `pingbot@${DOMAIN}/bot`, ts: Date.now() - 40 * 60e3, body: "Fleet up in 20 minutes\nFC Name: Bob FC\nFormup Location: Amarr\nDoctrine: Ferox\n\n~~~ This was a coord broadcast from bob to all ~~~" }]
