@@ -115,7 +115,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Local history with search, and mentions with custom keywords.
 - Correct your last message with ↑, quotes and `/me`.
 - Pidgin's XMPP commands, with suggestions as you type `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` and `/help`. Nickname (Tab) and `:emoji:` completion.
-- **Edit the room topic** from the header: an *edit* tag appears when the server lets you change it (moderators always, participants when the room allows it). It opens a box with the current topic to edit it or paste a new one, with ✓ and ✕. Room owners can open the room's settings from the ⋮ menu or with `/config`.
+- **Edit the room topic** from the header: an *edit* tag appears when the server lets you change it (moderators always, participants when the room allows it). It opens a box with the current topic to edit it or paste a new one, with ✓ and ✕. Room owners can open the room's settings from the ⋮ menu or with `/config`, including the lists of owners, admins, members and banned users. Right-click a participant to make them a moderator, member, admin or owner, as far as your own permissions allow.
 - Delivery receipts, "typing…" indicator, and image and YouTube previews.
 
 **Customization**

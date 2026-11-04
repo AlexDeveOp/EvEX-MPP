@@ -1138,3 +1138,76 @@
   border-color: var(--border);
   background: transparent;
 }
+
+/* ---------- configuración de la sala ---------- */
+
+.room-config .form-section {
+  margin: 18px 0 4px;
+  font-size: 0.95em;
+  font-weight: 700;
+}
+.room-config .form-section:first-child {
+  margin-top: 0;
+}
+.perm-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+.perm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+.perm-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.perm-head .chip {
+  font-size: 0.72em;
+  padding: 0 7px;
+}
+.perm-head .muted {
+  flex-basis: 100%;
+}
+.perm-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 9.5em;
+  overflow-y: auto;
+}
+.perm-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+.perm-jid {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+.perm-list .icon-btn.perm-remove {
+  width: 22px;
+  height: 22px;
+  color: var(--danger);
+}
+.perm-add {
+  display: flex;
+  gap: 6px;
+}
+.perm-add .input {
+  flex: 1;
+  min-width: 0;
+}

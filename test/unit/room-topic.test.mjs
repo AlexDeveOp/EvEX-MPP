@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { xml } from "@xmpp/client";
 import { XmppAccount, iqErrorMessage, parseChangeSubject, parseDataForm, dataFormSubmit } from "../../src/main/xmpp-account.js";
 import { S } from "../../src/renderer/js/state.js";
-import { canEditTopic, canConfigureRoom, topicLockedReason, topicChangedText, topicErrorText } from "../../src/renderer/js/room-admin.js";
+import { canEditTopic, canConfigureRoom, topicLockedReason, topicChangedText, topicErrorText, occupantAdminActions, selfRightsText } from "../../src/renderer/js/room-admin.js";
 import { TEST_SETTINGS, tempDir } from "./helpers.mjs";
 
 S.settings = structuredClone(TEST_SETTINGS);
@@ -48,6 +48,35 @@ test("textos del tema: cambiado, quitado y error de un cambio rechazado", () => 
   assert.equal(topicChangedText("bob", "Fleet 20:00"), "bob cambió el tema: Fleet 20:00");
   assert.equal(topicChangedText("bob", ""), "bob quitó el tema de la sala.");
   assert.equal(topicErrorText({ id: "desconocido", condition: "forbidden" }), null, "otros errores siguen su camino");
+});
+
+test("clic derecho en un participante: cada uno ve lo que su afiliación permite", () => {
+  const keys = (me, o) => occupantAdminActions(me, o).map((a) => a.key);
+  const p = { nick: "piloto", jid: "piloto@ejemplo.com/pc", role: "participant", affiliation: "none" };
+  assert.deepEqual(keys({ role: "participant", affiliation: "none" }, p), [], "un participante normal no puede nada");
+  assert.deepEqual(keys({ role: "moderator", affiliation: "none" }, p), [], "un moderador sin afiliación tampoco (solo expulsar y voz)");
+  assert.deepEqual(keys({ role: "moderator", affiliation: "admin" }, p), ["mod", "member"]);
+  assert.deepEqual(keys({ role: "moderator", affiliation: "owner" }, p), ["mod", "member", "admin", "owner"]);
+  assert.deepEqual(keys({ role: "moderator", affiliation: "owner" }, { ...p, role: "moderator", affiliation: "member" }), ["unmod", "unmember", "admin", "owner"]);
+  assert.deepEqual(keys({ role: "moderator", affiliation: "owner" }, { ...p, role: "moderator", affiliation: "admin" }), ["unadmin", "owner"], "a un administrador no se le quita el moderador suelto");
+  assert.deepEqual(keys({ role: "moderator", affiliation: "owner" }, { ...p, role: "moderator", affiliation: "owner" }), ["unowner"]);
+  assert.deepEqual(keys({ role: "moderator", affiliation: "admin" }, { ...p, role: "moderator", affiliation: "admin" }), [], "un administrador no toca a otro");
+  assert.deepEqual(keys({ role: "moderator", affiliation: "owner" }, { ...p, jid: "" }), ["mod"], "sin dirección real, solo el rol");
+  assert.deepEqual(keys({ role: "moderator", affiliation: "owner" }, { ...p, self: true }), [], "a uno mismo, nada");
+  const make = occupantAdminActions({ role: "moderator", affiliation: "owner" }, p).find((a) => a.key === "admin");
+  assert.deepEqual(make.opts, { jid: "piloto@ejemplo.com", affiliation: "admin" }, "la afiliación va por la dirección sin recurso");
+  assert.equal(make.done, "piloto ahora es administrador.");
+});
+
+test("aviso de nuestros propios permisos", () => {
+  const p = { role: "participant", affiliation: "member" };
+  assert.equal(selfRightsText(p, { ...p, role: "moderator" }), "Ahora eres moderador en esta sala.");
+  assert.equal(selfRightsText({ ...p, role: "moderator" }, p), "Ya no eres moderador en esta sala.");
+  assert.equal(selfRightsText(p, { role: "moderator", affiliation: "admin" }), "Ahora eres administrador de esta sala.");
+  assert.equal(selfRightsText({ role: "moderator", affiliation: "admin" }, p), "Ya no eres administrador de esta sala.");
+  assert.equal(selfRightsText(p, { role: "none", affiliation: "outcast" }), "Ya no eres miembro de esta sala.");
+  assert.equal(selfRightsText(p, { ...p, role: "visitor" }), "Ahora eres visitante: no puedes escribir en esta sala.");
+  assert.equal(selfRightsText(p, { ...p }), null, "sin cambios, sin aviso");
 });
 
 test("parseChangeSubject: 1/true, 0/false o null si el servidor no lo dice", () => {
@@ -177,6 +206,22 @@ test("configuración de la sala: el propietario la lee y la guarda; los demás r
   await waitFor((e) => e.type === "room-joined" && e.room === "general@conference.test.local");
   await assert.rejects(acc.getRoomConfig("general@conference.test.local"), /No tienes permiso/);
   await assert.rejects(acc.moderate("general@conference.test.local", { nick: "piloto_dos", role: "visitor" }), /No tienes permiso/);
+});
+
+test("listas de permisos: se leen por afiliación y cambian al añadir o quitar a alguien", async (t) => {
+  const { acc, waitFor } = await online(t);
+  const room = "entrenamiento@conference.test.local";
+  await acc.joinRoom(room, "probador");
+  await waitFor((e) => e.type === "room-joined" && e.room === room);
+  assert.deepEqual((await acc.getAffiliations(room, "owner")).map((i) => i.jid), ["instructor_y@test.local"]);
+  assert.deepEqual((await acc.getAffiliations(room, "outcast")).map((i) => i.jid), ["spammer@test.local"]);
+  await acc.moderate(room, { jid: "nuevo@test.local", affiliation: "admin" });
+  assert.deepEqual((await acc.getAffiliations(room, "admin")).map((i) => i.jid), ["nuevo@test.local"]);
+  await acc.moderate(room, { jid: "nuevo@test.local", affiliation: "none" });
+  assert.deepEqual(await acc.getAffiliations(room, "admin"), []);
+  await acc.joinRoom("general@conference.test.local", "probador");
+  await waitFor((e) => e.type === "room-joined" && e.room === "general@conference.test.local");
+  await assert.rejects(acc.getAffiliations("general@conference.test.local", "admin"), /No tienes permiso/);
 });
 
 test("/ping mide el tiempo; un cliente sin ping cuenta como conectado; /buzz llega y se recibe", async (t) => {

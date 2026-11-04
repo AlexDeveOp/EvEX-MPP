@@ -6,7 +6,7 @@ import { initChat, markReceipt, focusComposer } from "./chat.js";
 import { initSidebar } from "./sidebar.js";
 import { initOccupants } from "./occupants.js";
 import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, markRead, updateBadge, pingsConv, notifyAttention } from "./convs.js";
-import { topicErrorText, topicChangedText } from "./room-admin.js";
+import { topicErrorText, topicChangedText, selfRightsText } from "./room-admin.js";
 import { showRecoveredPings } from "./ping-recovery.js";
 import { startFormupWatch } from "./formup.js";
 import { windowFocused as ttsWindowFocused } from "./tts.js";
@@ -286,6 +286,7 @@ const HANDLERS = {
     const r = roomState(id, ev.room);
     const o = ev.occupant;
     const had = r.occupants.has(o.nick);
+    const before = r.occupants.get(o.nick);
     const c = S.convs.get(convKey(id, ev.room));
     if (o.available) r.occupants.set(o.nick, o);
     else r.occupants.delete(o.nick);
@@ -295,6 +296,9 @@ const HANDLERS = {
       else if (o.available && !had) systemMessage(c, t("{nick} ha entrado", { nick: o.nick }), { icon: "log-in", joinLeave: true, kind: "join" });
       else if (!o.available && had) systemMessage(c, o.status ? t("{nick} ha salido ({status})", { nick: o.nick, status: o.status }) : t("{nick} ha salido", { nick: o.nick }), { icon: "log-out", joinLeave: true, kind: "leave" });
       if (!o.available) c.typing.delete(o.nick);
+      // Nuestros propios permisos: la etiqueta «editar» y el menú cambian solos, y aquí se dice por qué.
+      const rights = o.nick === r.nick && o.available && had ? selfRightsText(before, o) : null;
+      if (rights) systemMessage(c, rights, { icon: "shield-check" });
     }
     emitRoomSoon(id, ev.room);
   },

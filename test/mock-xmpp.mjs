@@ -6,6 +6,7 @@
 //   general: los participantes pueden cambiar el tema · operaciones: no pueden (la información de la sala lo dice)
 //   entrenamiento: eres propietario y moderador (/config, /role, /affiliate…) · anuncios: la sala no dice nada y el
 //   servidor rechaza el cambio de tema. /ping a bob devuelve «service-unavailable» y /buzz a alice te llama de vuelta.
+//   En cualquier sala, escribir «!ascender» te hace administrador (y moderador) y «!degradar» te devuelve a miembro.
 // Con MOCK_MAM=1 anuncia archivo de mensajes (XEP-0313) y guarda en él un ping de hace 40 minutos que nunca se entregó,
 // como si hubiera llegado con la app cerrada.
 import net from "node:net";
@@ -23,6 +24,17 @@ const ROOMS = {
   anuncios: { name: "anuncios", subject: "Solo los moderadores cambian este tema", occupants: ["portavoz"], me: MEMBER, rejectSubject: true },
   secret: { name: "secret", subject: "", occupants: [], password: "pw", me: MEMBER },
 };
+// Listas de afiliación de cada sala (las que guarda el servidor aunque no estén dentro): el primer ocupante es
+// propietario, los demás miembros, y hay un vetado de ejemplo.
+for (const r of Object.values(ROOMS)) {
+  r.affs = { owner: [], admin: [], member: [], outcast: [`spammer@${DOMAIN}`] };
+  r.occupants.forEach((o, i) => r.affs[i === 0 ? "owner" : "member"].push(`${o}@${DOMAIN}`));
+}
+const setAff = (r, jid, aff) => {
+  for (const list of Object.values(r.affs)) list.splice(0, list.length, ...list.filter((j) => j !== jid));
+  if (aff !== "none") r.affs[aff].push(jid);
+};
+const affOf = (r, jid) => Object.keys(r.affs).find((a) => r.affs[a].includes(jid)) || "none";
 const STANZAS = "urn:ietf:params:xml:ns:xmpp-stanzas";
 const MUC_USER = "http://jabber.org/protocol/muc#user";
 // Formulario de configuración de sala (muc#owner), con un campo de cada tipo habitual.
@@ -188,14 +200,24 @@ net
         if (values["muc#roomconfig_changesubject"]) roomOf.changeSubject = values["muc#roomconfig_changesubject"][0] === "1" ? "1" : "0";
         return result(st);
       }
+      if (ns === "http://jabber.org/protocol/muc#admin" && roomOf && st.attrs.type === "get") {
+        if (!["owner", "admin"].includes(roomOf.me.affiliation)) return err("forbidden");
+        const aff = q.getChild("item")?.attrs.affiliation;
+        return result(st, xml("query", { xmlns: ns }, ...(roomOf.affs[aff] || []).map((j) => xml("item", { affiliation: aff, jid: j }))));
+      }
       if (ns === "http://jabber.org/protocol/muc#admin" && roomOf && st.attrs.type === "set") {
         if (roomOf.me.role !== "moderator") return err("forbidden");
         const item = q.getChild("item");
         log("admin", to, JSON.stringify(item.attrs));
+        if (item.attrs.jid && item.attrs.affiliation) setAff(roomOf, item.attrs.jid.split("/")[0], item.attrs.affiliation);
         const roomJid = to.split("/")[0];
         const nick = item.attrs.nick || roomOf.occupants.find((o) => item.attrs.jid?.startsWith(`${o}@`));
-        if (nick && item.attrs.role !== "none" && item.attrs.affiliation !== "outcast")
-          send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: MUC_USER }, xml("item", { affiliation: item.attrs.affiliation || "member", role: item.attrs.role || "participant", jid: `${nick}@${DOMAIN}/x` }))));
+        if (nick && item.attrs.role !== "none" && item.attrs.affiliation !== "outcast") {
+          // Los administradores y propietarios son moderadores; si no, se mantiene el rol que se pide o el de participante.
+          const aff = affOf(roomOf, `${nick}@${DOMAIN}`);
+          const role = item.attrs.role || (["owner", "admin"].includes(aff) ? "moderator" : "participant");
+          send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: MUC_USER }, xml("item", { affiliation: aff, role, jid: `${nick}@${DOMAIN}/x` }))));
+        }
         else if (nick) send(xml("presence", { from: `${roomJid}/${nick}`, to: jid, type: "unavailable" }, xml("x", { xmlns: MUC_USER }, xml("item", { affiliation: item.attrs.affiliation || "none", role: "none" }), xml("status", { code: item.attrs.affiliation === "outcast" ? "301" : "307" }))));
         return result(st);
       }
@@ -291,7 +313,14 @@ net
           room.subject = subject.text();
         }
         const out = xml("message", { from: `${roomJid}/${joined.get(roomJid)}`, to: jid, type: "groupchat", id: st.attrs.id }, ...st.getChildElements().filter((c) => ["body", "subject", "replace"].includes(c.name)));
-        return send(out);
+        send(out);
+        // Cambiar nuestros propios permisos para probar los avisos y la etiqueta «editar».
+        if (body === "!ascender" || body === "!degradar") {
+          room.me = body === "!ascender" ? { affiliation: "admin", role: "moderator" } : { ...MEMBER };
+          log("permisos propios en", roomJid, JSON.stringify(room.me));
+          setTimeout(() => send(xml("presence", { from: `${roomJid}/${joined.get(roomJid)}`, to: jid }, xml("x", { xmlns: MUC_USER }, xml("item", room.me), xml("status", { code: "110" })))), 500);
+        }
+        return;
       }
       if (to.startsWith(`alice@${DOMAIN}`) && st.getChild("attention", "urn:xmpp:attention:0")) {
         log("buzz a alice");

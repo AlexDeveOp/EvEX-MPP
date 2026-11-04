@@ -1004,6 +1004,15 @@ export class XmppAccount extends EventEmitter {
     await friendly(this.xmpp.iqCaller.set(xml("query", NS.MUC_ADMIN, xml("item", attrs, reason ? xml("reason", {}, reason) : null)), bare(roomJid)));
   }
 
+  // Lista de una afiliación de la sala (owner, admin, member u outcast), aunque no estén dentro (XEP-0045 §9/§10).
+  async getAffiliations(roomJid, affiliation) {
+    const res = await friendly(this.xmpp.iqCaller.get(xml("query", NS.MUC_ADMIN, xml("item", { affiliation })), bare(roomJid), 15000));
+    return (res?.getChildren("item") || [])
+      .filter((i) => i.attrs.jid)
+      .map((i) => ({ jid: bare(i.attrs.jid), nick: i.attrs.nick || "", reason: i.getChildText("reason") || "" }))
+      .sort((a, b) => a.jid.localeCompare(b.jid));
+  }
+
   async invite(roomJid, jid, reason) {
     await this.send(xml("message", { to: bare(jid) }, xml("x", { xmlns: NS.CONFERENCE, jid: bare(roomJid), ...(reason ? { reason } : {}) })));
   }
