@@ -40,6 +40,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
 
 ### Fixed
+- **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
+- **Linux: clean exit on shutdown or reboot.** The app now takes the logind shutdown delay lock and quits before the desktop closes. Before, Ubuntu showed "EvEX-MPP has closed unexpectedly" after rebooting with the app open.
 - The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
 - With *Until you open the pings again*, the sirens switch off as soon as you leave the pings view (before, they kept pulsing until the view was redrawn), and choosing that mode no longer makes every stored ping pulse at once.
 
