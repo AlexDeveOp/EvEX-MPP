@@ -114,7 +114,8 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Hora local (gris) y **hora EVE/UTC** (ámbar) en cada mensaje; cualquiera de las dos se puede ocultar. Reloj EVE en la barra de título.
 - Historial local con búsqueda y menciones con palabras clave.
 - Corregir el último mensaje con ↑, citas y `/me`.
-- Comandos tipo IRC (`/help`) y autocompletado de apodos (Tab) y de `:emoji:`.
+- Los comandos de Pidgin para XMPP, con sugerencias al escribir `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` y `/help`. Autocompletado de apodos (Tab) y de `:emoji:`.
+- **Editar el tema de la sala** desde la cabecera: sale una etiqueta *editar* cuando el servidor te deja cambiarlo (los moderadores siempre; los participantes, si la sala lo permite). Abre un cuadro con el tema actual para editarlo o pegar uno nuevo, con ✓ y ✕. Los propietarios abren la configuración de la sala desde el menú ⋮ o con `/config`.
 - Recibos de entrega, «escribiendo…» y vistas previas de imágenes y YouTube.
 
 **Personalización**
