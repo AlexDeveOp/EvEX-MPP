@@ -1,4 +1,4 @@
-// Preferencias → Perfil: tu avatar. Se elige una imagen, se encuadra en un círculo (arrastrar y zoom) y se publica ya
+// Preferencias → Avatar: tu avatar. Se elige una imagen, se encuadra en un círculo (arrastrar y zoom) y se publica ya
 // reducida y comprimida (avatar-image.js). Las imágenes animadas se pueden mantener como GIF animado.
 import { S, api, conn, on } from "../state.js";
 import { h, icon, modal, toast, toggle, confirmDialog } from "../dom.js";
@@ -12,10 +12,10 @@ const MAX_SOURCE = 25 * 1024 * 1024;
 
 // Cuenta que se quiere ver al abrir la pestaña (desde su círculo o desde Gestionar cuentas).
 let focusId = null;
-export const setProfileFocus = (id) => (focusId = id);
+export const setAvatarFocus = (id) => (focusId = id);
 
-export const profileTabs = {
-  profile() {
+export const avatarTabs = {
+  avatar() {
     const wrap = h("div", {});
     const render = () => {
       wrap.replaceChildren(...S.accounts.map(accountBlock), aboutGroup());

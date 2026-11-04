@@ -8,12 +8,12 @@ import { notificationTabs } from "./settings/notifications.js";
 import { pingTabs } from "./settings/pings.js";
 import { dataTabs } from "./settings/data.js";
 import { networkTabs } from "./settings/network.js";
-import { profileTabs, setProfileFocus } from "./settings/profile.js";
+import { avatarTabs, setAvatarFocus } from "./settings/avatar.js";
 
 export { openBackgroundEditor } from "./settings/backgrounds.js";
 
 const TABS = [
-  ["profile", t("Perfil"), "circle-user-round"],
+  ["avatar", t("Avatar"), "circle-user-round"],
   ["appearance", t("Apariencia"), "palette"],
   ["colors", t("Colores"), "brush"],
   ["messages", t("Mensajes"), "message-square"],
@@ -42,10 +42,10 @@ export function openSettings(tab = "appearance") {
   show(tab);
 }
 
-// Preferencias → Perfil con el avatar de esa cuenta a la vista.
-export function openProfile(accountId) {
-  setProfileFocus(accountId);
-  openSettings("profile");
+// Preferencias → Avatar con el avatar de esa cuenta a la vista.
+export function openAvatarSettings(accountId) {
+  setAvatarFocus(accountId);
+  openSettings("avatar");
 }
 
-const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...profileTabs };
+const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...avatarTabs };

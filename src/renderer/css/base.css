@@ -708,7 +708,7 @@ body.resizing {
   width: 38px;
   height: 38px;
 }
-/* El círculo de la cuenta abre Preferencias → Perfil (sidebar.js). */
+/* El círculo de la cuenta abre Preferencias → Avatar (sidebar.js). */
 .sb-accounts .account-avatar {
   cursor: pointer;
   transition: box-shadow 0.15s;

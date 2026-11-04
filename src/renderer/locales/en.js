@@ -1248,8 +1248,7 @@ export default {
   "Sin pedir": "Not requested",
   "Estado del SRP": "SRP status",
   "SRP · {estado}": "SRP · {estado}",
-  // Perfil: avatar propio (settings/profile.js)
-  "Perfil": "Profile",
+  // Avatar propio (settings/avatar.js)
   "Cambiar mi avatar": "Change my avatar",
   "Avatar": "Avatar",
   "Lo ven tus contactos y las salas, también desde Pidgin y otros clientes XMPP.": "Your contacts and rooms see it, also in Pidgin and other XMPP clients.",

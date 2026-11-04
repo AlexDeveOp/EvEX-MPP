@@ -1878,7 +1878,7 @@ select.input {
   color: var(--ok);
 }
 
-/* ---------- Preferencias → Perfil: avatar (settings/profile.js) ---------- */
+/* ---------- Preferencias → Avatar: avatar (settings/avatar.js) ---------- */
 .avatar-settings {
   display: flex;
   gap: 20px;
@@ -1956,7 +1956,7 @@ select.input {
   text-align: center;
 }
 
-/* Gestionar cuentas: el avatar de la cuenta lleva a Preferencias → Perfil (accounts.js). */
+/* Gestionar cuentas: el avatar de la cuenta lleva a Preferencias → Avatar (accounts.js). */
 .acc-form-head {
   display: flex;
   align-items: center;
@@ -1982,12 +1982,12 @@ select.input {
 .acc-avatar-link:focus-visible {
   outline: none;
 }
-/* Con varias cuentas, la que se ha pedido se resalta un momento al abrir Perfil. */
+/* Con varias cuentas, la que se ha pedido se resalta un momento al abrir la pestaña Avatar. */
 .settings-group.flash {
-  animation: profile-flash 1.6s ease-out;
+  animation: avatar-flash 1.6s ease-out;
   border-radius: var(--radius);
 }
-@keyframes profile-flash {
+@keyframes avatar-flash {
   from {
     box-shadow: 0 0 0 2px var(--accent);
   }

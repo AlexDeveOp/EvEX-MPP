@@ -8,13 +8,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
-- **Avatar editor** in *Preferences → Profile*, also opened by clicking your avatar circle in the sidebar or from *Change my avatar…* in the status menu.
+- **Avatar editor** in *Preferences → Avatar*, also opened by clicking your avatar circle in the sidebar or from *Change my avatar…* in the status menu.
   - Choose an image and frame it in a circle: drag to move, wheel, slider or +/− to zoom, arrow keys to move.
   - Like Pidgin, it is scaled to 96×96 and compressed before it is sent: PNG if it fits in 8 KB, otherwise the best JPEG that fits.
   - Animated GIF, WebP or PNG images can stay animated: they become a GIF of up to 64 KB, with fewer colors, a smaller size or fewer frames if needed. The GIF encoder is built in, with no new dependencies.
   - Published in the vCard (XEP-0153) as before, and now also with XEP-0084 (a still version), which modern clients use. Servers without it just keep the vCard.
   - *Remove avatar* clears the photo from the vCard, sends an empty `<photo/>` and publishes empty XEP-0084 metadata.
-  - With several accounts there is one avatar block per account. *Manage accounts* shows each account's avatar with an *Avatar…* shortcut that opens Profile with that account highlighted.
+  - With several accounts there is one avatar block per account. *Manage accounts* shows each account's avatar with an *Avatar…* shortcut that opens the Avatar tab with that account highlighted.
 
 ## [0.7.0] - 2026-11-04
 
