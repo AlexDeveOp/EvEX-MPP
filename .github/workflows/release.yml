@@ -133,16 +133,36 @@ jobs:
           $match = [regex]::Match($changelog, "(?ms)^## \[$([regex]::Escape($version))\][^\n]*\n(.*?)(?=^## \[|\z)")
           if (-not $match.Success) { throw "CHANGELOG.md no tiene sección para $version" }
           $verify = if ("${{ github.event.repository.visibility }}" -eq "public") {
-            "`n- Provenance: ``gh attestation verify <file> --repo ${{ github.repository }}``"
+            "`n- Provenance / Procedencia: ``gh attestation verify <file> --repo ${{ github.repository }}`` (offline: add ``--bundle EvEX-MPP-${{ github.ref_name }}.intoto.jsonl``)."
           } else { "" }
           @"
           $($match.Groups[1].Value.Trim())
 
-          ### Verify your download / Verifica la descarga
-          - SHA-256: compare with ``checksums.txt``. Windows: ``Get-FileHash <file> -Algorithm SHA256``; Linux: ``sha256sum -c --ignore-missing checksums.txt``.$verify
-          - Built by GitHub Actions from tag ``${{ github.ref_name }}`` (commit ``${{ github.sha }}``).
-          - Linux: ``chmod +x EvEX-MPP-*.AppImage`` (needs libfuse2) or ``sudo apt install ./evex-mpp_*_amd64.deb``. [Linux notes](https://github.com/${{ github.repository }}#linux)
-          - Not code-signed yet: SmartScreen → "More info" → "Run anyway" / «Más información» → «Ejecutar de todas formas». [Code signing policy](https://github.com/${{ github.repository }}#code-signing-policy) · [Privacy policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY.md)
+          ## Download / Descarga
+
+          ### Windows (x64)
+
+          | File | What it is / Qué es |
+          |---|---|
+          | ``EvEX-MPP-Setup-$($version).exe`` | Installer: Start menu, uninstaller, optional start with Windows. / Instalador. |
+          | ``EvEX-MPP-$($version)-portable.exe`` | Portable: nothing to install. / Portable, sin instalar. |
+
+          - Verify / Verifica: ``Get-FileHash <file> -Algorithm SHA256`` must equal its line in ``checksums.txt``.
+          - Not code-signed yet: SmartScreen → "More info" → "Run anyway" / «Más información» → «Ejecutar de todas formas». [Code signing policy](https://github.com/${{ github.repository }}#code-signing-policy)
+
+          ### Linux (x64)
+
+          | File | What it is / Qué es |
+          |---|---|
+          | ``EvEX-MPP-$($version)-x86_64.AppImage`` | AppImage: ``chmod +x`` and run. Needs FUSE 2 (``libfuse2t64`` on Ubuntu 24.04+, ``libfuse2`` on 22.04). |
+          | ``evex-mpp_$($version)_amd64.deb`` | Debian/Ubuntu package: ``sudo apt install ./evex-mpp_$($version)_amd64.deb`` |
+
+          - Verify / Verifica: ``sha256sum -c --ignore-missing checksums.txt`` (in the download folder).
+          - Requirements (keyring, tray, notifications on Wayland): [Linux notes](https://github.com/${{ github.repository }}#linux) · [Linux en español](https://github.com/${{ github.repository }}/blob/main/README.es.md#linux)
+
+          ### All files / Todos los archivos
+          - Built by GitHub Actions from tag ``${{ github.ref_name }}`` (commit ``${{ github.sha }}``). ``checksums.txt`` lists the SHA-256 of every file.$verify
+          - [Privacy policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY.md) · [How to verify your download](https://github.com/${{ github.repository }}#how-to-verify-your-download)
           "@ | Set-Content -Encoding utf8 notes.md
           Get-Content notes.md
 

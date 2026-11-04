@@ -2,7 +2,7 @@
 
 **English** | [Español](README.es.md)
 
-A desktop XMPP (Jabber) client for Windows (and Linux, in beta) built for EVE Online communities and alliances that coordinate over Jabber. It is a modern, highly customizable alternative to Pidgin: rooms with auto-join, fleet pings shown as cards, always-on-top pop-up alerts, EVE time and themes. The interface is available in English and Spanish.
+A desktop XMPP (Jabber) client for Windows and Linux built for EVE Online communities and alliances that coordinate over Jabber. It is a modern, highly customizable alternative to Pidgin: rooms with auto-join, fleet pings shown as cards, always-on-top pop-up alerts, EVE time and themes. The interface is available in English and Spanish.
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6)
 
@@ -19,7 +19,7 @@ The executables are not code-signed yet, so Windows SmartScreen will warn you th
 
 ### Linux
 
-**Beta**, for x64 (included in the releases after 0.6.0). Two packages, built by GitHub Actions on Ubuntu:
+For x64, since 0.7.0. Two packages, built by GitHub Actions on Ubuntu:
 
 | File | What it is |
 |---|---|
