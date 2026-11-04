@@ -29,6 +29,8 @@ const NS = {
   PUBSUB: "http://jabber.org/protocol/pubsub",
   AVATAR_DATA: "urn:xmpp:avatar:data",
   AVATAR_META: "urn:xmpp:avatar:metadata",
+  PUBSUB_EVENT: "http://jabber.org/protocol/pubsub#event",
+  CAPS: "http://jabber.org/protocol/caps",
   PRIVATE: "jabber:iq:private",
   BOOKMARKS: "storage:bookmarks",
   CONFERENCE: "jabber:x:conference",
@@ -41,7 +43,35 @@ const NS = {
   STANZAS: "urn:ietf:params:xml:ns:xmpp-stanzas",
 };
 
-const FEATURES = [NS.DISCO_INFO, NS.MUC, NS.CHATSTATES, NS.RECEIPTS, NS.CORRECT, NS.VERSION, NS.PING, NS.CONFERENCE, NS.OOB, NS.ATTENTION, `${NS.VCARD_UPDATE}`];
+// «+notify» (XEP-0163): pide al servidor los avatares XEP-0084 de los contactos, al conectar y cada vez que cambian.
+const FEATURES = [NS.DISCO_INFO, NS.MUC, NS.CHATSTATES, NS.RECEIPTS, NS.CORRECT, NS.VERSION, NS.PING, NS.CONFERENCE, NS.OOB, NS.ATTENTION, `${NS.VCARD_UPDATE}`, NS.CAPS, `${NS.AVATAR_META}+notify`];
+const IDENTITY = { category: "client", type: "pc", name: "EvEX-MPP" };
+export const CAPS_NODE = "https://github.com/AlexDeveOp/EvEX-MPP";
+
+// Versión de capacidades (XEP-0115 §5.1): SHA-1 en base64 de identidades y funciones ordenadas. El servidor la usa para
+// saber qué notificaciones PEP mandarnos sin preguntar cada vez.
+export function capsVer(identities = [IDENTITY], features = FEATURES) {
+  const ids = identities.map((i) => `${i.category}/${i.type}/${i.lang || ""}/${i.name || ""}`).sort();
+  const s = [...ids, ...[...features].sort()].map((x) => `${x}<`).join("");
+  return crypto.createHash("sha1").update(s, "utf8").digest("base64");
+}
+const CAPS_VER = capsVer();
+
+// De los metadatos XEP-0084 de un contacto, la imagen que se descarga del nodo de datos: sin url, preferiblemente PNG
+// y de tamaño razonable. Devuelve { id, type } o null si no hay avatar (metadatos vacíos = lo ha quitado).
+// Tipo de imagen por su cabecera (para la extensión del archivo guardado).
+export function imageType(data) {
+  if (data[0] === 0x89 && data[1] === 0x50) return "image/png";
+  if (data[0] === 0x47 && data[1] === 0x49) return "image/gif";
+  if (data[0] === 0x52 && data[8] === 0x57) return "image/webp";
+  return "image/jpeg";
+}
+
+export function pickAvatarInfo(metadata) {
+  const infos = (metadata?.getChildren("info") || []).filter((i) => !i.attrs.url && /^[0-9a-f]{40}$/i.test(i.attrs.id || "") && Number(i.attrs.bytes || 0) <= 2 * 1024 * 1024);
+  const best = infos.find((i) => i.attrs.type === "image/png") || infos[0];
+  return best ? { id: best.attrs.id.toLowerCase(), type: best.attrs.type || "image/png" } : null;
+}
 
 const MUC_ERRORS = {
   conflict: tk("Ese apodo ya está en uso en la sala."),
@@ -256,6 +286,8 @@ export class XmppAccount extends EventEmitter {
     this.avatarQueue = [];
     this.avatarPending = new Set();
     this.avatarActive = 0;
+    this.pepAvatars = new Map(); // jid -> hash del avatar XEP-0084
+    this.vcardAvatars = new Map(); // jid -> hash de la vCard (vuelve si quita el de XEP-0084)
     this.pingTimer = null;
     this.supervisor = null; // vigila los reintentos de conexión (ver supervise)
     this.lastProgress = 0; // último cambio de estado de la conexión
@@ -326,8 +358,9 @@ export class XmppAccount extends EventEmitter {
     xmpp.iqCallee.get(NS.VERSION, "query", () =>
       xml("query", { xmlns: NS.VERSION }, xml("name", {}, "EvEX-MPP"), xml("version", {}, this.version), xml("os", {}, process.platform)),
     );
-    xmpp.iqCallee.get(NS.DISCO_INFO, "query", () =>
-      xml("query", { xmlns: NS.DISCO_INFO }, xml("identity", { category: "client", type: "pc", name: "EvEX-MPP" }), ...FEATURES.map((v) => xml("feature", { var: v }))),
+    // Con node (node#ver de XEP-0115) se devuelve el mismo node: así el servidor relaciona la respuesta con nuestra versión.
+    xmpp.iqCallee.get(NS.DISCO_INFO, "query", (ctx) =>
+      xml("query", { xmlns: NS.DISCO_INFO, ...(ctx.element.attrs.node ? { node: ctx.element.attrs.node } : {}) }, xml("identity", IDENTITY), ...FEATURES.map((v) => xml("feature", { var: v }))),
     );
     xmpp.iqCallee.set(NS.ROSTER, "query", (ctx) => {
       const from = ctx.stanza.attrs.from;
@@ -565,6 +598,7 @@ export class XmppAccount extends EventEmitter {
     if (this.presence.status) p.append(xml("status", {}, this.presence.status));
     p.append(xml("priority", {}, String(this.acc.priority ?? 1)));
     p.append(xml("x", { xmlns: NS.VCARD_UPDATE }, this.avatarHash ? xml("photo", {}, this.avatarHash) : xml("photo")));
+    p.append(xml("c", { xmlns: NS.CAPS, hash: "sha-1", node: CAPS_NODE, ver: CAPS_VER }));
     return p;
   }
 
@@ -651,8 +685,11 @@ export class XmppAccount extends EventEmitter {
     if (type === "subscribed" || type === "unsubscribed" || type === "unsubscribe") return this.event("subscription", { jid: fromBare, type });
     if (type === "error") return;
 
-    const avatar = this.photoHash(st);
-    if (avatar) this.requestAvatar(fromBare, avatar);
+    // Si el contacto tiene avatar XEP-0084, manda sobre el de la vCard (es el que eligen los clientes actuales).
+    const vcardHash = this.photoHash(st);
+    if (vcardHash) this.vcardAvatars.set(fromBare, vcardHash);
+    const avatar = this.pepAvatars.get(fromBare) || vcardHash;
+    if (avatar && avatar === vcardHash) this.requestAvatar(fromBare, avatar);
     const p = {
       jid: fromBare,
       resource: resourceOf(from),
@@ -755,6 +792,13 @@ export class XmppAccount extends EventEmitter {
   }
 
   onMessage(st) {
+    // Notificaciones PEP: el avatar XEP-0084 de un contacto (el remitente es su dirección; la pone el servidor).
+    const pepEvent = st.getChild("event", NS.PUBSUB_EVENT);
+    if (pepEvent) {
+      const items = pepEvent.getChild("items");
+      if (items?.attrs.node === NS.AVATAR_META) this.onPepAvatar(bare(st.attrs.from || ""), items);
+      return;
+    }
     // Resultados del archivo de mensajes: se recogen para quien los pidió y no se tratan como mensajes nuevos.
     const mamResult = st.getChild("result", NS.MAM);
     if (mamResult) {
@@ -1126,7 +1170,9 @@ export class XmppAccount extends EventEmitter {
     return null;
   }
 
-  requestAvatar(target, hash) {
+  // kind: "vcard" (foto de la vCard) o "pep" (nodo de datos XEP-0084). Las imágenes se guardan por hash y no se
+  // vuelven a descargar.
+  requestAvatar(target, hash, kind = "vcard") {
     const existing = this.avatarFile(hash);
     if (existing) {
       this.event("avatar", { hash, file: existing });
@@ -1134,15 +1180,15 @@ export class XmppAccount extends EventEmitter {
     }
     if (this.avatarPending.has(hash)) return;
     this.avatarPending.add(hash);
-    this.avatarQueue.push({ target, hash });
+    this.avatarQueue.push({ target, hash, kind });
     this.pumpAvatars();
   }
 
   pumpAvatars() {
     while (this.avatarActive < 3 && this.avatarQueue.length && this.online) {
-      const { target, hash } = this.avatarQueue.shift();
+      const { target, hash, kind } = this.avatarQueue.shift();
       this.avatarActive++;
-      this.fetchVcardPhoto(target)
+      (kind === "pep" ? this.fetchPepAvatar(target, hash) : this.fetchVcardPhoto(target))
         .then((photo) => {
           if (!photo) return;
           const ext = /png/.test(photo.type) ? "png" : /gif/.test(photo.type) ? "gif" : /webp/.test(photo.type) ? "webp" : "jpg";
@@ -1167,6 +1213,36 @@ export class XmppAccount extends EventEmitter {
     const data = Buffer.from(bin.replace(/\s+/g, ""), "base64");
     if (data.length > 2 * 1024 * 1024) return null;
     return { type: photo.getChildText("TYPE") || "image/png", data };
+  }
+
+  // Datos XEP-0084: el id es el SHA-1 de la imagen; si no coincide, se descarta.
+  async fetchPepAvatar(target, hash) {
+    const res = await this.xmpp.iqCaller.get(xml("pubsub", { xmlns: NS.PUBSUB }, xml("items", { node: NS.AVATAR_DATA }, xml("item", { id: hash }))), target, 20000);
+    const item = res?.getChild("items")?.getChildren("item").find((i) => i.attrs.id === hash);
+    const b64 = item?.getChildText("data", NS.AVATAR_DATA);
+    if (!b64) return null;
+    const data = Buffer.from(b64.replace(/\s+/g, ""), "base64");
+    if (data.length > 2 * 1024 * 1024 || crypto.createHash("sha1").update(data).digest("hex") !== hash) return null;
+    return { type: imageType(data), data };
+  }
+
+  // Metadatos XEP-0084 de un contacto: el avatar nuevo (se descarga si no lo tenemos) o, vacíos, que lo ha quitado y
+  // vuelve el de su vCard. Los propios se ignoran: el avatar propio se lleva desde la vCard.
+  onPepAvatar(jid, items) {
+    if (!jid || jid === bare(this.ownJid)) return;
+    const item = items.getChildren("item").at(-1);
+    if (!item) return;
+    const info = pickAvatarInfo(item.getChild("metadata", NS.AVATAR_META));
+    if (info) {
+      this.pepAvatars.set(jid, info.id);
+      this.requestAvatar(jid, info.id, "pep");
+      this.event("contact-avatar", { jid, hash: info.id });
+    } else {
+      this.pepAvatars.delete(jid);
+      const fallback = this.vcardAvatars.get(jid) || "";
+      if (fallback) this.requestAvatar(jid, fallback);
+      this.event("contact-avatar", { jid, hash: fallback });
+    }
   }
 
   async loadOwnAvatar() {
