@@ -37,6 +37,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Without a system tray, the tray options are disabled and say why.
   - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
 
+### Fixed
+- The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
+
 ## [0.6.0] - 2026-11-03
 
 A big feature release (sounds, backgrounds, GIFs, keyword rules, recovered and spoken fleet pings, formup countdown) that is also much lighter. Measured on the same PC with the same test profile and mock server, before and after the performance work:
