@@ -6,10 +6,49 @@ import { onWindows, noKeyring, passwordStoreHint, mayRememberPassword, afterAcco
 import { proxyFields, PROXY_DEFAULTS, globalProxySummary, xmppTarget } from "./settings/network.js";
 
 import { t, locale } from "./i18n.js";
+// Pide la contraseña del proxy que falta (la de la cuenta o la del general) y la guarda: en el llavero, o solo en
+// memoria hasta cerrar la app si no hay llavero. Devuelve true si se ha escrito una.
+export function promptProxyPassword(accountId, global) {
+  const acc = account(accountId);
+  const p = global ? S.settings.proxy || {} : acc?.proxy || {};
+  const pass = h("input", { class: "input", type: "password", autofocus: true, autocomplete: "new-password" });
+  return new Promise((resolve) => {
+    const go = async (close) => {
+      if (!pass.value) return;
+      close();
+      try {
+        if (global) S.system.hasProxyPassword = !!(await api("proxy:password", pass.value))?.hasProxyPassword;
+        else Object.assign(acc, await api("account:save", { account: { id: accountId }, proxyPassword: pass.value }));
+        resolve(true);
+      } catch (err) {
+        toast(err.message, { kind: "error" });
+        resolve(false);
+      }
+    };
+    const m = modal({
+      title: t("Contraseña del proxy"),
+      icon: "key-round",
+      body: h(
+        "div",
+        { class: "form" },
+        h("p", { class: "muted" }, global ? t("El proxy general {proxy} pide la contraseña del usuario {user}.", { proxy: `${p.host}:${p.port}`, user: p.username }) : t("El proxy de {jid} ({proxy}) pide la contraseña del usuario {user}.", { jid: acc?.jid || "", proxy: `${p.host}:${p.port}`, user: p.username })),
+        field(t("Contraseña del proxy"), pass),
+        noKeyring() ? h("p", { class: "muted small" }, t("Este sistema no tiene llavero: se recordará solo hasta cerrar la app.")) : null,
+      ),
+      actions: ["spacer", { label: t("Cancelar"), action: (c) => (c(), resolve(false)) }, { label: t("Aceptar"), primary: true, icon: "check", action: go }],
+    });
+    pass.addEventListener("keydown", (ev) => ev.key === "Enter" && go(m.close));
+  });
+}
+
 export async function connectWithPrompt(accountId) {
   try {
     await api("account:connect", accountId);
   } catch (e) {
+    if (e.message === "NEED_PROXY_PASSWORD" || e.message === "NEED_GLOBAL_PROXY_PASSWORD") {
+      if (await promptProxyPassword(accountId, e.message === "NEED_GLOBAL_PROXY_PASSWORD")) return connectWithPrompt(accountId);
+      return;
+    }
     if (e.message !== "NEED_PASSWORD") return toast(e.message, { kind: "error" });
     const acc = account(accountId);
     const pass = h("input", { class: "input", type: "password", autofocus: true });
@@ -19,7 +58,14 @@ export async function connectWithPrompt(accountId) {
         if (!pass.value) return;
         close();
         if (save.checked && (await mayRememberPassword())) afterAccountSave(await api("account:save", { account: { id: acc.id, savePassword: true }, password: pass.value }));
-        api("account:connect", accountId, pass.value).then(resolve, (err) => (toast(err.message, { kind: "error" }), resolve()));
+        // Con la contraseña de la cuenta puede faltar aún la del proxy: se pide y se vuelve a intentar.
+        const connect = () =>
+          api("account:connect", accountId, pass.value).then(resolve, async (err) => {
+            if ((err.message === "NEED_PROXY_PASSWORD" || err.message === "NEED_GLOBAL_PROXY_PASSWORD") && (await promptProxyPassword(accountId, err.message === "NEED_GLOBAL_PROXY_PASSWORD"))) return connect();
+            if (!err.message.startsWith("NEED_")) toast(err.message, { kind: "error" });
+            resolve();
+          });
+        connect();
       };
       const m = modal({
         title: t("Contraseña"),
@@ -88,7 +134,11 @@ export function openSwitchAccount() {
       toast(t("Conectado como {jid}", { jid: account(accountId).jid }), { kind: "ok" });
     } catch (e) {
       if (e.message === "NEED_PASSWORD") setStatus("error", t("Esa cuenta no tiene contraseña guardada: rellénala abajo."));
-      else setStatus("error", e.message);
+      else if (e.message === "NEED_PROXY_PASSWORD" || e.message === "NEED_GLOBAL_PROXY_PASSWORD") {
+        // Falta la contraseña del proxy: se pide y se vuelve a intentar.
+        if (await promptProxyPassword(accountId, e.message === "NEED_GLOBAL_PROXY_PASSWORD")) return run(accountId, password, close, rememberPassword);
+        setStatus("error", t("Falta la contraseña del proxy."));
+      } else setStatus("error", e.message);
     }
   }
 

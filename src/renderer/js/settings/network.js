@@ -70,8 +70,8 @@ export function proxyFields({ value, hasPassword, onChange = () => {}, testTarge
     class: "input",
     type: "password",
     autocomplete: "new-password",
-    disabled: noKeyring(),
-    placeholder: noKeyring() ? t("No se puede guardar sin llavero") : hasPassword ? t("•••••••• (guardada — escribe para cambiarla)") : t("Opcional"),
+    // Sin llavero se puede escribir igual: se queda en memoria hasta cerrar la app (no se guarda en disco).
+    placeholder: noKeyring() ? (hasPassword ? t("•••••••• (en memoria hasta cerrar la app)") : t("Solo hasta cerrar la app: sin llavero no se guarda")) : hasPassword ? t("•••••••• (guardada — escribe para cambiarla)") : t("Opcional"),
   });
   pass.addEventListener("input", () => (clearSaved = false));
   const eye = iconButton("eye", t("Mostrar"), () => (pass.type = pass.type === "password" ? "text" : "password"));
@@ -122,7 +122,7 @@ export function proxyFields({ value, hasPassword, onChange = () => {}, testTarge
   );
   return {
     el,
-    password: () => (noKeyring() ? undefined : pass.value ? pass.value : clearSaved ? "" : undefined),
+    password: () => (pass.value ? pass.value : clearSaved ? "" : undefined),
   };
 }
 
@@ -159,14 +159,13 @@ export const networkTabs = {
       {
         class: "btn",
         type: "button",
-        disabled: noKeyring(),
         onclick: async () => {
           const pw = fields.password();
           if (pw === undefined) return toast(t("Escribe la contraseña del proxy, o usa la papelera para olvidar la guardada"), { kind: "info" });
           try {
             const r = await api("proxy:password", pw);
             S.system.hasProxyPassword = !!r?.hasProxyPassword;
-            toast(pw ? t("Contraseña del proxy guardada") : t("Contraseña del proxy olvidada"), { kind: "ok", timeout: 2500 });
+            toast(!pw ? t("Contraseña del proxy olvidada") : r?.inMemory ? t("Contraseña del proxy en memoria hasta cerrar la app: sin llavero no se guarda en disco.") : t("Contraseña del proxy guardada"), { kind: "ok", timeout: r?.inMemory ? 6000 : 2500 });
           } catch (e) {
             toast(e.message, { kind: "error" });
           }
