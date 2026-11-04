@@ -44,6 +44,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ### Fixed
 - **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
+- **Linux: the window did not open at startup.** On GNOME with Wayland the app often started with only its tray icon and no window, because Chromium does not always draw a hidden window and so never reported it ready to show. The window now opens as soon as the page has loaded. Starting hidden (start with the system, *Start minimized*) works as before.
 - **Linux: clean exit on shutdown or reboot.** The app now takes the logind shutdown delay lock and quits before the desktop closes. Before, Ubuntu showed "EvEX-MPP has closed unexpectedly" after rebooting with the app open.
 - **Reconnecting after losing the internet connection.** When the network dropped, the socket often stayed "open", so the app could keep showing an account as connected without receiving anything, or stay stuck on "connecting" after the network was back. It also tried only once at startup, so an account set to *Connect on startup* stayed disconnected if the PC started or woke up before the Wi-Fi.
   - Every 30 s the app pings the server. With no answer in 20 s, it treats the connection as dead and connects again.
