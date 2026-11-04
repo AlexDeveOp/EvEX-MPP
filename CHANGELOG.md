@@ -28,6 +28,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Start with the system* adds the app to `~/.config/autostart`.
 - **Passwords are only saved when the system can really encrypt them.** On Linux they go to the desktop keyring (GNOME Keyring or KWallet). Without a keyring the account is saved without the password, which is asked for when connecting, instead of keeping it with Chromium's fixed, publicly known key.
 - On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
+- **The *Fleet pings* siren in the sidebar pulses too** while there are new pings, with the same setting as the cards (*Preferences → Fleet pings → Visual alert*), so you notice them while you are in another conversation.
 
 ### Changed
 - **Direct TLS checks the account's domain:** with *Direct TLS*, the server certificate is now checked against the domain of your address, as STARTTLS already did, instead of the connection server name. This is what XEP-0368 expects, and it lets you connect through a different host name or a Tor `.onion` address.
@@ -37,6 +38,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Windows-only options are hidden (taskbar flash), and texts that named Windows say "system".
   - Without a system tray, the tray options are disabled and say why.
   - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
+
+### Fixed
+- The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
+- With *Until you open the pings again*, the sirens switch off as soon as you leave the pings view (before, they kept pulsing until the view was redrawn), and choosing that mode no longer makes every stored ping pulse at once.
 
 ## [0.6.0] - 2026-11-03
 

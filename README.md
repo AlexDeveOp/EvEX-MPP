@@ -98,6 +98,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 **Fleet pings**
 - Messages from the ping senders you configure (e.g. a broadcast bot such as `pingbot@example.com`) are shown as **cards**: FC, formup (with a Dotlan link), PAP, comms, doctrine, target group and who sent it.
 - Every card shows local time and EVE time.
+- **The siren of new pings pulses** for the time you choose (5 minutes to 2 hours, counted from when the ping arrives) or until you open the pings view and leave it again. The *Fleet pings* siren in the sidebar pulses too, so you see it from any conversation.
 - **Read pings aloud** with the voices installed in Windows (offline): voice, speed, pitch, volume, what to read (summary, title, whole ping or your own template), only some target groups, and only when you are not looking at the window.
 - **Pings that arrived while the app was closed are recovered** from Pidgin's logs on the same PC and, if your server keeps a message archive (XEP-0313), from the server.
 - Everything about pings has its own settings page, also reachable from the ⚙ button in the *Fleet pings* view.

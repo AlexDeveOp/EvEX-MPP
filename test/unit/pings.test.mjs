@@ -84,3 +84,46 @@ test("isFreshPing: «hasta volver a abrir los pings» depende de cuándo se sali
   assert.equal(isFreshPing(seenAt + 1000, "unseen", now, seenAt), true, "llegó después: late aunque tenga horas");
   assert.equal(isFreshPing(seenAt - 1000, "unseen", now, seenAt), false, "ya estaba al salir: no late");
 });
+
+test("freshUntil: la sirena se apaga al acabar el tiempo elegido, no a los pocos latidos", async () => {
+  const { freshUntil, isFreshPing } = await import("../../src/renderer/js/pings.js");
+  const ts = Date.UTC(2026, 10, 4, 12, 0, 0);
+  const min = 60e3;
+  assert.equal(freshUntil(ts, "5"), ts + 5 * min);
+  assert.equal(freshUntil(ts, "0"), ts, "«Nunca»: ya está apagada");
+  assert.equal(freshUntil(ts, "unseen"), Infinity, "«hasta volver a abrirlos» no tiene hora");
+  assert.equal(isFreshPing(ts, "5", freshUntil(ts, "5") - 1), true, "sigue latiendo hasta el último momento");
+  assert.equal(isFreshPing(ts, "5", freshUntil(ts, "5")), false);
+});
+
+test("pingsSeenAt: en un perfil nuevo cuenta desde ahora, para que no laten de golpe todos los pings guardados", async () => {
+  const { pingsSeenAt, isFreshPing, markPingsSeen } = await import("../../src/renderer/js/pings.js");
+  localStorage.removeItem("evex.pingsSeenAt");
+  const before = Date.now();
+  const seen = pingsSeenAt();
+  assert.ok(seen >= before && seen <= Date.now(), "se toma la hora actual");
+  assert.equal(Number(localStorage.getItem("evex.pingsSeenAt")), seen, "y se guarda");
+  assert.equal(isFreshPing(before - 60e3, "unseen"), false, "un ping de antes de elegir el modo no late");
+  markPingsSeen(seen - 10);
+  assert.equal(pingsSeenAt(), seen - 10, "una vez guardado, se respeta");
+});
+
+test("sidebarSirenTs: la sirena de la barra lateral late mientras lata la del ping más reciente", async () => {
+  const { sidebarSirenTs, newestPingTs } = await import("../../src/renderer/js/pings.js");
+  const { S } = await import("../../src/renderer/js/state.js");
+  const prev = S.settings;
+  const now = Date.now();
+  try {
+    S.settings = { ...(prev || {}), pingHighlight: "5" };
+    const msgs = [{ ts: now - 2 * 60e3 }, { ts: now - 30 * 60e3 }, { ts: now - 60e3 }];
+    assert.equal(newestPingTs(msgs), now - 60e3, "el más reciente, aunque no vaya el último");
+    assert.equal(newestPingTs([]), 0);
+    assert.equal(sidebarSirenTs(msgs), now - 60e3, "hay un ping de hace 1 min: late");
+    assert.equal(sidebarSirenTs([{ ts: now - 6 * 60e3 }]), 0, "el más reciente ya pasó de 5 min: no late");
+    assert.equal(sidebarSirenTs([]), 0, "sin pings no late");
+    S.settings = { ...(prev || {}), pingHighlight: "0" };
+    assert.equal(sidebarSirenTs(msgs), 0, "«Nunca»");
+  } finally {
+    S.settings = prev;
+  }
+});
