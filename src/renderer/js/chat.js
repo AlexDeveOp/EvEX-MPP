@@ -13,6 +13,7 @@ import { openBackgroundEditor, openSettings } from "./settings.js";
 import { stopSpeaking } from "./tts.js";
 import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
+import { canEditTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
 import { t } from "./i18n.js";
 const panes = new Map();
@@ -174,6 +175,7 @@ export function convMenu(c) {
   const room = acc?.rooms.find((r) => r.jid === c.conv);
   const items = [];
   if (c.type === "groupchat") {
+    const rs = roomState(c.accountId, c.conv);
     items.push(
       { label: isFavorite(room) ? t("Quitar de favoritas") : t("Añadir a favoritas"), icon: isFavorite(room) ? "star-off" : "star", action: () => toggleFavorite(c.accountId, c.conv) },
       { label: t("Entrar automáticamente"), icon: "zap", checked: !!room?.autojoin, action: () => toggleAutojoin(c.accountId, c.conv) },
@@ -186,7 +188,11 @@ export function convMenu(c) {
         ["none", t("Silenciada")],
       ].map(([v, l]) => ({ label: l, checked: (S.settings.notifications.roomModes[c.key] || "default") === v, action: () => setRoomNotify(c, v) })),
       "-",
-      { label: t("Cambiar apodo…"), icon: "pencil", action: () => changeNick(c) },
+      { label: t("Cambiar el tema…"), icon: "pencil", disabled: !canEditTopic(rs), hint: canEditTopic(rs) ? null : topicLockedReason(rs), action: () => openTopicEditor(c, pane(c)) },
+      ...(rs.subject ? [{ label: t("Copiar el tema"), icon: "copy", action: () => navigator.clipboard.writeText(rs.subject) }] : []),
+      { label: t("Configuración de la sala…"), icon: "settings", disabled: !canConfigureRoom(rs), hint: canConfigureRoom(rs) ? null : t("Solo los propietarios de la sala"), action: () => openRoomConfig(c) },
+      "-",
+      { label: t("Cambiar apodo…"), icon: "user-cog", action: () => changeNick(c) },
       { label: t("Invitar a alguien…"), icon: "user-plus", action: () => inviteTo(c) },
       { label: t("Volver a entrar"), icon: "refresh-cw", action: () => rejoin(c) },
     );
@@ -428,6 +434,10 @@ function renderHeader(c, p) {
     // Tema de la sala: plegado en una línea por defecto; el botón lo despliega y se recuerda por sala.
     const open = !!r.subject && topicOpen(c.conv);
     const subject = h("div", { class: `conv-sub subject ${open ? "open" : ""}`, title: r.subject || "", html: r.subject ? formatBody(r.subject).html : `<span class="muted">${esc(status)}</span>` });
+    // Con permiso para cambiar el tema, una etiqueta pequeña abre el cuadro para editarlo (room-admin.js).
+    const editTag = canEditTopic(r)
+      ? h("button", { class: "topic-edit-tag", type: "button", title: t("Cambiar el tema de la sala"), onclick: () => openTopicEditor(c, p) }, icon(r.subject ? "pencil" : "plus"), r.subject ? t("editar") : t("añadir tema"))
+      : null;
     const topicLabel = (isOpen) => (isOpen ? t("Plegar el tema de la sala") : t("Desplegar el tema de la sala"));
     // Siempre el mismo botón: solo cambian su icono, su texto y su estado.
     const topicBtn = r.subject
@@ -448,7 +458,7 @@ function renderHeader(c, p) {
         "div",
         { class: "conv-title" },
         h("h1", {}, convTitle(c), h("span", { class: "conv-jid" }, c.conv), h("span", { class: "chip" }, r.joined ? `${r.occupants.size}` : status)),
-        subject,
+        editTag ? h("div", { class: "subject-row" }, subject, editTag) : subject,
       ),
       h(
         "div",
@@ -925,7 +935,8 @@ function buildComposer(c, p) {
   function updateSuggestions() {
     const before = ta.value.slice(0, ta.selectionStart);
     const m = before.match(/(?:^|\s):([a-z0-9_+-]{2,})$/i);
-    suggestions = m ? shortcodeSuggestions(m[1]) : [];
+    const cmd = before.match(/^\/([a-z]*)$/i);
+    suggestions = cmd ? commandSuggestions(cmd[1], c) : m ? shortcodeSuggestions(m[1]) : [];
     selIndex = 0;
     renderSuggest();
   }
@@ -938,8 +949,9 @@ function buildComposer(c, p) {
         h(
           "button",
           { class: `suggest-item ${i === selIndex ? "sel" : ""}`, type: "button", onmousedown: (e) => (e.preventDefault(), applySuggestion(i)) },
-          s.custom ? h("img", { class: "emoji custom", src: s.url }) : h("span", { html: emojifyHtml(s.emoji) }),
-          h("span", {}, `:${s.code}:`),
+          ...(s.command
+            ? [h("span", { class: "suggest-cmd" }, s.usage), h("span", { class: "muted" }, s.desc)]
+            : [s.custom ? h("img", { class: "emoji custom", src: s.url }) : h("span", { html: emojifyHtml(s.emoji) }), h("span", {}, `:${s.code}:`)]),
         ),
       );
     });
@@ -949,7 +961,7 @@ function buildComposer(c, p) {
     const s = suggestions[i];
     if (!s) return;
     const pos = ta.selectionStart;
-    const before = ta.value.slice(0, pos).replace(/:([a-z0-9_+-]{2,})$/i, s.custom ? `:${s.code}: ` : `${s.emoji} `);
+    const before = s.command ? `/${s.command} ` : ta.value.slice(0, pos).replace(/:([a-z0-9_+-]{2,})$/i, s.custom ? `:${s.code}: ` : `${s.emoji} `);
     ta.value = before + ta.value.slice(pos);
     ta.selectionStart = ta.selectionEnd = before.length;
     suggestions = [];
@@ -994,9 +1006,11 @@ function buildComposer(c, p) {
       }
       return;
     }
+    let sayBody = null;
     if (text.startsWith("/") && !text.startsWith("//") && !isAction(text)) {
       const handled = await runCommand(c, text);
-      if (handled) {
+      if (handled?.say != null) sayBody = handled.say;
+      else if (handled) {
         sentHistory.unshift(text);
         ta.value = "";
         c.draft = "";
@@ -1004,7 +1018,7 @@ function buildComposer(c, p) {
         return;
       }
     }
-    const body = text.startsWith("//") ? text.slice(1) : text;
+    const body = sayBody ?? (text.startsWith("//") ? text.slice(1) : text);
     if (conn(c.accountId).state !== "online") return toast(t("No hay conexión con el servidor."), { kind: "error" });
     if (c.type === "groupchat" && !roomState(c.accountId, c.conv).joined) return toast(t("No estás dentro de la sala."), { kind: "warn" });
     ta.value = "";
@@ -1046,7 +1060,12 @@ function buildComposer(c, p) {
         selIndex = (selIndex + (e.key === "ArrowDown" ? 1 : -1) + suggestions.length) % suggestions.length;
         return renderSuggest();
       }
-      if (e.key === "Enter" || e.key === "Tab") {
+      // Con un comando ya escrito entero, Enter lo envía en vez de completarlo.
+      const typedCommand = suggestions[0]?.command && suggestions.some((s) => ta.value.trim().toLowerCase() === `/${s.command}`);
+      if (e.key === "Enter" && typedCommand) {
+        suggestions = [];
+        renderSuggest();
+      } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
         return applySuggestion(selIndex);
       }
@@ -1104,22 +1123,49 @@ function placeholderFor(c) {
 
 // ---------- comandos ----------
 
-const HELP = [
-  [t("/me <acción>"), t("Mensaje de acción")],
-  [t("/nick <apodo>"), t("Cambiar tu apodo en la sala")],
-  [t("/topic <tema>"), t("Cambiar el tema de la sala")],
-  [t("/join <sala> [contraseña]"), t("Entrar en una sala (se completa @conference)")],
-  [t("/part [motivo]"), t("Salir de la sala actual")],
-  [t("/msg <apodo|jid> <texto>"), t("Mensaje privado")],
-  [t("/query <apodo|jid>"), t("Abrir conversación privada")],
-  ["/invite <jid>", t("Invitar a la sala")],
-  [t("/kick <apodo> [motivo]"), t("Expulsar (moderadores)")],
-  [t("/ban <apodo> [motivo]"), t("Vetar (administradores)")],
-  [t("/status <online|away|dnd|xa> [mensaje]"), t("Cambiar estado")],
-  [t("/away [mensaje]  ·  /back"), t("Ausente / disponible")],
-  ["/clear", t("Limpiar la ventana (no borra el historial)")],
-  ["/help", t("Esta ayuda")],
-];
+// Los de Pidgin para XMPP, con los mismos nombres. where: "room" (solo en salas), "chat" (solo en privados) o "any".
+// Se construye al usarse para que siga el idioma elegido.
+function commandList() {
+  return [
+    { name: "me", usage: t("/me <acción>"), desc: t("Mensaje de acción"), where: "any" },
+    { name: "say", usage: t("/say <texto>"), desc: t("Enviar el texto tal cual, aunque empiece por /"), where: "any" },
+    { name: "nick", usage: t("/nick <apodo>"), desc: t("Cambiar tu apodo en la sala"), where: "room" },
+    { name: "topic", usage: t("/topic [tema | -]"), desc: t("Ver el tema, cambiarlo o quitarlo con «-»"), where: "room" },
+    { name: "join", usage: t("/join <sala> [contraseña]"), desc: t("Entrar en una sala (se completa @conference)"), where: "any" },
+    { name: "part", usage: t("/part [motivo]"), desc: t("Salir de la sala actual"), where: "room" },
+    { name: "msg", usage: t("/msg <apodo|jid> <texto>"), desc: t("Mensaje privado"), where: "any" },
+    { name: "query", usage: t("/query <apodo|jid>"), desc: t("Abrir conversación privada"), where: "any" },
+    { name: "invite", usage: "/invite <jid>", desc: t("Invitar a la sala"), where: "room" },
+    { name: "kick", usage: t("/kick <apodo> [motivo]"), desc: t("Expulsar (moderadores)"), where: "room" },
+    { name: "ban", usage: t("/ban <apodo|jid> [motivo]"), desc: t("Vetar (administradores)"), where: "room" },
+    { name: "unban", usage: "/unban <jid>", desc: t("Quitar un veto (administradores)"), where: "room" },
+    { name: "role", usage: t("/role <moderator|participant|visitor|none> <apodo>"), desc: t("Cambiar el rol de alguien en la sala (moderadores)"), where: "room" },
+    { name: "affiliate", usage: t("/affiliate <owner|admin|member|outcast|none> <apodo|jid>"), desc: t("Cambiar la afiliación de alguien (administradores)"), where: "room" },
+    { name: "config", usage: "/config", desc: t("Configuración de la sala (propietarios)"), where: "room" },
+    { name: "ping", usage: t("/ping [apodo|jid]"), desc: t("Comprobar si alguien (o la sala) responde y cuánto tarda"), where: "any" },
+    { name: "buzz", usage: t("/buzz [apodo]"), desc: t("Llamar la atención de alguien en privado"), where: "any" },
+    { name: "status", usage: t("/status <online|away|dnd|xa> [mensaje]"), desc: t("Cambiar estado"), where: "any" },
+    { name: "away", usage: t("/away [mensaje]  ·  /back"), desc: t("Ausente / disponible"), where: "any" },
+    { name: "clear", usage: "/clear", desc: t("Limpiar la ventana (no borra el historial)"), where: "any" },
+    { name: "help", usage: "/help", desc: t("Esta ayuda"), where: "any" },
+  ];
+}
+
+const fits = (cmd, c) => cmd.where === "any" || (cmd.where === "room") === (c.type === "groupchat");
+
+// Sugerencias al escribir «/…» en el compositor.
+function commandSuggestions(prefix, c) {
+  const p = prefix.toLowerCase();
+  return commandList()
+    .filter((x) => x.name.startsWith(p) && fits(x, c))
+    .slice(0, 8)
+    .map((x) => ({ command: x.name, usage: x.usage, desc: x.desc }));
+}
+
+const ROLES = ["moderator", "participant", "visitor", "none"];
+const AFFILIATIONS = ["owner", "admin", "member", "outcast", "none"];
+const roleName = (r) => ({ moderator: t("moderador"), participant: t("participante"), visitor: t("visitante"), none: t("sin rol (fuera de la sala)") })[r] || r;
+const affiliationName = (a) => ({ owner: t("propietario"), admin: t("administrador"), member: t("miembro"), outcast: t("vetado"), none: t("sin afiliación") })[a] || a;
 
 async function runCommand(c, text) {
   const [cmdRaw, ...restArr] = text.slice(1).split(" ");
@@ -1127,19 +1173,30 @@ async function runCommand(c, text) {
   const rest = restArr.join(" ").trim();
   const acc = account(c.accountId);
   const isRoom = c.type === "groupchat";
+  const rs = isRoom ? roomState(c.accountId, c.conv) : null;
   const need = (cond, msg) => {
     if (!cond) throw new Error(msg);
+  };
+  const ok = (msg) => systemMessage(c, msg, { icon: "check" });
+  // Un apodo de la sala o una dirección: devuelve { nick, jid } (jid real si se conoce).
+  const who = (target) => {
+    if (target.includes("@")) return { nick: "", jid: target.toLowerCase() };
+    const occ = rs?.occupants.get(target);
+    return { nick: target, jid: occ?.jid ? occ.jid.split("/")[0] : "" };
   };
   try {
     switch (cmd) {
       case "help":
-        systemMessage(c, HELP.map(([a, b]) => `${a} — ${b}`).join("\n"), { icon: "keyboard" });
+        systemMessage(c, commandList().filter((x) => fits(x, c)).map((x) => `${x.usage} — ${x.desc}`).join("\n"), { icon: "keyboard" });
         return true;
       case "clear":
         c.messages = [];
         c.exhausted = false;
         renderAllMessages(c, panes.get(c.key));
         return true;
+      case "say":
+        need(rest, t("Uso: /say <texto>"));
+        return { say: rest };
       case "nick":
         need(isRoom && rest, t("Uso: /nick <apodo> (dentro de una sala)"));
         await api("room:nick", c.accountId, c.conv, rest);
@@ -1148,10 +1205,13 @@ async function runCommand(c, text) {
       case "subject":
         need(isRoom, t("Solo en salas"));
         if (!rest) {
-          systemMessage(c, t("Tema: {x}", { x: roomState(c.accountId, c.conv).subject || t("(sin tema)") }));
+          systemMessage(c, t("Tema: {x}", { x: rs.subject || t("(sin tema)") }), { icon: "info" });
           return true;
         }
-        await api("room:subject", c.accountId, c.conv, rest);
+        need(rs.joined, t("No estás dentro de la sala."));
+        // Si ya sabemos que no hay permiso, se avisa sin preguntar al servidor.
+        need(canEditTopic(rs), t("No tienes permiso para cambiar el tema de esta sala. Pídeselo a un moderador."));
+        await setTopic(c, rest === "-" ? "" : rest);
         return true;
       case "join": {
         need(rest, t("Uso: /join <sala> [contraseña]"));
@@ -1170,27 +1230,86 @@ async function runCommand(c, text) {
         const [target, ...msgArr] = rest.split(" ");
         need(target, t("Uso: /{cmd} <apodo|jid> [texto]", { cmd }));
         const jid = target.includes("@") ? target.toLowerCase() : isRoom ? `${c.conv}/${target}` : `${target.toLowerCase()}@${acc.jid.split("@")[1]}`;
-        const conv = await openConv(c.accountId, jid, "chat");
+        await openConv(c.accountId, jid, "chat");
         if (msgArr.length) await api("msg:send", c.accountId, { to: jid, body: msgArr.join(" "), type: "chat" });
-        void conv;
         return true;
       }
       case "invite":
         need(isRoom && rest, t("Uso: /invite <jid>"));
         await api("room:invite", c.accountId, c.conv, rest, "");
-        systemMessage(c, t("Invitación enviada a {rest}", { rest }));
+        ok(t("Invitación enviada a {rest}", { rest }));
         return true;
-      case "kick":
-      case "ban": {
+      case "kick": {
         need(isRoom, t("Solo en salas"));
         const [nick, ...reason] = rest.split(" ");
-        need(nick, t("Uso: /{cmd} <apodo> [motivo]", { cmd }));
-        if (cmd === "kick") await api("room:moderate", c.accountId, c.conv, { nick, role: "none", reason: reason.join(" ") });
-        else {
-          const occ = roomState(c.accountId, c.conv).occupants.get(nick);
-          need(occ?.jid, t("No se conoce el JID real de ese usuario (sala semi-anónima)."));
-          await api("room:moderate", c.accountId, c.conv, { jid: occ.jid, affiliation: "outcast", reason: reason.join(" ") });
-        }
+        need(nick, t("Uso: /kick <apodo> [motivo]"));
+        need(rs.occupants.has(nick), t("No hay nadie con el apodo «{nick}» en la sala.", { nick }));
+        await api("room:moderate", c.accountId, c.conv, { nick, role: "none", reason: reason.join(" ") });
+        ok(t("Has expulsado a {nick}.", { nick }));
+        return true;
+      }
+      case "ban": {
+        need(isRoom, t("Solo en salas"));
+        const [target, ...reason] = rest.split(" ");
+        need(target, t("Uso: /ban <apodo|jid> [motivo]"));
+        const { jid } = who(target);
+        need(jid, t("No se conoce el JID real de ese usuario (sala semi-anónima)."));
+        await api("room:moderate", c.accountId, c.conv, { jid, affiliation: "outcast", reason: reason.join(" ") });
+        ok(t("Has vetado a {who}.", { who: target }));
+        return true;
+      }
+      case "unban":
+        need(isRoom, t("Solo en salas"));
+        need(rest.includes("@"), t("Uso: /unban <jid>"));
+        await api("room:moderate", c.accountId, c.conv, { jid: rest.split(" ")[0].toLowerCase(), affiliation: "none" });
+        ok(t("Se ha quitado el veto a {jid}.", { jid: rest.split(" ")[0] }));
+        return true;
+      case "role": {
+        need(isRoom, t("Solo en salas"));
+        const [role, nick, ...reason] = rest.split(" ");
+        need(ROLES.includes(role?.toLowerCase()) && nick, t("Uso: /role <moderator|participant|visitor|none> <apodo>"));
+        need(rs.occupants.has(nick), t("No hay nadie con el apodo «{nick}» en la sala.", { nick }));
+        await api("room:moderate", c.accountId, c.conv, { nick, role: role.toLowerCase(), reason: reason.join(" ") });
+        ok(t("{nick} ahora es {role}.", { nick, role: roleName(role.toLowerCase()) }));
+        return true;
+      }
+      case "affiliate":
+      case "affiliation": {
+        need(isRoom, t("Solo en salas"));
+        const [aff, target, ...reason] = rest.split(" ");
+        need(AFFILIATIONS.includes(aff?.toLowerCase()) && target, t("Uso: /affiliate <owner|admin|member|outcast|none> <apodo|jid>"));
+        const { jid } = who(target);
+        need(jid, t("No se conoce el JID real de ese usuario (sala semi-anónima)."));
+        await api("room:moderate", c.accountId, c.conv, { jid, affiliation: aff.toLowerCase(), reason: reason.join(" ") });
+        ok(t("{who} ahora es {affiliation}.", { who: target, affiliation: affiliationName(aff.toLowerCase()) }));
+        return true;
+      }
+      case "config":
+      case "configure":
+        need(isRoom, t("Solo en salas"));
+        need(canConfigureRoom(rs), t("Solo los propietarios de la sala pueden cambiar su configuración."));
+        await openRoomConfig(c);
+        return true;
+      case "ping": {
+        const target = rest.split(" ")[0];
+        // Sin nada: la persona del privado o la propia sala. En una sala, un apodo es alguien de la sala.
+        const to = !target ? c.conv : target.includes("@") ? target : isRoom ? `${c.conv}/${target}` : `${target.toLowerCase()}@${acc.jid.split("@")[1]}`;
+        const label = target || convTitle(c);
+        const r = await api("xmpp:ping", c.accountId, to);
+        systemMessage(
+          c,
+          r.supported ? t("{who} responde en {ms} ms.", { who: label, ms: r.ms }) : t("{who} está conectado ({ms} ms), aunque su programa no contesta a los ping.", { who: label, ms: r.ms }),
+          { icon: "wifi" },
+        );
+        return true;
+      }
+      case "buzz":
+      case "attention": {
+        const target = rest.split(" ")[0];
+        need(!isRoom || target, t("Uso: /buzz <apodo> (en una sala) o /buzz en un privado"));
+        const to = isRoom ? `${c.conv}/${target}` : target ? (target.includes("@") ? target : `${target.toLowerCase()}@${acc.jid.split("@")[1]}`) : c.conv;
+        await api("msg:attention", c.accountId, to);
+        ok(t("Has llamado la atención de {who}.", { who: target || convTitle(c) }));
         return true;
       }
       case "status":

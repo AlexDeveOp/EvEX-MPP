@@ -15,6 +15,8 @@ const NS = {
   MUC: "http://jabber.org/protocol/muc",
   MUC_USER: "http://jabber.org/protocol/muc#user",
   MUC_ADMIN: "http://jabber.org/protocol/muc#admin",
+  MUC_OWNER: "http://jabber.org/protocol/muc#owner",
+  ATTENTION: "urn:xmpp:attention:0",
   DELAY: "urn:xmpp:delay",
   DELAY_LEGACY: "jabber:x:delay",
   CHATSTATES: "http://jabber.org/protocol/chatstates",
@@ -36,7 +38,7 @@ const NS = {
   STANZAS: "urn:ietf:params:xml:ns:xmpp-stanzas",
 };
 
-const FEATURES = [NS.DISCO_INFO, NS.MUC, NS.CHATSTATES, NS.RECEIPTS, NS.CORRECT, NS.VERSION, NS.PING, NS.CONFERENCE, NS.OOB, `${NS.VCARD_UPDATE}`];
+const FEATURES = [NS.DISCO_INFO, NS.MUC, NS.CHATSTATES, NS.RECEIPTS, NS.CORRECT, NS.VERSION, NS.PING, NS.CONFERENCE, NS.OOB, NS.ATTENTION, `${NS.VCARD_UPDATE}`];
 
 const MUC_ERRORS = {
   conflict: tk("Ese apodo ya está en uso en la sala."),
@@ -95,6 +97,67 @@ function stanzaErrorText(el) {
   const text = err.getChildText("text", NS.STANZAS);
   const cond = err.children.find((c) => typeof c !== "string" && c.attrs?.xmlns === NS.STANZAS && c.name !== "text");
   return { condition: cond?.name || "undefined-condition", text: text || "" };
+}
+
+// Error de una petición iq (xmpp.js lanza StanzaError con .condition y .text) en palabras del usuario.
+export function iqErrorMessage(err) {
+  const c = err?.condition;
+  if (c === "forbidden" || c === "not-allowed") return t("No tienes permiso para hacer eso en esta sala.");
+  if (c === "item-not-found") return t("No se encuentra esa sala o ese usuario.");
+  if (c === "remote-server-not-found" || c === "remote-server-timeout") return t("No se puede llegar a ese servidor.");
+  if (c === "service-unavailable" || c === "feature-not-implemented") return t("El servidor no admite esa función.");
+  if (c === "not-acceptable" || c === "bad-request") return err.text ? t("El servidor no lo acepta: {text}", { text: err.text }) : t("El servidor no lo acepta.");
+  if (err?.name === "TimeoutError" || /timeout/i.test(err?.message || "")) return t("El servidor no ha respondido a tiempo.");
+  return err?.text || err?.message || String(err);
+}
+async function friendly(promise) {
+  try {
+    return await promise;
+  } catch (e) {
+    const out = new Error(iqErrorMessage(e), { cause: e });
+    out.condition = e?.condition || "";
+    throw out;
+  }
+}
+
+// «muc#roominfo_changesubject» de la información de la sala: true, false o null si el servidor no lo dice.
+export function parseChangeSubject(value) {
+  if (value === "1" || value === "true") return true;
+  if (value === "0" || value === "false") return false;
+  return null;
+}
+
+// Formulario de datos (XEP-0004) a un objeto sencillo para la interfaz.
+export function parseDataForm(x) {
+  if (!x) return { title: "", instructions: "", fields: [] };
+  return {
+    title: x.getChildText("title") || "",
+    instructions: x.getChildren("instructions").map((i) => i.text()).join(" "),
+    fields: x.getChildren("field").map((f) => ({
+      var: f.attrs.var || "",
+      type: f.attrs.type || "text-single",
+      label: f.attrs.label || "",
+      desc: f.getChildText("desc") || "",
+      required: !!f.getChild("required"),
+      values: f.getChildren("value").map((v) => v.text()),
+      options: f.getChildren("option").map((o) => ({ label: o.attrs.label || o.getChildText("value") || "", value: o.getChildText("value") || "" })),
+    })),
+  };
+}
+
+// Respuesta a un formulario: cada campo con nombre (menos los de solo lectura) con su valor nuevo o el que traía.
+// values[var] es una lista de cadenas; un booleano puede venir como true/false.
+export function dataFormSubmit(fields, values = {}) {
+  const x = xml("x", { xmlns: NS.DATA, type: "submit" });
+  for (const f of fields) {
+    if (!f.var || f.type === "fixed") continue;
+    let v = Object.hasOwn(values, f.var) ? values[f.var] : f.values;
+    if (typeof v === "boolean") v = [v ? "1" : "0"];
+    else if (!Array.isArray(v)) v = [String(v ?? "")];
+    if (f.type === "text-multi" || f.type === "jid-multi" || f.type === "list-multi") v = v.filter((s) => s !== "");
+    x.append(xml("field", { var: f.var }, ...v.map((s) => xml("value", {}, String(s)))));
+  }
+  return x;
 }
 
 // ---------- proxy ----------
@@ -670,6 +733,14 @@ export class XmppAccount extends EventEmitter {
         role: occ.role,
         affiliation: occ.affiliation,
       });
+      // ¿Pueden los participantes cambiar el tema? Lo dice la información de la sala; los moderadores siempre pueden.
+      this.roomInfo(roomJid).then(
+        (info) => {
+          room.changeSubject = info.changeSubject;
+          this.event("room-info", { room: roomJid, changeSubject: info.changeSubject });
+        },
+        () => {},
+      );
       if (codes.has("201")) {
         // Sala nueva: aceptar la configuración por defecto para desbloquearla.
         this.xmpp.iqCaller.set(xml("query", "http://jabber.org/protocol/muc#owner", xml("x", { xmlns: NS.DATA, type: "submit" })), roomJid).catch(() => {});
@@ -710,7 +781,7 @@ export class XmppAccount extends EventEmitter {
     const mtype = msg.attrs.type || type;
     if (mtype === "error") {
       const { condition, text } = stanzaErrorText(msg);
-      this.event("message-error", { conv: bare(from), id: msg.attrs.id, message: text || condition });
+      this.event("message-error", { conv: bare(from), id: msg.attrs.id, condition, message: text || condition });
       return;
     }
 
@@ -778,6 +849,8 @@ export class XmppAccount extends EventEmitter {
     const isMucPm = this.rooms.has(peerBare) && resourceOf(peer);
     const conv = isMucPm ? peer : peerBare;
 
+    // Llamada de atención (XEP-0224, /buzz en Pidgin)
+    if (msg.getChild("attention", NS.ATTENTION) && !outgoing) this.event("attention", { conv, nick: isMucPm ? resourceOf(peer) : this.roster.get(peerBare)?.name || peerBare.split("@")[0] });
     if (stateEl && body == null) {
       if (!outgoing) this.event("chatstate", { conv, state: stateEl.name });
       return;
@@ -886,8 +959,40 @@ export class XmppAccount extends EventEmitter {
     await this.send(this.presenceStanza({ to: `${bare(roomJid)}/${nick}` }));
   }
 
+  // Devuelve el id del mensaje: si el servidor lo rechaza, el error llega con ese id («message-error»).
   async setSubject(roomJid, subject) {
-    await this.send(xml("message", { to: bare(roomJid), type: "groupchat" }, xml("subject", {}, subject)));
+    const id = crypto.randomUUID();
+    await this.send(xml("message", { to: bare(roomJid), type: "groupchat", id }, xml("subject", {}, subject)));
+    return id;
+  }
+
+  // Configuración de la sala (muc#owner): el formulario del servidor, en el idioma de la app si el servidor lo traduce.
+  async getRoomConfig(roomJid, lang) {
+    const iq = xml("iq", { type: "get", to: bare(roomJid), ...(lang ? { "xml:lang": lang } : {}) }, xml("query", NS.MUC_OWNER));
+    const res = await friendly(this.xmpp.iqCaller.request(iq, 15000));
+    return parseDataForm(res.getChild("query", NS.MUC_OWNER)?.getChild("x", NS.DATA));
+  }
+
+  async setRoomConfig(roomJid, fields, values) {
+    await friendly(this.xmpp.iqCaller.set(xml("query", NS.MUC_OWNER, dataFormSubmit(fields, values)), bare(roomJid), 15000));
+  }
+
+  // /ping: tiempo de respuesta en ms (XEP-0199). Una respuesta de error también prueba que el otro lado está ahí.
+  // (No confundir con la comprobación periódica de la conexión, que hace ping al propio servidor.)
+  async pingJid(target) {
+    const start = Date.now();
+    try {
+      await this.xmpp.iqCaller.get(xml("ping", NS.PING), target, 15000);
+      return { ms: Date.now() - start, supported: true };
+    } catch (e) {
+      if (e?.condition === "service-unavailable" || e?.condition === "feature-not-implemented") return { ms: Date.now() - start, supported: false };
+      throw new Error(iqErrorMessage(e), { cause: e });
+    }
+  }
+
+  // /buzz: llamada de atención (XEP-0224).
+  async sendAttention(to) {
+    await this.send(xml("message", { to, type: "headline", id: crypto.randomUUID() }, xml("attention", NS.ATTENTION)));
   }
 
   async moderate(roomJid, { nick, jid, role, affiliation, reason }) {
@@ -896,7 +1001,16 @@ export class XmppAccount extends EventEmitter {
     if (jid) attrs.jid = jid;
     if (role) attrs.role = role;
     if (affiliation) attrs.affiliation = affiliation;
-    await this.xmpp.iqCaller.set(xml("query", NS.MUC_ADMIN, xml("item", attrs, reason ? xml("reason", {}, reason) : null)), bare(roomJid));
+    await friendly(this.xmpp.iqCaller.set(xml("query", NS.MUC_ADMIN, xml("item", attrs, reason ? xml("reason", {}, reason) : null)), bare(roomJid)));
+  }
+
+  // Lista de una afiliación de la sala (owner, admin, member u outcast), aunque no estén dentro (XEP-0045 §9/§10).
+  async getAffiliations(roomJid, affiliation) {
+    const res = await friendly(this.xmpp.iqCaller.get(xml("query", NS.MUC_ADMIN, xml("item", { affiliation })), bare(roomJid), 15000));
+    return (res?.getChildren("item") || [])
+      .filter((i) => i.attrs.jid)
+      .map((i) => ({ jid: bare(i.attrs.jid), nick: i.attrs.nick || "", reason: i.getChildText("reason") || "" }))
+      .sort((a, b) => a.jid.localeCompare(b.jid));
   }
 
   async invite(roomJid, jid, reason) {
@@ -904,7 +1018,7 @@ export class XmppAccount extends EventEmitter {
   }
 
   roomSnapshot() {
-    return [...this.rooms.entries()].map(([jid, r]) => ({ jid, nick: r.nick, joined: r.joined, subject: r.subject, occupants: [...r.occupants.values()] }));
+    return [...this.rooms.entries()].map(([jid, r]) => ({ jid, nick: r.nick, joined: r.joined, subject: r.subject, changeSubject: r.changeSubject ?? null, occupants: [...r.occupants.values()] }));
   }
 
   // ---------- descubrimiento ----------
@@ -958,6 +1072,7 @@ export class XmppAccount extends EventEmitter {
       name: identity?.attrs.name || "",
       description: fields["muc#roominfo_description"] || "",
       subject: fields["muc#roominfo_subject"] || "",
+      changeSubject: parseChangeSubject(fields["muc#roominfo_changesubject"]),
       occupants: fields["muc#roominfo_occupants"] ? Number(fields["muc#roominfo_occupants"]) : null,
       passwordProtected: features.includes("muc_passwordprotected"),
       membersOnly: features.includes("muc_membersonly"),

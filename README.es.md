@@ -36,7 +36,7 @@ Verifícalos antes, igual que los archivos de Windows (`sha256sum -c` y `gh atte
 
 Qué necesita en Linux:
 
-- **Un llavero** para guardar tus contraseñas cifradas: el de GNOME (`gnome-keyring`) o KWallet. GNOME y KDE ya traen uno; en otros escritorios, instálalo, o la contraseña no se podrá guardar cifrada.
+- **Un llavero** para guardar tus contraseñas cifradas: el de GNOME (`gnome-keyring`) o KWallet. GNOME y KDE ya traen uno; en otros escritorios, instálalo, o la contraseña no se podrá guardar cifrada. Con el **inicio de sesión automático**, el llavero sigue bloqueado porque no has escrito tu contraseña, así que la primera vez que EvEX-MPP lo necesita (nada más arrancar, si se inicia con el sistema) el escritorio te pide desbloquearlo: escribe la contraseña con la que entras en tu sesión. Es la forma en que el escritorio protege el llavero, no un fallo de EvEX-MPP, y no pasa si entras escribiendo tu contraseña.
 - **Speech Dispatcher y una voz** para leer en voz alta los pings de flota: `sudo apt install speech-dispatcher espeak-ng`.
 - **Avisos en Wayland:** un escritorio Wayland no deja que las apps coloquen sus ventanas ni las pongan por encima, así que allí EvEX-MPP muestra los avisos como notificaciones del sistema en vez de sus burbujas (en X11 las burbujas funcionan como en Windows). Si el escritorio no tiene servicio de notificaciones, vuelve a sus burbujas.
 - **Icono de la bandeja:** GNOME solo lo muestra con la extensión *AppIndicator and KStatusNotifierItem Support* (Ubuntu ya la trae). KDE, Xfce y Cinnamon lo muestran sin más.
@@ -114,7 +114,8 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Hora local (gris) y **hora EVE/UTC** (ámbar) en cada mensaje; cualquiera de las dos se puede ocultar. Reloj EVE en la barra de título.
 - Historial local con búsqueda y menciones con palabras clave.
 - Corregir el último mensaje con ↑, citas y `/me`.
-- Comandos tipo IRC (`/help`) y autocompletado de apodos (Tab) y de `:emoji:`.
+- Los comandos de Pidgin para XMPP, con sugerencias al escribir `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` y `/help`. Autocompletado de apodos (Tab) y de `:emoji:`.
+- **Editar el tema de la sala** desde la cabecera: sale una etiqueta *editar* cuando el servidor te deja cambiarlo (los moderadores siempre; los participantes, si la sala lo permite). Abre un cuadro con el tema actual para editarlo o pegar uno nuevo, con ✓ y ✕. Los propietarios abren la configuración de la sala desde el menú ⋮ o con `/config`, con las listas de propietarios, administradores, miembros y vetados. Con clic derecho en un participante se le hace moderador, miembro, administrador o propietario, hasta donde lleguen tus permisos.
 - Recibos de entrega, «escribiendo…» y vistas previas de imágenes y YouTube.
 
 **Personalización**
