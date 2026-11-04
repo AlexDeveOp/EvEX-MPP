@@ -7,7 +7,7 @@ import { playSound } from "./sounds.js";
 import { openGifPicker } from "./gifs.js";
 import { activate, closeConv, openConv, convTitle, markRead, loadHistory, systemMessage, mentionWords, moveTab, notifyMode, getConv } from "./convs.js";
 import { applyBackgroundLayer } from "./themes.js";
-import { pingCard, pingMatches, pingGroups } from "./pings.js";
+import { pingCard, pingMatches, pingGroups, visiblePings } from "./pings.js";
 import { srpHeaderControls } from "./srp.js";
 import { matchRule, highlightRules } from "./keywords.js";
 import { openBackgroundEditor, openSettings } from "./settings.js";
@@ -608,7 +608,7 @@ function renderAllMessages(c, p, prependedCount) {
   const oldTop = p.scroller.scrollTop;
   clear(p.list);
   if (c.type === "pings") {
-    const shown = c.messages.filter((m) => pingMatches(m, p.filter.query, p.filter.group, p.filter.srpOnly)).slice(-400).reverse();
+    const shown = visiblePings(c.messages, p.filter);
     if (!shown.length) p.list.append(h("div", { class: "empty-state" }, icon("radio"), h("p", {}, !c.loaded ? t("Cargando…") : p.filter.srpOnly ? t("No hay pings marcados para SRP. Márcalos con la bandera de cada ping.") : t("No hay pings que mostrar."))));
     for (const m of shown) p.list.append(pingCard(m, { srp: p.filter.srpOnly }));
     p.lastRendered = null;
@@ -642,7 +642,9 @@ function appendMessage(c, m) {
   const p = panes.get(c.key);
   if (!p) return;
   if (c.type === "pings") {
-    if (pingMatches(m, p.filter.query, p.filter.group, p.filter.srpOnly)) {
+    // Con la lista pendiente de repintar (p. ej. tras cambiar un ajuste con otra pestaña delante), el ping entra al
+    // repintarla al abrirla; añadirlo ahora lo mezclaría con una lista desfasada.
+    if (!p.dirty && pingMatches(m, p.filter.query, p.filter.group, p.filter.srpOnly)) {
       p.list.querySelector(".empty-state")?.remove();
       p.list.prepend(pingCard(m, { srp: p.filter.srpOnly }));
     }

@@ -222,6 +222,13 @@ export function pingMatches(m, query, group, srpOnly) {
   return m.body.replace(INVISIBLE, "").toLowerCase().includes(query.toLowerCase());
 }
 
+// Pings que se pintan con un filtro de la vista. Con el SRP apagado, el filtro «Marcados» deja de valer y se quita
+// aquí, antes de filtrar: si no, al apagar el SRP con «Marcados» puesto la lista se pintaba vacía.
+export function visiblePings(messages, filter, limit = 400) {
+  if (!srpEnabled()) filter.srpOnly = false;
+  return messages.filter((m) => pingMatches(m, filter.query, filter.group, filter.srpOnly)).slice(-limit).reverse();
+}
+
 export function pingGroups(messages) {
   const set = new Set();
   for (const m of messages) {
