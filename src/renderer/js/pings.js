@@ -6,7 +6,7 @@ import { matchRule, highlightRules, ruleLabel } from "./keywords.js";
 import { parseFormup, countdownText, countdownSettings, watchCountdowns } from "./formup.js";
 
 import { t } from "./i18n.js";
-import { srpEnabled, isMarked, flagButton, deadlineChip, srpPanel } from "./srp.js";
+import { srpEnabled, isMarked, flagButton, deadlineChip, srpPanel, statusChip } from "./srp.js";
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const FIELD_RE = /^([A-Za-z][\w ./()'&-]{1,32}?)\s*:[\s\u200B-\u200D\u2060\uFEFF]*(.+)$/;
 // p. ej. "~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00 EVE ~~~"
@@ -171,6 +171,7 @@ export function pingCard(m, opts = {}) {
           )
         : null,
       p.footer ? h("span", { class: "ping-group", title: t("Destinatarios") }, p.footer.to) : null,
+      srpEnabled() ? statusChip(m) : null,
       srpEnabled() ? deadlineChip(m) : null,
       h("time", { class: "ping-time", title: fmtTimes(m.ts) }, timeAgo(m.ts)),
     ),

@@ -1112,4 +1112,7 @@ export default {
   "¿Quitar la marca, el killmail, la nota y el estado de los {n} pings marcados? Los pings no se borran.": "Remove the flag, killmail, note and status from the {n} flagged pings? The pings themselves are not deleted.",
   "Borrar": "Clear",
   "Borrar todas las marcas": "Clear all flags",
+  "Sin pedir": "Not requested",
+  "Estado del SRP": "SRP status",
+  "SRP · {estado}": "SRP · {estado}",
 };

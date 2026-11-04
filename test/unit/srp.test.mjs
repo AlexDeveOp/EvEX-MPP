@@ -96,3 +96,18 @@ test("enlace de killmail: vacío o http(s)", () => {
   assert.equal(validKillmail("javascript:alert(1)"), false);
   assert.equal(validKillmail("zkillboard.com/kill/1"), false);
 });
+
+test("burbuja de estado: solo en los marcados, con su estado (y «Sin pedir» si falta)", async () => {
+  const { chipStatus } = await import("../../src/renderer/js/srp.js");
+  S.settings.srp = { enabled: true, deadlineDays: 0, marks: {} };
+  const a = ping("a", 1000);
+  assert.equal(chipStatus(a), null, "sin marcar no hay burbuja");
+  toggleMark(a);
+  assert.equal(chipStatus(a), "pending");
+  for (const st of ["requested", "paid", "rejected"]) {
+    updateMark("a", { status: st });
+    assert.equal(chipStatus(a), st);
+  }
+  updateMark("a", { status: "raro" });
+  assert.equal(chipStatus(a), "pending");
+});

@@ -10,7 +10,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ### Added
 - **SRP (ship replacement) for fleet pings**, optional and off by default (*Preferences → Fleet pings → SRP*). Many alliances replace ships lost in their fleets if you paste the fleet ping and the killmail.
   - Flag any ping and see the flagged ones together with the *Flagged* filter in the *Fleet pings* view.
-  - For each flagged ping, keep the killmail link, a note and the status (not requested yet, requested, paid, rejected).
+  - For each flagged ping, keep the killmail link, a note and the status (not requested yet, requested, paid, rejected). The status is shown on the card, next to the target group, as a colored bubble: yellow not requested, blue requested, green paid, red rejected.
   - An optional deadline in days shows how long is left to request it (also on the card), and marks it as expired.
   - *Copy for SRP* copies the ping, its EVE date and time, the killmail and the note, ready to paste; *Copy all* does it for every flagged ping.
   - Flags are stored only on this computer, never on the server.

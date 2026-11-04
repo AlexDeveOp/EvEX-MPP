@@ -18,6 +18,9 @@ export const SRP_STATUS = [
   ["rejected", tk("Rechazado")],
 ];
 
+// Texto corto del estado para la burbuja de la cabecera del ping.
+const STATUS_SHORT = { pending: tk("Sin pedir"), requested: tk("Pedido"), paid: tk("Pagado"), rejected: tk("Rechazado") };
+
 export const srpSettings = () => ({ enabled: false, deadlineDays: 0, marks: {}, ...(S.settings?.srp || {}) });
 export const srpEnabled = () => !!srpSettings().enabled;
 export const getMark = (key) => (key ? srpSettings().marks[key] || null : null);
@@ -107,6 +110,7 @@ export function flagButton(m, card, { srpOnly } = {}) {
   btn.addEventListener("click", () => {
     const on = toggleMark(m);
     paint();
+    refreshStatusChip(card, m);
     updateFilterCount();
     if (!on && srpOnly) card.remove();
   });
@@ -120,6 +124,34 @@ export function deadlineChip(m) {
   const d = srpDeadline(m.ts);
   if (!d || getMark(m.key)?.status === "paid") return null;
   return h("span", { class: `srp-deadline ${d.state}`, title: d.text }, icon("hourglass"), d.short);
+}
+
+// Burbuja con el estado del SRP en la cabecera del ping (junto al grupo): amarillo sin pedir, azul pedido,
+// verde pagado y rojo rechazado. Solo en los pings marcados.
+// Estado que muestra la burbuja: el guardado, o «pending» si falta o no se reconoce; null si no está marcado.
+export function chipStatus(m) {
+  const mark = getMark(m.key);
+  if (!mark) return null;
+  return STATUS_SHORT[mark.status] ? mark.status : "pending";
+}
+
+export function statusChip(m) {
+  const st = chipStatus(m);
+  if (!st) return null;
+  return h("span", { class: "srp-status-chip", dataset: { status: st }, title: t("Estado del SRP") }, t("SRP · {estado}", { estado: t(STATUS_SHORT[st]) }));
+}
+
+// Repinta la burbuja de estado de una tarjeta (al marcar, desmarcar o cambiar el estado en el panel).
+function refreshStatusChip(card, m) {
+  const old = card.querySelector(".srp-status-chip");
+  const chip = statusChip(m);
+  if (old && chip) old.replaceWith(chip);
+  else if (old) old.remove();
+  else if (chip) {
+    const group = card.querySelector(".ping-group");
+    if (group) group.after(chip);
+    else card.querySelector(".ping-time")?.before(chip);
+  }
 }
 
 // Panel de SRP de un ping marcado (vista «Solo marcados»): killmail, nota, estado, plazo y copiar.
@@ -136,7 +168,11 @@ export function srpPanel(m) {
   note.value = mark.note || "";
   note.addEventListener("change", () => updateMark(m.key, { note: note.value }));
   const status = h("select", { class: "input small" }, SRP_STATUS.map(([v, label]) => h("option", { value: v, selected: v === (mark.status || "pending") }, t(label))));
-  status.addEventListener("change", () => updateMark(m.key, { status: status.value }));
+  status.addEventListener("change", () => {
+    updateMark(m.key, { status: status.value });
+    const card = status.closest(".ping-card");
+    if (card) refreshStatusChip(card, m);
+  });
   const d = srpDeadline(m.ts);
   return h(
     "div",
