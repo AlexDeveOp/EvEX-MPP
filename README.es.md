@@ -2,7 +2,7 @@
 
 [English](README.md) | **Español**
 
-Cliente XMPP (Jabber) de escritorio para Windows (y Linux, en pruebas), pensado para comunidades y alianzas de EVE Online que se coordinan por Jabber. Es una alternativa moderna y muy personalizable a Pidgin: salas con autounión, pings de flota en tarjetas, avisos emergentes siempre visibles, hora EVE y temas. La interfaz está en español e inglés.
+Cliente XMPP (Jabber) de escritorio para Windows y Linux, pensado para comunidades y alianzas de EVE Online que se coordinan por Jabber. Es una alternativa moderna y muy personalizable a Pidgin: salas con autounión, pings de flota en tarjetas, avisos emergentes siempre visibles, hora EVE y temas. La interfaz está en español e inglés.
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6)
 
@@ -19,7 +19,7 @@ Los ejecutables aún no están firmados, así que la primera vez avisará Window
 
 ### Linux
 
-**En pruebas (beta)**, para x64 (en las versiones posteriores a la 0.6.0). Hay dos paquetes, compilados por GitHub Actions en Ubuntu:
+Para x64, desde la 0.7.0. Hay dos paquetes, compilados por GitHub Actions en Ubuntu:
 
 | Archivo | Para qué |
 |---|---|
@@ -71,9 +71,9 @@ Solo da el visto bueno si el archivo lo compiló un workflow de GitHub Actions d
 
 | Versión | Instalador | Portable |
 |---|---|---|
-| 0.6.0 | [0/67](https://www.virustotal.com/gui/file/73c6d029cd613e649813136a0f6f1f5deaadcc8e87250ef349b02fc042556cb4) | [1/65](https://www.virustotal.com/gui/file/1164e5e2f11ee938d31d706c0d848505102279aaf65477cbf4b2eace555c59a0) ¹ |
+| 0.6.0 | [0/67](https://www.virustotal.com/gui/file/73c6d029cd613e649813136a0f6f1f5deaadcc8e87250ef349b02fc042556cb4) | [0/60](https://www.virustotal.com/gui/file/1164e5e2f11ee938d31d706c0d848505102279aaf65477cbf4b2eace555c59a0) ¹ |
 
-¹ McAfee marca el portable de la 0.6.0 con una detección genérica por reputación (`Ti!` seguido del principio del hash del archivo), habitual en ejecutables nuevos y sin firmar. Ningún otro antivirus lo marca, y el instalador, que contiene la misma app, sale limpio en los 67.
+¹ Al principio McAfee marcaba el portable de la 0.6.0 (1/65) con una detección genérica por reputación (`Ti!` seguido del principio del hash del archivo), habitual en ejecutables nuevos y sin firmar. Se le notificó como falso positivo y lo añadió a su lista blanca el 4 de noviembre de 2026; un análisis nuevo da 0/60. Si algún antivirus marca una versión, notifícaselo a ese fabricante como falso positivo.
 
 Para avisar de un fallo de seguridad, consulta [SECURITY.md](SECURITY.md) (en inglés).
 

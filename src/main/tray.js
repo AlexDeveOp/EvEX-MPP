@@ -59,19 +59,39 @@ export function buildTrayMenu() {
   ]);
 }
 
-export function createTray(o) {
-  options = { ...options, ...o };
-  tray = new Tray(trayImage());
-  tray.setToolTip("EvEX-MPP");
-  tray.setContextMenu(buildTrayMenu());
-  tray.on("click", () => {
+function makeTray() {
+  const t = new Tray(trayImage());
+  t.setToolTip("EvEX-MPP");
+  t.setContextMenu(buildTrayMenu());
+  t.on("click", () => {
     const win = options.getWin();
     return win?.isVisible() && win.isFocused() ? win.hide() : options.showWindow();
   });
-  tray.on("double-click", () => options.showWindow());
-  tray.on("balloon-click", () => options.showWindow());
+  t.on("double-click", () => options.showWindow());
+  t.on("balloon-click", () => options.showWindow());
+  return t;
+}
+
+export function createTray(o) {
+  options = { ...options, ...o };
+  tray = makeTray();
+  // Linux (GNOME, extensión AppIndicator): Chromium registra el icono antes de publicar IconName/IconThemePath. Si
+  // la extensión pide las propiedades (GetAll) en ese hueco, no ve el icono y no lo vuelve a pedir nunca: se queda
+  // con «cargando» («…»). Pasa sobre todo con la app aún ocupada arrancando (AppImage). Recrear la bandeja con la app
+  // ya libre la registra de nuevo y la extensión vuelve a leerlo todo.
+  if (process.platform === "linux") {
+    setTimeout(() => {
+      if (!tray || tray.isDestroyed()) return;
+      tray.destroy();
+      tray = makeTray();
+      refreshTray();
+    }, 3000);
+  }
   return tray;
 }
+
+// El objeto de la bandeja puede cambiar (ver createTray): quien lo use debe pedirlo aquí cada vez.
+export const getTray = () => (tray && !tray.isDestroyed() ? tray : null);
 
 // Pings sin leer: la bandeja muestra la sirena sobre un círculo ámbar (parpadeando si está activado) hasta que se abren los pings.
 let pingAlert = 0;

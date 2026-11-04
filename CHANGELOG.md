@@ -7,6 +7,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-04
+
 ### Added
 - **SRP (ship replacement) for fleet pings**, optional and off by default (*Preferences → Fleet pings → SRP*). Many alliances replace ships lost in their fleets if you paste the fleet ping and the killmail.
   - Flag any ping and see the flagged ones together with the *Flagged* filter in the *Fleet pings* view.
@@ -55,6 +57,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ### Fixed
 - The room topic's **edit** tag (and *Change topic…* in the ⋮ menu) appeared in every room when the server didn't say whether participants may change the topic. It now only appears for moderators, or for participants when the room says it allows it. `/topic` still tries and explains the server's answer.
 - **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
+- **Linux: the tray icon could stay as "…".** On Ubuntu's GNOME (AppIndicator extension), the icon sometimes never loaded, mostly when the AppImage was still busy starting: the desktop asked for the icon a few milliseconds before the app had published it and never asked again. On Linux the app now recreates its tray icon a few seconds after starting, so the desktop reads it again. ([#37](https://github.com/AlexDeveOp/EvEX-MPP/issues/37))
+- **Linux: the AppImage took about 35 s to open** on a virtual machine, because it was packed with the slowest compression (xz) and is unpacked on every start. It now uses faster compression: it opens in about 2 s and is 25 MB larger. The `.deb` and the Windows installer are unchanged. ([#38](https://github.com/AlexDeveOp/EvEX-MPP/issues/38))
 - **Linux: the window did not open at startup.** On GNOME with Wayland the app often started with only its tray icon and no window, because Chromium does not always draw a hidden window and so never reported it ready to show. The window now opens as soon as the page has loaded. Starting hidden (start with the system, *Start minimized*) works as before.
 - **Linux: clean exit on shutdown or reboot.** The app now takes the logind shutdown delay lock and quits before the desktop closes. Before, Ubuntu showed "EvEX-MPP has closed unexpectedly" after rebooting with the app open.
 - **Reconnecting after losing the internet connection.** When the network dropped, the socket often stayed "open", so the app could keep showing an account as connected without receiving anything, or stay stuck on "connecting" after the network was back. It also tried only once at startup, so an account set to *Connect on startup* stayed disconnected if the PC started or woke up before the Wi-Fi.
@@ -241,7 +245,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.1...v0.4.2
