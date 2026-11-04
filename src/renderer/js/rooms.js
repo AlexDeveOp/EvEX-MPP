@@ -299,6 +299,8 @@ function roomSuggestions(accountId, input) {
   })();
   function render() {
     const q = input.value.trim().toLowerCase();
+    // Si la lista llega del servidor con una sugerencia ya marcada, la marca sigue en la misma sala.
+    const marked = shown[active]?.jid;
     active = -1;
     const score = (r) => (r.name.toLowerCase().startsWith(q) || r.jid.startsWith(q) ? 0 : 1);
     shown = q ? known.filter((r) => r.name.toLowerCase().includes(q) || r.jid.includes(q)).sort((a, b) => score(a) - score(b) || a.name.localeCompare(b.name)).slice(0, 8) : [];
@@ -318,6 +320,8 @@ function roomSuggestions(accountId, input) {
         ),
       );
     });
+    const keep = shown.findIndex((r) => r.jid === marked);
+    if (keep >= 0) highlight(keep);
   }
   function highlight(i) {
     active = i;
