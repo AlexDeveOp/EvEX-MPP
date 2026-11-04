@@ -7,9 +7,14 @@
 //   entrenamiento: eres propietario y moderador (/config, /role, /affiliate…) · anuncios: la sala no dice nada y el
 //   servidor rechaza el cambio de tema. /ping a bob devuelve «service-unavailable» y /buzz a alice te llama de vuelta.
 //   En cualquier sala, escribir «!ascender» te hace administrador (y moderador) y «!degradar» te devuelve a miembro.
+// Alice tiene avatar XEP-0084 (PEP): como un servidor real, si la presencia lleva capacidades (XEP-0115) se le pregunta
+//   al cliente su disco#info con node#ver y, si anuncia «urn:xmpp:avatar:metadata+notify», se le manda. Escribirle
+//   «!avatar» le pone otro y «!sinavatar» se lo quita.
 // Con MOCK_MAM=1 anuncia archivo de mensajes (XEP-0313) y guarda en él un ping de hace 40 minutos que nunca se entregó,
 // como si hubiera llegado con la app cerrada.
 import net from "node:net";
+import zlib from "node:zlib";
+import crypto from "node:crypto";
 import Parser from "@xmpp/xml/lib/Parser.js";
 import xml from "@xmpp/xml";
 
@@ -81,6 +86,40 @@ const MAM = "urn:xmpp:mam:2";
 // vCard y avatar XEP-0084 de cada usuario, en memoria mientras dure el servidor (para probar el avatar propio).
 const VCARDS = new Map();
 const PEP = new Map();
+
+// PNG de 64×64 hecho a mano (círculo de color sobre fondo de otro) para el avatar XEP-0084 de Alice.
+function makePng(size, [r1, g1, b1], [r2, g2, b2]) {
+  const raw = Buffer.alloc((size * 3 + 1) * size);
+  for (let y = 0; y < size; y++) {
+    raw[y * (size * 3 + 1)] = 0;
+    for (let x = 0; x < size; x++) {
+      const inside = (x - size / 2) ** 2 + (y - size / 2) ** 2 < (size / 3) ** 2;
+      raw.set(inside ? [r2, g2, b2] : [r1, g1, b1], y * (size * 3 + 1) + 1 + x * 3);
+    }
+  }
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, "latin1"), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(zlib.crc32(body) >>> 0);
+    return Buffer.concat([len, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr.set([8, 2, 0, 0, 0], 8);
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
+const ALICE_AVATARS = [makePng(64, [233, 30, 99], [255, 235, 59]), makePng(64, [33, 150, 243], [255, 255, 255]), makePng(64, [76, 175, 80], [33, 33, 33])];
+let aliceAvatar = 0; // índice en ALICE_AVATARS, o -1 sin avatar
+const sha1 = (b) => crypto.createHash("sha1").update(b).digest("hex");
+const AVATAR_META = "urn:xmpp:avatar:metadata";
+const aliceMetaEvent = (to) => {
+  const png = ALICE_AVATARS[aliceAvatar];
+  const meta = png ? xml("metadata", { xmlns: AVATAR_META }, xml("info", { id: sha1(png), type: "image/png", bytes: String(png.length), width: "64", height: "64" })) : xml("metadata", { xmlns: AVATAR_META });
+  return xml("message", { from: `alice@${DOMAIN}`, to, type: "headline" }, xml("event", { xmlns: "http://jabber.org/protocol/pubsub#event" }, xml("items", { node: AVATAR_META }, xml("item", { id: png ? sha1(png) : "current" }, meta))));
+};
 const ARCHIVE = process.env.MOCK_MAM
   ? [{ id: "arch-1", from: `pingbot@${DOMAIN}/bot`, ts: Date.now() - 40 * 60e3, body: "Fleet up in 20 minutes\nFC Name: Bob FC\nFormup Location: Amarr\nDoctrine: Ferox\n\n~~~ This was a coord broadcast from bob to all ~~~" }]
   : [];
@@ -136,6 +175,14 @@ net
         authed = true;
         send(`<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>`);
         reset();
+        return;
+      }
+      // Respuesta del cliente a nuestra consulta de capacidades: si pide +notify, se le manda el avatar de Alice.
+      if (st.is("iq") && st.attrs.id === "caps-1") {
+        const notify = st.getChild("query")?.getChildren("feature").some((f) => f.attrs.var === `${AVATAR_META}+notify`);
+        log("disco#info del cliente:", st.getChild("query")?.attrs.node, notify ? "pide avatares XEP-0084" : "sin +notify");
+        // Un servidor real solo cachea la respuesta si trae el mismo node#ver que preguntó.
+        if (notify && st.getChild("query")?.attrs.node?.includes("#")) setTimeout(() => send(aliceMetaEvent(jid)), 100);
         return;
       }
       if (st.is("iq")) return onIq(st);
@@ -270,6 +317,13 @@ net
         }
         return result(st, VCARDS.get(owner) || xml("vCard", { xmlns: "vcard-temp" }));
       }
+      if (ns === "http://jabber.org/protocol/pubsub" && st.attrs.type === "get" && to === `alice@${DOMAIN}`) {
+        const id = q.getChild("items")?.getChild("item")?.attrs.id;
+        const png = ALICE_AVATARS.find((b) => sha1(b) === id);
+        log("PEP datos de alice pedidos", png ? `${png.length} bytes` : "(no existe)");
+        if (!png) return send(xml("iq", { type: "error", id: st.attrs.id, to: jid, from: to }, xml("error", { type: "cancel" }, xml("item-not-found", STANZAS))));
+        return result(st, xml("pubsub", { xmlns: ns }, xml("items", { node: "urn:xmpp:avatar:data" }, xml("item", { id }, xml("data", { xmlns: "urn:xmpp:avatar:data" }, png.toString("base64"))))));
+      }
       if (ns === "http://jabber.org/protocol/pubsub" && st.attrs.type === "set") {
         const pub = q.getChild("publish");
         const item = pub?.getChild("item");
@@ -286,6 +340,12 @@ net
       if (!to) {
         // Presencia inicial: los contactos aparecen conectados
         send(xml("presence", { from: `alice@${DOMAIN}/phone`, to: jid }, xml("show", {}, "away"), xml("status", {}, "En el trabajo")));
+        // Como un servidor real: con +notify en las capacidades, manda el último avatar XEP-0084 de cada contacto.
+        const caps = st.getChild("c", "http://jabber.org/protocol/caps");
+        if (caps && !sock.pepSent) {
+          sock.pepSent = true;
+          send(xml("iq", { type: "get", id: "caps-1", to: jid, from: DOMAIN }, xml("query", { xmlns: "http://jabber.org/protocol/disco#info", node: `${caps.attrs.node}#${caps.attrs.ver}` })));
+        }
         send(xml("presence", { from: `bob@${DOMAIN}/pc`, to: jid }, xml("status", {}, "FCing")));
         if (!sock.pinged) {
           sock.pinged = true;
@@ -372,6 +432,11 @@ net
         log("buzz a alice");
         setTimeout(() => send(xml("message", { from: `alice@${DOMAIN}/phone`, to: jid, type: "headline" }, xml("attention", "urn:xmpp:attention:0"))), 1000);
         return;
+      }
+      if (to.startsWith(`alice@${DOMAIN}`) && (body === "!avatar" || body === "!sinavatar")) {
+        aliceAvatar = body === "!avatar" ? (Math.max(aliceAvatar, 0) + 1) % ALICE_AVATARS.length : -1;
+        log("alice cambia su avatar XEP-0084:", aliceAvatar < 0 ? "sin avatar" : `nº ${aliceAvatar}`);
+        setTimeout(() => send(aliceMetaEvent(jid)), 300);
       }
       if (to.startsWith(`alice@${DOMAIN}`) && body) {
         const req = st.getChild("request", "urn:xmpp:receipts");

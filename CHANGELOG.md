@@ -15,6 +15,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Published in the vCard (XEP-0153) as before, and now also with XEP-0084 (a still version), which modern clients use. Servers without it just keep the vCard.
   - *Remove avatar* clears the photo from the vCard, sends an empty `<photo/>` and publishes empty XEP-0084 metadata.
   - With several accounts there is one avatar block per account. *Manage accounts* shows each account's avatar with an *Avatar…* shortcut that opens the Avatar tab with that account highlighted.
+- **Contacts' XEP-0084 avatars.** The app now sends entity capabilities (XEP-0115) with `urn:xmpp:avatar:metadata+notify`, so the server pushes each contact's XEP-0084 avatar on connect and whenever it changes.
+  - The image is downloaded from the contact's data node, checked against its SHA-1 and cached like vCard avatars.
+  - It takes priority over the vCard photo. If the contact removes it, their vCard photo or initials come back.
+  - Avatars already drawn (messages, chat header, participants) are updated in place, also when one is removed.
+  - The mock server asks for the client's capabilities like a real server. Writing `!avatar` or `!sinavatar` to Alice changes or removes hers.
 
 ## [0.7.0] - 2026-11-04
 
