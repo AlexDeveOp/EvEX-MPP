@@ -21,6 +21,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Avatars already drawn (messages, chat header, participants) are updated in place, also when one is removed.
   - The mock server asks for the client's capabilities like a real server. Writing `!avatar` or `!sinavatar` to Alice changes or removes hers.
 
+### Fixed
+- **Repeated fleet pings.** Some ping bots send one copy of the broadcast to each connection of the account. With Pidgin (or another client) connected at the same time, the server also forwards Pidgin's copy to EvEX-MPP (Message Carbons), so the same ping showed up twice, with only the time in the footer one second apart. A ping from a ping sender with the same text as another received less than 10 seconds before (ignoring dates, times and invisible characters) is now neither saved nor announced again.
+
 ### Security
 - **Images from a link are no longer saved as downloaded** (CodeQL alerts #24 and #25). The app checks what a link really is from the file itself, not from what the server says, and no longer writes the downloaded bytes to disk:
   - *My GIFs* keeps only the link (sending a GIF already used the link). Thumbnails saved by earlier versions keep working.
