@@ -91,7 +91,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 **Rooms**
 - ★ marks a room as a **favorite** and ⚡ makes it **open on connect**. ⚡ implies ★, and removing the ★ takes the room off the list (with "Undo").
 - On connect, only ⚡ rooms are joined. Open rooms that are not favorites are listed separately under "Open now".
-- Server room browser with search, user counts and details.
+- Server room browser with search, user counts and details, and room suggestions as you type a name in *Join a room*. Optionally it also finds the domain's other room servers (`muc.`, `chat.`…).
 - Occupants grouped by role, per-room nickname, room passwords, invitations and moderation.
 - The list is synced with server bookmarks (XEP-0048). If the server does not allow saving them (some don't), the list is kept on your PC and rooms you remove do not come back.
 
