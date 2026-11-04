@@ -55,6 +55,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
 
 ### Fixed
+- The room topic's **edit** tag (and *Change topic…* in the ⋮ menu) appeared in every room when the server didn't say whether participants may change the topic. It now only appears for moderators, or for participants when the room says it allows it. `/topic` still tries and explains the server's answer.
 - **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
 - **Linux: the tray icon could stay as "…".** On Ubuntu's GNOME (AppIndicator extension), the icon sometimes never loaded, mostly when the AppImage was still busy starting: the desktop asked for the icon a few milliseconds before the app had published it and never asked again. On Linux the app now recreates its tray icon a few seconds after starting, so the desktop reads it again.
 - **Linux: the AppImage took about 35 s to open** on a virtual machine, because it was packed with the slowest compression (xz) and is unpacked on every start. It now uses faster compression: it opens in about 2 s and is 25 MB larger. The `.deb` and the Windows installer are unchanged.

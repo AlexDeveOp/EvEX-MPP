@@ -14,7 +14,7 @@ import { openBackgroundEditor, openSettings } from "./settings.js";
 import { stopSpeaking } from "./tts.js";
 import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
-import { canEditTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
+import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
 import { t } from "./i18n.js";
 const panes = new Map();
@@ -1212,7 +1212,7 @@ async function runCommand(c, text) {
         }
         need(rs.joined, t("No estás dentro de la sala."));
         // Si ya sabemos que no hay permiso, se avisa sin preguntar al servidor.
-        need(canEditTopic(rs), t("No tienes permiso para cambiar el tema de esta sala. Pídeselo a un moderador."));
+        need(mayTryTopic(rs), t("No tienes permiso para cambiar el tema de esta sala. Pídeselo a un moderador."));
         await setTopic(c, rest === "-" ? "" : rest);
         return true;
       case "join": {
