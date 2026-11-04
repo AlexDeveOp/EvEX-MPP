@@ -6,6 +6,7 @@ import { matchRule, highlightRules, ruleLabel } from "./keywords.js";
 import { parseFormup, countdownText, countdownSettings, watchCountdowns } from "./formup.js";
 
 import { t } from "./i18n.js";
+import { srpEnabled, isMarked, flagButton, deadlineChip, srpPanel, statusChip } from "./srp.js";
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const FIELD_RE = /^([A-Za-z][\w ./()'&-]{1,32}?)\s*:[\s\u200B-\u200D\u2060\uFEFF]*(.+)$/;
 // p. ej. "~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00 EVE ~~~"
@@ -142,7 +143,8 @@ function watchFresh(ts) {
   sweepTimer.unref?.(); // en los tests (Node), que el temporizador no impida terminar
 }
 
-export function pingCard(m) {
+// opts.srp: vista «Solo marcados» (muestra el panel de SRP de cada ping).
+export function pingCard(m, opts = {}) {
   const p = parsePing(m.body);
   const fresh = isFreshPing(m.ts);
   if (fresh) watchFresh(m.ts);
@@ -153,7 +155,7 @@ export function pingCard(m) {
   if (cd && cd.state !== "old") watchCountdowns();
   const card = h(
     "article",
-    { class: `ping-card ${fresh ? "fresh" : ""} ${rule ? "kw" : ""}`, dataset: { key: m.key, ts: String(m.ts) }, style: rule ? { "--kw": rule.color } : null },
+    { class: `ping-card ${fresh ? "fresh" : ""} ${rule ? "kw" : ""} ${srpEnabled() && isMarked(m.key) ? "srp-marked" : ""}`, dataset: { key: m.key, ts: String(m.ts) }, style: rule ? { "--kw": rule.color } : null },
     h(
       "header",
       { class: "ping-head" },
@@ -169,6 +171,8 @@ export function pingCard(m) {
           )
         : null,
       p.footer ? h("span", { class: "ping-group", title: t("Destinatarios") }, p.footer.to) : null,
+      srpEnabled() ? statusChip(m) : null,
+      srpEnabled() ? deadlineChip(m) : null,
       h("time", { class: "ping-time", title: fmtTimes(m.ts) }, timeAgo(m.ts)),
     ),
     p.fields.length
@@ -201,10 +205,15 @@ export function pingCard(m) {
       ),
     ),
   );
+  if (srpEnabled()) {
+    card.querySelector(".ping-foot").append(flagButton(m, card, { srpOnly: opts.srp }));
+    if (opts.srp) card.append(srpPanel(m) || "");
+  }
   return card;
 }
 
-export function pingMatches(m, query, group) {
+export function pingMatches(m, query, group, srpOnly) {
+  if (srpOnly && !(srpEnabled() && isMarked(m.key))) return false;
   if (group) {
     const p = parsePing(m.body);
     if ((p.footer?.to || "") !== group) return false;

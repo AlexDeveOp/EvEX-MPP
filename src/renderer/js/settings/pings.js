@@ -1,6 +1,7 @@
 // Preferencias → Pings de flota: remitentes, aviso y sonido, lectura en voz alta y cuenta atrás del formup.
 import { S, api } from "../state.js";
-import { h, icon, iconButton, field, toggle, select, range } from "../dom.js";
+import { h, icon, iconButton, field, toggle, select, range, confirmDialog, clear } from "../dom.js";
+import { srpSettings, clearMarks } from "../srp.js";
 import { PRESETS as SOUNDS, previewSound } from "../sounds.js";
 import { parseFormup, countdownText, countdownSettings } from "../formup.js";
 import { parsePing } from "../pings.js";
@@ -9,6 +10,50 @@ import { t } from "../i18n.js";
 import { isWindows, onWindows } from "../system.js";
 import { VOICE_DEFAULTS, TEMPLATE_FIELDS, voiceSettings, listVoices, pingSpeech, speak, stopSpeaking, speechAvailable } from "../tts.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
+
+// «Pings de flota» → SRP: marcar pings para pedir el reembolso de naves perdidas (killmail, nota, estado y plazo).
+// Desactivado por defecto: quien no lo use no ve ni la bandera ni el filtro.
+function srpGroup() {
+  const box = h("div");
+  const paint = () => clear(box).append(srpGroupContent(paint));
+  paint();
+  return box;
+}
+
+function srpGroupContent(repaint) {
+  const s = srpSettings();
+  const set = (fn) => (full((x) => (x.srp = fn({ ...srpSettings() }))), repaint());
+  const days = h("input", { class: "input small", type: "number", min: 0, max: 365, step: 1, value: s.deadlineDays || 0 });
+  days.addEventListener("change", () => set((x) => ({ ...x, deadlineDays: Math.max(0, Math.min(365, Math.round(Number(days.value) || 0))) })));
+  const count = Object.keys(s.marks).length;
+  return group(
+    t("SRP (reposición de naves)"),
+    h("p", { class: "muted small" }, t("Muchas alianzas reponen las naves perdidas en sus flotas si les pegas el ping de la flota (y el killmail). Con esto puedes marcar pings con una bandera, verlos juntos con el filtro «Marcados» y guardar en cada uno el killmail, una nota y el estado, para copiarlo todo listo para el formulario. Las marcas se guardan solo en este equipo.")),
+    toggle(s.enabled, (v) => set((x) => ({ ...x, enabled: v })), t("Activar el SRP: marcar pings"), t("Añade la bandera a cada ping y el filtro «Marcados» en la vista de pings")),
+    s.enabled ? field(t("Plazo para pedir el SRP (días)"), days, t("Cada ping marcado muestra cuánto queda, contando desde el ping. 0 = sin plazo.")) : null,
+    s.enabled
+      ? h(
+          "div",
+          { class: "row" },
+          h("span", { class: "muted small" }, t("{n} pings marcados", { n: count })),
+          count
+            ? h(
+                "button",
+                {
+                  class: "btn small danger ghost",
+                  type: "button",
+                  onclick: async () => {
+                    if (await confirmDialog({ title: t("Borrar las marcas de SRP"), message: t("¿Quitar la marca, el killmail, la nota y el estado de los {n} pings marcados? Los pings no se borran.", { n: count }), okLabel: t("Borrar"), danger: true })) (full(() => clearMarks()), repaint());
+                  },
+                },
+                icon("trash-2"),
+                t("Borrar todas las marcas"),
+              )
+            : null,
+        )
+      : null,
+  );
+}
 
 // «Pings de flota» → Aviso y sonido: lo mismo que en Notificaciones, reunido aquí con lo demás de los pings.
 function pingAlertGroup() {
@@ -170,6 +215,7 @@ export const pingTabs = {
           t("Los minutos cuentan desde que llega el ping, lo mires o no. Con «hasta que vuelvas a abrir los pings» laten los que han llegado desde la última vez que saliste de la vista de pings, y siguen latiendo hasta que vuelves a salir. Si desactivas las animaciones (Apariencia), no late nunca."),
         ),
       ),
+      srpGroup(),
       voiceGroup(),
       formupGroup(),
       // Pings que llegaron con la app cerrada (src/main/ping-recovery.js). Ambos activados por defecto.

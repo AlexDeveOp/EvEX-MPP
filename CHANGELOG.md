@@ -8,6 +8,12 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **SRP (ship replacement) for fleet pings**, optional and off by default (*Preferences → Fleet pings → SRP*). Many alliances replace ships lost in their fleets if you paste the fleet ping and the killmail.
+  - Flag any ping and see the flagged ones together with the *Flagged* filter in the *Fleet pings* view.
+  - For each flagged ping, keep the killmail link, a note and the status (not requested yet, requested, paid, rejected). The status is shown on the card, next to the target group, as a colored bubble: yellow not requested, purple requested, green paid, red rejected.
+  - An optional deadline in days shows how long is left to request it (also on the card), and marks it as expired.
+  - *Copy for SRP* copies the ping, its EVE date and time, the killmail and the note, ready to paste; *Copy all* does it for every flagged ping.
+  - Flags are stored only on this computer, never on the server.
 - **Proxy support (SOCKS5, HTTP and HTTPS),** with optional username and password:
   - *Preferences → Network and proxy* sets a general proxy, used by accounts set to *Use the general proxy* (the default) and by all of the app's web traffic: update checks, GIF search, downloaded emoji, link previews and spell-check dictionaries.
   - Each account can use the general proxy, no proxy, or its own one (in the account's *Proxy* section).

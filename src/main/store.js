@@ -81,6 +81,8 @@ export const DEFAULT_SETTINGS = {
   pingSenders: [],
   // Cuánto late la sirena de los pings recientes: minutos ("0" = nunca) o "unseen" (hasta volver a abrir los pings).
   pingHighlight: "60",
+  // SRP: marcar pings para pedir el reembolso de naves (renderer/js/srp.js). Las marcas, por clave del mensaje.
+  srp: { enabled: false, deadlineDays: 0, marks: {} },
   behavior: {
     enterToSend: true,
     sendTyping: true,

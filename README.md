@@ -100,6 +100,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Every card shows local time and EVE time.
 - **The siren of new pings pulses** for the time you choose (5 minutes to 2 hours, counted from when the ping arrives) or until you open the pings view and leave it again. The *Fleet pings* siren in the sidebar pulses too, so you see it from any conversation.
 - **Read pings aloud** with the voices installed in Windows (offline): voice, speed, pitch, volume, what to read (summary, title, whole ping or your own template), only some target groups, and only when you are not looking at the window.
+- **SRP (ship replacement), optional:** flag the pings of the fleets where you lost a ship and see them together with the *Flagged* filter. For each one you can keep the killmail link, a note and the status (not requested yet, requested, paid, rejected; shown on the card as a yellow, purple, green or red bubble), see how long is left if your alliance has a deadline, and **copy everything ready to paste into the SRP form**. Turn it on in *Preferences → Fleet pings → SRP*; flags are stored only on your computer.
 - **Pings that arrived while the app was closed are recovered** from Pidgin's logs on the same PC and, if your server keeps a message archive (XEP-0313), from the server.
 - Everything about pings has its own settings page, also reachable from the ⚙ button in the *Fleet pings* view.
 

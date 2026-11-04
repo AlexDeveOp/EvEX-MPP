@@ -1,0 +1,102 @@
+/* SRP: pings marcados para pedir el reembolso de naves (renderer/js/srp.js). */
+.ping-card.srp-marked {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.srp-flag.on,
+.srp-filter.on {
+  color: var(--accent);
+}
+.srp-flag.on svg {
+  fill: currentColor;
+}
+.srp-filter .srp-count {
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: var(--bg-3, rgba(127, 127, 127, 0.2));
+  font-size: 0.8em;
+  text-align: center;
+}
+.srp-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.8em;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.srp-deadline svg {
+  width: 1em;
+  height: 1em;
+}
+.srp-deadline.soon {
+  color: var(--warn, #e0a030);
+  opacity: 1;
+}
+.srp-deadline.late {
+  color: var(--danger, #e05050);
+  opacity: 1;
+}
+/* El pie del ping da margin-left:auto a sus botones (chat.css); la bandera va pegada a «Copiar», a la derecha. */
+.ping-foot .btn.srp-flag {
+  margin-left: 0;
+}
+.srp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px 16px; /* como .ping-foot y .ping-fields */
+  border-top: 1px dashed var(--border, rgba(127, 127, 127, 0.3));
+  font-size: 0.9em;
+}
+.srp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.srp-row > svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  opacity: 0.7;
+}
+.srp-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.srp-row textarea.input {
+  resize: vertical;
+}
+.srp-row .input.invalid {
+  border-color: var(--danger, #e05050);
+}
+.srp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.srp-status .input {
+  flex: none;
+}
+
+/* Estado del SRP en la cabecera del ping: misma forma que la burbuja del grupo («all»). «Pedido» va en morado fijo:
+   en azul se confundía con la burbuja del grupo, y el morado del tema (--accent2) cambia con cada tema. */
+.srp-status-chip {
+  --srp-c: var(--warn, #d29922);
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--srp-c) 18%, transparent);
+  color: var(--srp-c);
+  font-size: 0.8em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.srp-status-chip[data-status="requested"] {
+  --srp-c: #a371f7;
+}
+.srp-status-chip[data-status="paid"] {
+  --srp-c: var(--ok, #3fb950);
+}
+.srp-status-chip[data-status="rejected"] {
+  --srp-c: var(--danger, #f85149);
+}
