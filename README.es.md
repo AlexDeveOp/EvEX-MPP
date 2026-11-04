@@ -91,7 +91,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 **Salas**
 - ★ marca una sala como **favorita** y ⚡ hace que se **abra al conectar**. ⚡ implica ★, y quitar la ★ saca la sala de la lista (con «Deshacer»).
 - Al conectar solo se entra en las salas con ⚡. Las salas abiertas que no son favoritas aparecen aparte, en «Abiertas ahora».
-- Explorador de salas del servidor, con búsqueda, número de usuarios y detalles.
+- Explorador de salas del servidor, con búsqueda, número de usuarios y detalles, y sugerencias de salas al escribir el nombre en «Unirse a una sala». Si quieres, también encuentra los demás servidores de salas del dominio (`muc.`, `chat.`…).
 - Participantes agrupados por rol, apodo por sala, contraseña, invitaciones y moderación.
 - La lista se sincroniza con los marcadores del servidor (XEP-0048). Si el servidor no permite guardarlos (algunos no lo permiten), la lista se guarda en tu PC y las salas que quites no vuelven.
 

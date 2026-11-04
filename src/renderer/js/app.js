@@ -403,7 +403,7 @@ function startEveClock() {
 function bindTitlebar() {
   startEveClock();
   $("#tb-switch").addEventListener("click", openSwitcher);
-  $("#tb-rooms").addEventListener("click", () => S.accounts[0] && openRoomBrowser(S.accounts[0].id));
+  $("#tb-rooms").addEventListener("click", () => S.accounts[0] && openRoomBrowser(currentAccount()));
   $("#tb-search").addEventListener("click", () => {
     const c = S.active && S.convs.get(S.active);
     openSearch(c && c.accountId ? { accountId: c.accountId, conv: c.conv } : {});

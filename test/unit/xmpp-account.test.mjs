@@ -212,3 +212,15 @@ test("los cambios de participantes salen agrupados y antes que el siguiente even
   t.mock.timers.tick(OCCUPANT_BATCH_MS);
   assert.equal(events.length, 4, "no queda ningún lote vacío pendiente");
 });
+
+test("descubre los servidores de salas del dominio y deja fuera pasarelas y otros servicios", async (t) => {
+  const { acc, waitFor } = account(t);
+  await acc.connect("test");
+  await waitFor((e) => e.type === "status" && e.state === "online");
+  const services = await acc.listMucServices("test.local");
+  assert.deepEqual(services.map((s) => s.jid).sort(), ["chat.test.local", "conference.test.local"]);
+  assert.equal(services.find((s) => s.jid === "chat.test.local").name, "Salas de la alianza");
+  // Las salas del segundo servidor se listan igual que las del primero.
+  const rooms = await acc.listRooms("chat.test.local");
+  assert.deepEqual(rooms.map((r) => r.jid).sort(), ["general@chat.test.local", "logistica@chat.test.local", "mineria@chat.test.local"]);
+});

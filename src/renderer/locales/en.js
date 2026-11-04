@@ -302,7 +302,6 @@ export default {
   "Solo si la sala la requiere": "Only if the room requires one",
   "Sin conexión: la sala se abrirá al conectar.": "Offline: the room will open when you connect.",
   "Unirse a una sala": "Join a room",
-  "Servidor por defecto: {conferenceServer}": "Default server: {conferenceServer}",
   "Apodo": "Nickname",
   "Guardar en favoritas": "Save to favorites",
 
@@ -508,7 +507,6 @@ export default {
   "Abiertas ahora (no favoritas)": "Open now (not favorites)",
   "Salas favoritas · {alias}": "Favorite rooms · {alias}",
   "Salas favoritas": "Favorite rooms",
-  "Explorar salas del servidor": "Browse server rooms",
   "Sin resultados": "No results",
   "Sin salas. Usa ": "No rooms. Use ",
   "Favorita (clic para quitarla)": "Favorite (click to remove)",
@@ -1070,6 +1068,25 @@ export default {
   "Contraseña del proxy en memoria hasta cerrar la app: sin llavero no se guarda en disco.": "Proxy password kept in memory until you close the app: without a keyring it is not saved to disk.",
   "No hay conexión a Internet.": "There is no Internet connection.",
   "Tiempo de espera agotado.": "The connection timed out.",
+
+  // descubrimiento de salas
+  "Explorar salas del servidor (Ctrl+B)": "Browse server rooms (Ctrl+B)",
+  "Explorar salas del servidor…": "Browse server rooms…",
+  "Servidor por defecto: {conferenceServer}. Al escribir, sugiere las salas del servidor.": "Default server: {conferenceServer}. Start typing to see suggestions from the server's rooms.",
+  "Dentro": "Joined",
+  "Otros servidores de salas": "Other room servers",
+  "Busca también otros servidores de salas del dominio de la cuenta (por ejemplo muc. o chat.)": "Also look for other room servers on the account's domain (for example muc. or chat.)",
+  "Buscando servidores de salas…": "Looking for room servers…",
+  "Servidores de salas:": "Room servers:",
+  "No hay otros servidores de salas en {domain}.": "There are no other room servers on {domain}.",
+  "Todos": "All",
+  "Todos los servidores": "All servers",
+  "Las salas de todos los servidores": "Rooms from every server",
+  "{shown} de {total} salas en {count} servidores": "{shown} of {total} rooms on {count} servers",
+  "Buscar otros servidores de salas": "Look for other room servers",
+  "El explorador y las sugerencias del + incluyen también los demás servidores de salas del dominio (muc., chat.…), no solo conference.":
+    "The room browser and the + suggestions also include the domain's other room servers (muc., chat.…), not just conference.",
+
   // Tema de la sala, permisos, configuración y comandos (/say, /role, /affiliate, /unban, /ping, /buzz, /config)
   "Cambiar el tema…": "Change topic…",
   "Copiar el tema": "Copy topic",
