@@ -36,7 +36,7 @@ Verify them first like the Windows files (`sha256sum -c` and `gh attestation ver
 
 What it needs on Linux:
 
-- **A keyring** to store your passwords encrypted: GNOME Keyring (`gnome-keyring`) or KWallet. GNOME and KDE include one; on other desktops install it, or the password cannot be saved encrypted.
+- **A keyring** to store your passwords encrypted: GNOME Keyring (`gnome-keyring`) or KWallet. GNOME and KDE include one; on other desktops install it, or the password cannot be saved encrypted. With **automatic login**, the keyring stays locked because you never typed your password, so the first time EvEX-MPP needs it (right at startup if it starts with the system) the desktop asks you to unlock it: type your login password. It is how the desktop protects the keyring, not an EvEX-MPP error, and it does not happen if you log in with your password.
 - **Speech Dispatcher and a voice** to read fleet pings aloud: `sudo apt install speech-dispatcher espeak-ng`.
 - **Alerts on Wayland:** a Wayland desktop does not let apps place their own windows or keep them on top, so EvEX-MPP shows alerts as system notifications there instead of its own pop-ups (on X11 the pop-ups work as on Windows). If the desktop has no notification service, it falls back to its own pop-ups.
 - **Tray icon:** GNOME shows it only with the *AppIndicator and KStatusNotifierItem Support* extension (included in Ubuntu). KDE, Xfce and Cinnamon show it out of the box.
