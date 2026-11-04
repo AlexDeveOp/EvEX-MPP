@@ -96,9 +96,11 @@ test("quitar el avatar: vCard sin foto, <photo/> vacío y metadatos PEP vacíos"
 
 test("sin pep no se publica XEP-0084", async (t) => {
   const { acc } = await online(t, "solovcard");
-  const before = mockLog.filter((l) => l.includes("PEP")).length;
+  // Solo cuentan las publicaciones: al conectar, la cuenta también pide el avatar de Alice («PEP datos de alice pedidos»).
+  const published = () => mockLog.filter((l) => /PEP urn:xmpp:avatar:/.test(l)).length;
+  const before = published();
   const r = await acc.setOwnAvatar(png, "image/png");
   assert.equal(r.pep, false);
   await new Promise((res) => setTimeout(res, 100));
-  assert.equal(mockLog.filter((l) => l.includes("PEP")).length, before);
+  assert.equal(published(), before);
 });
