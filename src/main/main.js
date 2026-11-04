@@ -39,6 +39,11 @@ if (!app.requestSingleInstanceLock()) app.quit();
 // Linux: Chromium solo usa las voces del sistema (speech-dispatcher) para «Leer en voz alta» si se le pide al arrancar.
 if (process.platform === "linux") app.commandLine.appendSwitch("enable-speech-dispatcher");
 
+// Electron en Linux solo pide a logind el aviso de apagado (el que permite cerrar bien, ver «shutdown» más abajo) si
+// «shutdown» no es el primer oyente de powerMonitor: comprobado en Electron 45 con systemd-inhibit. Este oyente vacío,
+// registrado antes de ready, va primero a propósito.
+powerMonitor.on("resume", () => {});
+
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true } },
   { scheme: "media", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
