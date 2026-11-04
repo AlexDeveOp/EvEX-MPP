@@ -6,7 +6,7 @@ const CHANNELS = [
   "account:save", "account:delete", "account:connect", "account:disconnect", "account:snapshot", "network:online",
   "proxy:password", "proxy:test",
   "presence:set", "msg:send", "chatstate:send",
-  "room:join", "room:leave", "room:list", "room:info", "room:nick", "room:subject", "room:moderate", "room:invite", "disco:items",
+  "room:join", "room:leave", "room:list", "room:info", "room:nick", "room:subject", "room:moderate", "room:invite", "room:affiliations", "room:config-get", "room:config-set", "xmpp:ping", "msg:attention", "disco:items",
   "rooms:update", "rooms:pushBookmarks", "rooms:fetchBookmarks",
   "roster:add", "roster:remove", "roster:update", "roster:answer",
   "logs:tail", "logs:search", "logs:list",
