@@ -136,3 +136,55 @@ test("qué errores cuentan como de red", () => {
   assert.equal(isNetworkError(Object.assign(new Error("x"), { code: "ECONNREFUSED", fatal: true })), false);
   assert.equal(isNetworkError(new Error("otro")), false);
 });
+
+// Con proxy: la app habla con un reenvío local (ver useProxy) y el reenvío con el proxy.
+test("por proxy SOCKS5: si el proxy deja de contestar en silencio, el ping lo detecta y reconecta", async (t) => {
+  const { startFakeProxy } = await import("../fake-proxy.mjs");
+  const r = await relay(t); // el relé hace de red entre el proxy y el servidor
+  const proxy = await startFakeProxy({ type: "socks5" });
+  t.after(() => proxy.close());
+  const acc = new XmppAccount({ id: "rp", jid: "usuario@test.local", host: "localhost", port: r.port, security: "opportunistic" }, { avatarDir: tempDir(t), version: "1", getProxy: async () => ({ type: "socks5", host: "127.0.0.1", port: proxy.port }) });
+  const states = [];
+  acc.on("event", (e) => e.type === "status" && states.push(e.state));
+  t.after(() => acc.disconnect(true).catch(() => {}));
+  await acc.connect("test");
+  await sleep(300);
+  for (const p of r.pairs) p.mute = true; // detrás del proxy deja de pasar nada, sin cerrar
+  await until(() => states.includes("reconnecting"), 3000);
+  await until(() => acc.state === "online", 8000);
+  assert.ok(proxy.targets.filter((x) => x === `localhost:${r.port}`).length >= 2, "el reintento también va por el proxy");
+});
+
+test("por proxy: si el proxy se cae, no es un error definitivo y reconecta cuando vuelve", async (t) => {
+  const { startFakeProxy } = await import("../fake-proxy.mjs");
+  const r = await relay(t);
+  const first = await startFakeProxy({ type: "socks5" });
+  const port = first.port;
+  let current = { type: "socks5", host: "127.0.0.1", port };
+  const acc = new XmppAccount({ id: "rq", jid: "usuario@test.local", host: "localhost", port: r.port, security: "opportunistic" }, { avatarDir: tempDir(t), version: "1", getProxy: async () => current });
+  t.after(() => acc.disconnect(true).catch(() => {}));
+  await acc.connect("test");
+  await sleep(300);
+  first.close(); // el proxy se cae: los reintentos dan PROXY_CONNECT
+  await until(() => acc.state !== "online", 3000);
+  await sleep(1500);
+  assert.notEqual(acc.state, "error", "un proxy caído no es un error definitivo");
+  const second = await startFakeProxy({ type: "socks5" }); // vuelve (otro puerto: se le indica a la cuenta)
+  t.after(() => second.close());
+  current = { ...current, port: second.port };
+  acc.nudge();
+  await until(() => acc.state === "online", 6000);
+});
+
+test("con TLS directo se corta el socket de verdad, que va dentro del envoltorio", () => {
+  const acc = new XmppAccount({ id: "rt", jid: "u@ejemplo.com", security: "direct" }, { avatarDir: ".", version: "1" });
+  let destroyed = 0;
+  acc.wantOnline = true;
+  acc.xmpp = { status: "online", socket: { socket: { destroy: () => destroyed++ } }, reconnect: { delay: 1000 } }; // envoltorio de @xmpp/tls
+  acc.restartConnection();
+  assert.equal(destroyed, 1);
+  acc.xmpp = { status: "online", socket: { destroy: () => destroyed++ }, reconnect: { delay: 1000 } }; // net.Socket o TLSSocket (STARTTLS)
+  acc.restartConnection();
+  assert.equal(destroyed, 2);
+  acc.xmpp = null;
+});
