@@ -26,14 +26,17 @@ export function parsePing(body) {
 }
 
 function parsePingNow(body) {
-  const lines = body.split("\n");
   const fields = [];
-  const title = [];
-  const extra = [];
+  // Texto libre en orden; "" marca una línea en blanco (separa párrafos).
+  const free = [];
+  let fieldsAt = -1; // posición en `free` donde empiezan los campos
   let footer = null;
-  for (const raw of lines) {
+  for (const raw of body.split("\n")) {
     let line = raw.trim();
-    if (!line) continue;
+    if (!line) {
+      if (free.length && free[free.length - 1] !== "") free.push("");
+      continue;
+    }
     // El pie "~~~ This was a … broadcast ~~~" puede venir en su propia línea o al final de otra.
     const inline = line.match(FOOTER_RE);
     const clean = line.replace(INVISIBLE, "");
@@ -45,10 +48,20 @@ function parsePingNow(body) {
       if (!line) continue;
     }
     const m = line.match(FIELD_RE);
-    if (m && !/^https?$/i.test(m[1].trim())) fields.push({ key: m[1].trim(), value: m[2].trim() });
-    else if (!fields.length) title.push(line);
-    else extra.push(line);
+    // «Tomorrow at 17:15 we form…» no es un campo: los dos puntos son de una hora (dígito a cada lado).
+    const isTime = m && /\d$/.test(m[1]) && /^\d/.test(m[2]);
+    if (m && !isTime && !/^https?$/i.test(m[1].trim())) {
+      if (fieldsAt < 0) fieldsAt = free.length;
+      fields.push({ key: m[1].trim(), value: m[2].trim() });
+    } else free.push(line);
   }
+  // Con campos, lo de antes es el título y lo de después va debajo. Sin campos, el título es solo la primera
+  // línea y el resto, con sus párrafos, va debajo (antes se juntaba todo en un título en negrita).
+  const cut = fieldsAt >= 0 ? fieldsAt : Math.min(1, free.length);
+  const title = free.slice(0, cut).filter(Boolean);
+  const extra = free.slice(cut);
+  while (extra[0] === "") extra.shift();
+  while (extra.length && extra[extra.length - 1] === "") extra.pop();
   return { title: title.join(" ") || t("Ping"), fields, extra, footer };
 }
 

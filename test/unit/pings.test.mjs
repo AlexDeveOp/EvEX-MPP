@@ -44,7 +44,23 @@ test("parsePing reconoce el pie al final de otra línea y con caracteres invisib
 test("parsePing no confunde una URL con un campo", () => {
   const p = parsePing("Mirad esto\nhttps://example.com/x");
   assert.equal(p.fields.length, 0);
-  assert.equal(p.title, "Mirad esto https://example.com/x");
+  assert.equal(p.title, "Mirad esto");
+  assert.deepEqual(p.extra, ["https://example.com/x"]);
+});
+
+test("parsePing no toma una hora («17:15») por un campo", () => {
+  const p = parsePing("Tomorrow at 17:15 we are forming for the final timer.\nwe need absolutely everyone there");
+  assert.equal(p.fields.length, 0);
+  assert.equal(p.title, "Tomorrow at 17:15 we are forming for the final timer.");
+  assert.deepEqual(p.extra, ["we need absolutely everyone there"]);
+  assert.deepEqual(parsePing("Formup: 17:15 EVE").fields, [{ key: "Formup", value: "17:15 EVE" }]);
+});
+
+test("parsePing sin campos conserva los párrafos del texto libre", () => {
+  const p = parsePing("Apple pinged you guys.\nThey are looking to fight.\n\n\nRemember the 5th\n\n~~~ This was a broadcast from bob to all at 2026-11-04 22:02:04 EVE ~~~");
+  assert.equal(p.title, "Apple pinged you guys.");
+  assert.deepEqual(p.extra, ["They are looking to fight.", "", "Remember the 5th"]);
+  assert.equal(p.footer?.from, "bob");
 });
 
 test("parsePing sin título usa «Ping»", () => {
