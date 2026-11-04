@@ -2,6 +2,10 @@
 // Uso: node test/mock-xmpp.mjs  → cuenta usuario@test.local, servidor 127.0.0.1:5299 (o MOCK_PORT), seguridad «TLS si está disponible».
 // Ofrece roster, salas MUC (general, operaciones, entrenamiento y "secret" con contraseña "pw"), historial, marcadores
 // y un ping de pingbot@test.local en cada conexión (añade «pingbot» a los remitentes de pings).
+// Permisos del tema (y de la administración) por sala, para probar la etiqueta «editar» y los comandos:
+//   general: los participantes pueden cambiar el tema · operaciones: no pueden (la información de la sala lo dice)
+//   entrenamiento: eres propietario y moderador (/config, /role, /affiliate…) · anuncios: la sala no dice nada y el
+//   servidor rechaza el cambio de tema. /ping a bob devuelve «service-unavailable» y /buzz a alice te llama de vuelta.
 // Con MOCK_MAM=1 anuncia archivo de mensajes (XEP-0313) y guarda en él un ping de hace 40 minutos que nunca se entregó,
 // como si hubiera llegado con la app cerrada.
 import net from "node:net";
@@ -11,12 +15,39 @@ import xml from "@xmpp/xml";
 const PORT = Number(process.env.MOCK_PORT) || 5299;
 const DOMAIN = "test.local";
 const CONF = `conference.${DOMAIN}`;
+const MEMBER = { affiliation: "member", role: "participant" };
 const ROOMS = {
-  general: { name: "general", subject: "Bienvenidos a general — sala de pruebas", occupants: ["piloto_uno", "piloto_dos", "piloto_tres"] },
-  operaciones: { name: "Operaciones", subject: "Sala de pruebas", occupants: ["comandante_x"] },
-  entrenamiento: { name: "entrenamiento", subject: "", occupants: ["instructor_y"] },
-  secret: { name: "secret", subject: "", occupants: [], password: "pw" },
+  general: { name: "general", subject: "Bienvenidos a general — sala de pruebas", occupants: ["piloto_uno", "piloto_dos", "piloto_tres"], changeSubject: "1", me: MEMBER },
+  operaciones: { name: "Operaciones", subject: "Sala de pruebas", occupants: ["comandante_x"], changeSubject: "0", me: MEMBER },
+  entrenamiento: { name: "entrenamiento", subject: "", occupants: ["instructor_y"], changeSubject: "0", me: { affiliation: "owner", role: "moderator" } },
+  anuncios: { name: "anuncios", subject: "Solo los moderadores cambian este tema", occupants: ["portavoz"], me: MEMBER, rejectSubject: true },
+  secret: { name: "secret", subject: "", occupants: [], password: "pw", me: MEMBER },
 };
+const STANZAS = "urn:ietf:params:xml:ns:xmpp-stanzas";
+const MUC_USER = "http://jabber.org/protocol/muc#user";
+// Formulario de configuración de sala (muc#owner), con un campo de cada tipo habitual.
+const configForm = (r) =>
+  xml(
+    "x",
+    { xmlns: "jabber:x:data", type: "form" },
+    xml("title", {}, `Configuration for ${r.name}`),
+    xml("instructions", {}, "Complete this form to change the room settings."),
+    xml("field", { var: "FORM_TYPE", type: "hidden" }, xml("value", {}, "http://jabber.org/protocol/muc#roomconfig")),
+    xml("field", { var: "muc#roomconfig_roomname", type: "text-single", label: "Room name" }, xml("value", {}, r.name)),
+    xml("field", { var: "muc#roomconfig_roomdesc", type: "text-single", label: "Description" }, xml("value", {}, `Descripción de ${r.name}`)),
+    xml("field", { type: "fixed" }, xml("value", {}, "Permissions")),
+    xml("field", { var: "muc#roomconfig_changesubject", type: "boolean", label: "Allow occupants to change the subject" }, xml("value", {}, r.changeSubject === "1" ? "1" : "0")),
+    xml("field", { var: "muc#roomconfig_persistentroom", type: "boolean", label: "Persistent room" }, xml("value", {}, "1")),
+    xml(
+      "field",
+      { var: "muc#roomconfig_whois", type: "list-single", label: "Who may discover real JIDs" },
+      xml("value", {}, "moderators"),
+      xml("option", { label: "Moderators only" }, xml("value", {}, "moderators")),
+      xml("option", { label: "Anyone" }, xml("value", {}, "anyone")),
+    ),
+    xml("field", { var: "muc#roomconfig_roomadmins", type: "jid-multi", label: "Room admins" }, xml("desc", {}, "One address per line")),
+    xml("field", { var: "muc#roomconfig_roomsecret", type: "text-private", label: "Password" }),
+  );
 // Lo que se registra puede venir del cliente: se quitan los saltos de línea para que no pueda fingir líneas del registro.
 const log = (...a) => console.log(`${new Date().toISOString().slice(11, 19)} ${a.map(String).join(" ")}`.replace(/\n|\r/g, ""));
 const MAM = "urn:xmpp:mam:2";
@@ -121,6 +152,7 @@ net
               { xmlns: "jabber:x:data", type: "result" },
               xml("field", { var: "muc#roominfo_description" }, xml("value", {}, `Descripción de ${r.name}`)),
               xml("field", { var: "muc#roominfo_occupants" }, xml("value", {}, String(r.occupants.length))),
+              r.changeSubject ? xml("field", { var: "muc#roominfo_changesubject" }, xml("value", {}, r.changeSubject)) : null,
             ),
           ),
         );
@@ -145,6 +177,29 @@ net
           );
         return result(st, xml("fin", { xmlns: MAM, complete: "true" }, xml("set", { xmlns: "http://jabber.org/protocol/rsm" }, found.length ? xml("last", {}, found.at(-1).id) : null)));
       }
+      const err = (cond) => send(xml("iq", { type: "error", id: st.attrs.id, to: jid, from: to }, xml("error", { type: cond === "service-unavailable" ? "cancel" : "auth" }, xml(cond, STANZAS))));
+      const roomOf = ROOMS[to.split("@")[0]];
+      if (ns === "http://jabber.org/protocol/muc#owner" && roomOf) {
+        if (roomOf.me.affiliation !== "owner") return err("forbidden");
+        if (st.attrs.type === "get") return result(st, xml("query", { xmlns: ns }, configForm(roomOf)));
+        const values = Object.fromEntries(q.getChild("x")?.getChildren("field").map((x) => [x.attrs.var, x.getChildren("value").map((v) => v.text())]) || []);
+        log("configuración de", to, JSON.stringify(values));
+        if (values["muc#roomconfig_roomname"]) roomOf.name = values["muc#roomconfig_roomname"][0];
+        if (values["muc#roomconfig_changesubject"]) roomOf.changeSubject = values["muc#roomconfig_changesubject"][0] === "1" ? "1" : "0";
+        return result(st);
+      }
+      if (ns === "http://jabber.org/protocol/muc#admin" && roomOf && st.attrs.type === "set") {
+        if (roomOf.me.role !== "moderator") return err("forbidden");
+        const item = q.getChild("item");
+        log("admin", to, JSON.stringify(item.attrs));
+        const roomJid = to.split("/")[0];
+        const nick = item.attrs.nick || roomOf.occupants.find((o) => item.attrs.jid?.startsWith(`${o}@`));
+        if (nick && item.attrs.role !== "none" && item.attrs.affiliation !== "outcast")
+          send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: MUC_USER }, xml("item", { affiliation: item.attrs.affiliation || "member", role: item.attrs.role || "participant", jid: `${nick}@${DOMAIN}/x` }))));
+        else if (nick) send(xml("presence", { from: `${roomJid}/${nick}`, to: jid, type: "unavailable" }, xml("x", { xmlns: MUC_USER }, xml("item", { affiliation: item.attrs.affiliation || "none", role: "none" }), xml("status", { code: item.attrs.affiliation === "outcast" ? "301" : "307" }))));
+        return result(st);
+      }
+      if (q?.is("ping") && to.startsWith(`bob@${DOMAIN}`)) return err("service-unavailable");
       if (ns === "jabber:iq:private" && st.attrs.type === "set") {
         log("marcadores guardados:", q.getChild("storage").getChildren("conference").map((x) => `${x.attrs.jid.split("@")[0]}${x.attrs.autojoin === "true" ? "⚡" : ""}`).join(", "));
         return result(st);
@@ -196,7 +251,7 @@ net
           send(xml("presence", { from: `${roomJid}/${old}`, to: jid, type: "unavailable" }, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", { affiliation: "member", role: "participant", nick }), xml("status", { code: "303" }), xml("status", { code: "110" }))));
           joined.set(roomJid, nick);
         }
-        return send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", { affiliation: "member", role: "participant" }), xml("status", { code: "110" }))));
+        return send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", room.me), xml("status", { code: "110" }))));
       }
       if (room.password && st.getChild("x")?.getChildText("password") !== room.password) {
         return send(xml("presence", { from: `${roomJid}/${nick}`, to: jid, type: "error" }, xml("error", { type: "auth" }, xml("not-authorized", "urn:ietf:params:xml:ns:xmpp-stanzas"))));
@@ -209,7 +264,7 @@ net
       room.occupants.forEach((o, i) =>
         send(xml("presence", { from: `${roomJid}/${o}`, to: jid }, i === 2 ? xml("show", {}, "away") : null, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", { affiliation: i === 0 ? "owner" : "member", role: i === 0 ? "moderator" : "participant", jid: `${o}@${DOMAIN}/x` })))),
       );
-      send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", { affiliation: "member", role: "participant" }), xml("status", { code: "110" }))));
+      send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", room.me), xml("status", { code: "110" }))));
       const since = st.getChild("x")?.getChild("history")?.attrs.since;
       const histTs = Date.now() - 3600e3;
       if (!since || Date.parse(since) < histTs)
@@ -227,8 +282,21 @@ net
       const roomJid = to.split("/")[0];
       if (st.attrs.type === "groupchat" && joined.has(roomJid)) {
         if (!body && !st.getChild("subject")) return;
+        const room = ROOMS[roomJid.split("@")[0]];
+        const subject = st.getChild("subject");
+        if (subject && !body) {
+          const allowed = room.me.role === "moderator" || (room.me.role === "participant" && room.changeSubject === "1" && !room.rejectSubject);
+          log("tema", roomJid, allowed ? "aceptado" : "rechazado");
+          if (!allowed) return send(xml("message", { from: roomJid, to: jid, type: "error", id: st.attrs.id }, subject, xml("error", { type: "auth" }, xml("forbidden", STANZAS))));
+          room.subject = subject.text();
+        }
         const out = xml("message", { from: `${roomJid}/${joined.get(roomJid)}`, to: jid, type: "groupchat", id: st.attrs.id }, ...st.getChildElements().filter((c) => ["body", "subject", "replace"].includes(c.name)));
         return send(out);
+      }
+      if (to.startsWith(`alice@${DOMAIN}`) && st.getChild("attention", "urn:xmpp:attention:0")) {
+        log("buzz a alice");
+        setTimeout(() => send(xml("message", { from: `alice@${DOMAIN}/phone`, to: jid, type: "headline" }, xml("attention", "urn:xmpp:attention:0"))), 1000);
+        return;
       }
       if (to.startsWith(`alice@${DOMAIN}`) && body) {
         const req = st.getChild("request", "urn:xmpp:receipts");

@@ -5,7 +5,8 @@ import { applyAppearance } from "./themes.js";
 import { initChat, markReceipt, focusComposer } from "./chat.js";
 import { initSidebar } from "./sidebar.js";
 import { initOccupants } from "./occupants.js";
-import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, markRead, updateBadge, pingsConv } from "./convs.js";
+import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, markRead, updateBadge, pingsConv, notifyAttention } from "./convs.js";
+import { topicErrorText, topicChangedText } from "./room-admin.js";
 import { showRecoveredPings } from "./ping-recovery.js";
 import { startFormupWatch } from "./formup.js";
 import { windowFocused as ttsWindowFocused } from "./tts.js";
@@ -89,7 +90,7 @@ function applySnapshot(id, snap) {
   }
   for (const r of snap.rooms || []) {
     const rs = roomState(id, r.jid);
-    Object.assign(rs, { joined: r.joined, nick: r.nick, subject: r.subject });
+    Object.assign(rs, { joined: r.joined, nick: r.nick, subject: r.subject, changeSubject: r.changeSubject ?? null });
     rs.occupants = new Map(r.occupants.map((o) => [o.nick, o]));
   }
 }
@@ -221,7 +222,8 @@ const HANDLERS = {
   },
   "message-error"(id, ev) {
     const c = S.convs.get(convKey(id, ev.conv));
-    if (c) systemMessage(c, t("No se pudo entregar un mensaje: {message}", { message: ev.message }), { icon: "triangle-alert" });
+    // Un cambio de tema rechazado se explica como tal (p. ej. sin permiso), no como un mensaje sin entregar.
+    if (c) systemMessage(c, topicErrorText(ev) || t("No se pudo entregar un mensaje: {message}", { message: ev.message }), { icon: "triangle-alert" });
   },
   chatstate(id, ev) {
     const c = S.convs.get(convKey(id, ev.conv));
@@ -313,8 +315,16 @@ const HANDLERS = {
     const changed = r.joined && r.subject !== ev.subject && !ev.ts;
     r.subject = ev.subject;
     const c = S.convs.get(convKey(id, ev.room));
-    if (c && changed && ev.by) systemMessage(c, t("{by} cambió el tema: {subject}", { by: ev.by, subject: ev.subject }), { icon: "quote" });
+    if (c && changed && ev.by) systemMessage(c, topicChangedText(ev.by, ev.subject), { icon: "quote" });
     emit("room", { accountId: id, room: ev.room });
+  },
+  // Si los participantes pueden cambiar el tema (información de la sala): decide si sale la etiqueta «editar».
+  "room-info"(id, ev) {
+    roomState(id, ev.room).changeSubject = ev.changeSubject;
+    emit("room", { accountId: id, room: ev.room });
+  },
+  attention(id, ev) {
+    openConv(id, ev.conv, "chat", { focus: false }).then((c) => notifyAttention(c || getConv(id, ev.conv, "chat"), ev.nick));
   },
   invite(id, ev) {
     playSound("invite");

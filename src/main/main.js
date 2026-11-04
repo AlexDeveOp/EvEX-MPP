@@ -660,6 +660,10 @@ function registerIpc() {
   handle("room:subject", (id, room, subject) => getConn(id).setSubject(room, subject));
   handle("room:moderate", (id, room, opts) => getConn(id).moderate(room, opts));
   handle("room:invite", (id, room, jid, reason) => getConn(id).invite(room, jid, reason));
+  handle("room:config-get", (id, room, lang) => getConn(id).getRoomConfig(room, lang));
+  handle("room:config-set", (id, room, fields, values) => getConn(id).setRoomConfig(room, fields, values));
+  handle("xmpp:ping", (id, target) => getConn(id).pingJid(target));
+  handle("msg:attention", (id, to) => getConn(id).sendAttention(to));
   handle("disco:items", (id, target) => getConn(id).discoItems(target));
 
   handle("rooms:update", (id, rooms) => {

@@ -367,6 +367,25 @@ function maybeNotify(c, msg, rule) {
   }).catch(() => {});
 }
 
+// Alguien nos llama la atención (/buzz, XEP-0224): línea en la conversación, sonido de privado y aviso,
+// salvo con «No molestar» o las notificaciones desactivadas.
+export function notifyAttention(c, nick) {
+  systemMessage(c, t("{nick} te está llamando la atención.", { nick }), { icon: "bell-ring" });
+  const n = S.settings.notifications;
+  if (!n.enabled || n.dnd || conn(c.accountId).show === "dnd") return;
+  playSound("private");
+  api("notify", {
+    kind: "msg",
+    title: convTitle(c),
+    text: t("{nick} te está llamando la atención.", { nick }),
+    accountId: c.accountId,
+    conv: c.conv,
+    convType: c.type,
+    time: popupTime(Date.now()),
+    colors: popupColors(),
+  }).catch(() => {});
+}
+
 function notifyPing(m, rule) {
   // La lectura en voz alta tiene sus propios ajustes (Preferencias → Pings de flota): no depende de las notificaciones.
   speakPing(m);
