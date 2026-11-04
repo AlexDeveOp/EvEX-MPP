@@ -644,6 +644,14 @@ function registerIpc() {
   handle("account:disconnect", (id) => accounts.get(id)?.disconnect());
   handle("account:snapshot", (id) => accountSnapshot(id));
 
+  // La red ha vuelto (evento «online» de la ventana) o el PC sale de suspensión: cada cuenta lo comprueba o reintenta
+  // ya, sin esperar al siguiente ping o reintento.
+  const nudgeAccounts = () => {
+    for (const x of accounts.values()) x.nudge();
+  };
+  handle("network:online", () => nudgeAccounts());
+  powerMonitor.on("resume", () => setTimeout(nudgeAccounts, 3000)); // margen para que la red se levante
+
   handle("presence:set", (id, show, status) => getConn(id).setPresence(show, status));
 
   handle("msg:send", (id, msg) => getConn(id).sendMessage(msg));

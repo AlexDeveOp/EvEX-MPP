@@ -42,6 +42,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ### Fixed
 - **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
 - **Linux: clean exit on shutdown or reboot.** The app now takes the logind shutdown delay lock and quits before the desktop closes. Before, Ubuntu showed "EvEX-MPP has closed unexpectedly" after rebooting with the app open.
+- **Reconnecting after losing the internet connection.** When the network dropped, the socket often stayed "open", so the app could keep showing an account as connected without receiving anything, or stay stuck on "connecting" after the network was back. It also tried only once at startup, so an account set to *Connect on startup* stayed disconnected if the PC started or woke up before the Wi-Fi.
+  - Every 30 s the app pings the server. With no answer in 20 s, it treats the connection as dead and connects again.
+  - A retry that stops making progress for 30 s is cut short and replaced by a new one.
+  - Network errors when connecting are no longer final: the account keeps retrying in the background, waiting 1 s, then 2, 4… up to 30 s. A wrong password or a TLS problem still stops it.
+  - When the network comes back, or the PC wakes from sleep, accounts retry right away.
 - The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
 - With *Until you open the pings again*, the sirens switch off as soon as you leave the pings view (before, they kept pulsing until the view was redrawn), and choosing that mode no longer makes every stored ping pulse at once.
 

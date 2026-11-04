@@ -57,6 +57,22 @@ export const JOIN_TIMEOUT = 30000;
 // Los cambios de presencia en las salas se mandan a la interfaz en lotes cada este tiempo.
 export const OCCUPANT_BATCH_MS = 120;
 
+// Reconexión. Cuando se cae la red, el socket muchas veces NO se cierra (Wi-Fi que se va, router que reinicia, NAT
+// que olvida la conexión): sin estas comprobaciones la app se quedaba «conectada» o «conectando» para siempre.
+// Ping al servidor cada PING_EVERY; sin respuesta en PING_TIMEOUT, la conexión se da por muerta y se rehace.
+export const RECONNECT = { PING_EVERY: 30000, PING_TIMEOUT: 20000, STALL: 30000, SUPERVISE_EVERY: 5000, MAX_DELAY: 30000 };
+
+// Errores de red: con ellos se sigue reintentando, porque la red puede volver. Los demás (contraseña, TLS, falta de
+// mecanismo…) son definitivos.
+const NETWORK_CODES = new Set(["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ECONNRESET", "ECONNABORTED", "ETIMEDOUT", "EHOSTUNREACH", "ENETUNREACH", "ENETDOWN", "EPIPE", "PROXY_CONNECT", "PROXY_TIMEOUT", "PROXY_TARGET"]);
+export function isNetworkError(err) {
+  for (let e = err, i = 0; e && i < 5; e = e.cause, i++) {
+    if (e.fatal || e.condition === "not-authorized") return false;
+    if (NETWORK_CODES.has(e.code) || e.name === "TimeoutError") return true;
+  }
+  return false;
+}
+
 const bare = (j) => String(j || "").split("/")[0].toLowerCase();
 const resourceOf = (j) => {
   const s = String(j || "");
@@ -238,6 +254,8 @@ export class XmppAccount extends EventEmitter {
     this.avatarPending = new Set();
     this.avatarActive = 0;
     this.pingTimer = null;
+    this.supervisor = null; // vigila los reintentos de conexión (ver supervise)
+    this.lastProgress = 0; // último cambio de estado de la conexión
     this.wantOnline = false;
     this.occBatch = [];
     this.occTimer = null;
@@ -316,6 +334,10 @@ export class XmppAccount extends EventEmitter {
     });
 
     xmpp.on("status", (s) => {
+      this.lastProgress = Date.now();
+      // Espera entre reintentos: 1 s tras perder una conexión que funcionaba, y el doble en cada fallo seguido.
+      if (s === "online") xmpp.reconnect.delay = 1000;
+      if (s === "disconnect" && this.state !== "online") xmpp.reconnect.delay = Math.min(xmpp.reconnect.delay * 2, RECONNECT.MAX_DELAY);
       if (s === "connecting" && this.state !== "online") this.setState("connecting");
       if (s === "disconnect") {
         this.presences.clear();
@@ -338,6 +360,7 @@ export class XmppAccount extends EventEmitter {
       if (err?.condition === "not-authorized" || err?.fatal) {
         failStart(err);
         this.wantOnline = false;
+        clearInterval(this.supervisor);
         xmpp.reconnect.stop();
         xmpp.stop().catch(() => {});
         this.setState("error", msg);
@@ -360,14 +383,25 @@ export class XmppAccount extends EventEmitter {
     xmpp.on("online", (address) => this.onOnline(address).catch((e) => this.event("error", { message: e.message })));
 
     this.setState("connecting");
+    this.lastProgress = Date.now();
+    clearInterval(this.supervisor);
+    this.supervisor = setInterval(() => this.supervise(), RECONNECT.SUPERVISE_EVERY);
     try {
       await Promise.race([xmpp.start(), startFailed]);
     } catch (err) {
       if (this.state !== "error") {
-        this.wantOnline = false;
-        xmpp.reconnect.stop();
-        await xmpp.stop().catch(() => {});
-        this.setState("error", this.describeError(err));
+        if (this.wantOnline && isNetworkError(err)) {
+          // Sin red al conectar (p. ej. el PC arranca o despierta antes que el Wi-Fi): se sigue intentando en
+          // segundo plano, y se avisa de por qué todavía no está conectada.
+          this.setState("reconnecting", this.describeError(err));
+          this.restartConnection();
+        } else {
+          this.wantOnline = false;
+          clearInterval(this.supervisor);
+          xmpp.reconnect.stop();
+          await xmpp.stop().catch(() => {});
+          this.setState("error", this.describeError(err));
+        }
       }
       throw new Error(this.describeError(err), { cause: err });
     }
@@ -387,6 +421,7 @@ export class XmppAccount extends EventEmitter {
   async disconnect(silent) {
     this.wantOnline = false;
     clearInterval(this.pingTimer);
+    clearInterval(this.supervisor);
     const xmpp = this.xmpp;
     this.xmpp = null;
     if (!xmpp) return;
@@ -429,10 +464,45 @@ export class XmppAccount extends EventEmitter {
     if (this.acc.syncBookmarks) this.fetchBookmarks().catch(() => {});
 
     clearInterval(this.pingTimer);
-    this.pingTimer = setInterval(() => {
-      if (!this.online) return;
-      this.xmpp.iqCaller.get(xml("ping", NS.PING), parseJid(this.ownJid).domain, 20000).catch(() => {});
-    }, 60000);
+    this.pingTimer = setInterval(() => this.checkAlive(), RECONNECT.PING_EVERY);
+  }
+
+  // Ping al servidor. Una respuesta de error también vale (el servidor está ahí); solo el silencio indica que la
+  // conexión ha muerto aunque el socket siga «abierto», y entonces se rehace.
+  checkAlive() {
+    const x = this.xmpp;
+    if (!x || x.status !== "online") return;
+    x.iqCaller.get(xml("ping", NS.PING), parseJid(this.ownJid).domain, RECONNECT.PING_TIMEOUT).catch((err) => {
+      if (err?.name === "TimeoutError" && this.xmpp === x && x.status === "online") this.restartConnection();
+    });
+  }
+
+  // Vigila los reintentos: si la conexión lleva STALL sin avanzar (p. ej. el TCP se abre pero el servidor no
+  // contesta, con la red a medias), se corta para que xmpp.js lo intente otra vez. Sin esto se quedaba atascada.
+  supervise() {
+    const x = this.xmpp;
+    if (!x || !this.wantOnline || this.state === "error" || x.status === "online") return;
+    if (Date.now() - this.lastProgress < RECONNECT.STALL) return;
+    this.restartConnection();
+  }
+
+  // Corta el socket actual: xmpp.js ve «disconnect» y programa otro intento. Si no hay socket, programa uno.
+  restartConnection() {
+    const x = this.xmpp;
+    if (!x || !this.wantOnline) return;
+    this.lastProgress = Date.now();
+    const raw = x.socket?.socket || x.socket; // con TLS directo, el socket de verdad va dentro
+    if (raw?.destroy) raw.destroy();
+    else if (x.status === "disconnect") x.reconnect.scheduleReconnect();
+  }
+
+  // La red ha vuelto o el PC sale de suspensión: si está conectada, se comprueba ya; si no, se reintenta ya.
+  nudge() {
+    const x = this.xmpp;
+    if (!x || !this.wantOnline || this.state === "error") return;
+    if (x.status === "online") return this.checkAlive();
+    x.reconnect.delay = 1000;
+    this.restartConnection();
   }
 
   async discoverServer() {
