@@ -14,8 +14,18 @@ export function myRoomRights(rs) {
 }
 
 // ¿Puedo cambiar el tema? Los moderadores siempre (XEP-0045); los participantes, si la sala lo permite.
-// Si el servidor no dice si la sala lo permite (changeSubject null), se ofrece y, si lo rechaza, se explica por qué.
+// La etiqueta «editar» y el menú solo se ofrecen con permiso confirmado: si el servidor no dice si la sala
+// lo permite (changeSubject null), no se muestran.
 export function canEditTopic(rs) {
+  if (!rs?.joined) return false;
+  const { role } = myRoomRights(rs);
+  if (role === "moderator") return true;
+  if (role === "participant") return rs.changeSubject === true;
+  return false;
+}
+
+// Para /topic basta con no saber que está prohibido: el comando se intenta y, si el servidor lo rechaza, se explica.
+export function mayTryTopic(rs) {
   if (!rs?.joined) return false;
   const { role } = myRoomRights(rs);
   if (role === "moderator") return true;
@@ -28,6 +38,7 @@ export function topicLockedReason(rs) {
   if (!rs?.joined) return t("No estás en la sala");
   const { role } = myRoomRights(rs);
   if (role === "visitor") return t("Los visitantes no pueden cambiarlo");
+  if (role === "participant" && rs.changeSubject == null) return t("La sala no indica que los participantes puedan cambiarlo");
   return t("Solo los moderadores pueden cambiarlo en esta sala");
 }
 

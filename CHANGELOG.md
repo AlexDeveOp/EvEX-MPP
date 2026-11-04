@@ -53,6 +53,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
 
 ### Fixed
+- The room topic's **edit** tag (and *Change topic…* in the ⋮ menu) appeared in every room when the server didn't say whether participants may change the topic. It now only appears for moderators, or for participants when the room says it allows it. `/topic` still tries and explains the server's answer.
 - **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
 - **Linux: the window did not open at startup.** On GNOME with Wayland the app often started with only its tray icon and no window, because Chromium does not always draw a hidden window and so never reported it ready to show. The window now opens as soon as the page has loaded. Starting hidden (start with the system, *Start minimized*) works as before.
 - **Linux: clean exit on shutdown or reboot.** The app now takes the logind shutdown delay lock and quits before the desktop closes. Before, Ubuntu showed "EvEX-MPP has closed unexpectedly" after rebooting with the app open.

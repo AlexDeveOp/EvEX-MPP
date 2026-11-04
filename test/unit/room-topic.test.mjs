@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { xml } from "@xmpp/client";
 import { XmppAccount, iqErrorMessage, parseChangeSubject, parseDataForm, dataFormSubmit } from "../../src/main/xmpp-account.js";
 import { S } from "../../src/renderer/js/state.js";
-import { canEditTopic, canConfigureRoom, topicLockedReason, topicChangedText, topicErrorText, occupantAdminActions, selfRightsText, AFFILIATION_LISTS } from "../../src/renderer/js/room-admin.js";
+import { canEditTopic, mayTryTopic, canConfigureRoom, topicLockedReason, topicChangedText, topicErrorText, occupantAdminActions, selfRightsText, AFFILIATION_LISTS } from "../../src/renderer/js/room-admin.js";
 import { TEST_SETTINGS, tempDir } from "./helpers.mjs";
 
 S.settings = structuredClone(TEST_SETTINGS);
@@ -19,14 +19,22 @@ const room = (role, affiliation = "member", changeSubject = null, joined = true)
   occupants: new Map([["yo", { nick: "yo", role, affiliation }]]),
 });
 
-test("canEditTopic: moderadores siempre; participantes si la sala lo permite o no lo dice; visitantes nunca", () => {
+test("canEditTopic: moderadores siempre; participantes solo si la sala dice que lo permite; visitantes nunca", () => {
   assert.equal(canEditTopic(room("moderator", "member", false)), true);
   assert.equal(canEditTopic(room("participant", "member", true)), true);
-  assert.equal(canEditTopic(room("participant", "member", null)), true, "sin dato: se ofrece y el servidor decide");
+  assert.equal(canEditTopic(room("participant", "member", null)), false, "sin dato: no se ofrece la etiqueta");
   assert.equal(canEditTopic(room("participant", "member", false)), false);
   assert.equal(canEditTopic(room("visitor", "none", true)), false);
   assert.equal(canEditTopic(room("moderator", "owner", true, false)), false, "fuera de la sala, no");
   assert.equal(canEditTopic(undefined), false);
+});
+
+test("mayTryTopic: /topic se intenta si no se sabe que está prohibido", () => {
+  assert.equal(mayTryTopic(room("participant", "member", null)), true, "sin dato: el servidor decide");
+  assert.equal(mayTryTopic(room("participant", "member", false)), false);
+  assert.equal(mayTryTopic(room("moderator", "member", false)), true);
+  assert.equal(mayTryTopic(room("visitor", "none", null)), false);
+  assert.equal(mayTryTopic(room("participant", "member", null, false)), false);
 });
 
 test("el rol se mira en la lista de participantes (puede cambiar estando dentro)", () => {
@@ -41,6 +49,7 @@ test("configuración de la sala: solo propietarios; motivos del menú en su idio
   assert.equal(canConfigureRoom(room("moderator", "admin")), false);
   assert.match(topicLockedReason(room("visitor", "none")), /visitantes/i);
   assert.match(topicLockedReason(room("participant", "member", false)), /moderadores/i);
+  assert.match(topicLockedReason(room("participant", "member", null)), /no indica/i);
   assert.match(topicLockedReason(room("participant", "member", false, false)), /No estás en la sala/);
 });
 
