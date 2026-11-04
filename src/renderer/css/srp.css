@@ -79,8 +79,8 @@
   flex: none;
 }
 
-/* Estado del SRP en la cabecera del ping: misma forma que la burbuja del grupo («all»). El azul es fijo porque el
-   acento lo elige cada tema (con un tema dorado, «Pedido» se confundiría con «Sin pedir»). */
+/* Estado del SRP en la cabecera del ping: misma forma que la burbuja del grupo («all»). «Pedido» va en morado fijo:
+   en azul se confundía con la burbuja del grupo, y el morado del tema (--accent2) cambia con cada tema. */
 .srp-status-chip {
   --srp-c: var(--warn, #d29922);
   padding: 2px 10px;
@@ -92,7 +92,7 @@
   white-space: nowrap;
 }
 .srp-status-chip[data-status="requested"] {
-  --srp-c: #3b9bff;
+  --srp-c: #a371f7;
 }
 .srp-status-chip[data-status="paid"] {
   --srp-c: var(--ok, #3fb950);

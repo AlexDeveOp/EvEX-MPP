@@ -126,7 +126,7 @@ export function deadlineChip(m) {
   return h("span", { class: `srp-deadline ${d.state}`, title: d.text }, icon("hourglass"), d.short);
 }
 
-// Burbuja con el estado del SRP en la cabecera del ping (junto al grupo): amarillo sin pedir, azul pedido,
+// Burbuja con el estado del SRP en la cabecera del ping (junto al grupo): amarillo sin pedir, morado pedido,
 // verde pagado y rojo rechazado. Solo en los pings marcados.
 // Estado que muestra la burbuja: el guardado, o «pending» si falta o no se reconoce; null si no está marcado.
 export function chipStatus(m) {
