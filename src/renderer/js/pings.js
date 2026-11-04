@@ -87,7 +87,7 @@ export function markPingsSeen(ts = Date.now()) {
   try {
     localStorage.setItem(SEEN_KEY, String(ts));
   } catch {}
-  if (typeof document !== "undefined" && document.querySelector?.(".ping-card.fresh")) sweepFresh();
+  if (typeof document !== "undefined" && document.querySelector?.(FRESH_SEL)) sweepFresh();
 }
 
 // ¿Late la sirena de este ping? Según Preferencias → Pings de flota.
@@ -103,14 +103,31 @@ export function freshUntil(ts, mode = S.settings?.pingHighlight ?? "60") {
   return ts + (Number(mode) || 0) * 60e3;
 }
 
-// Apaga a su hora la sirena de las tarjetas visibles (antes seguía latiendo hasta que la vista se repintaba).
+// El ping más reciente de una lista (los recuperados pueden llegar desordenados). 0 si no hay ninguno.
+export function newestPingTs(messages) {
+  let max = 0;
+  for (const m of messages) if (m.ts > max) max = m.ts;
+  return max;
+}
+
+// ¿Late la sirena de «Pings de flota» en la barra lateral? Sí mientras lata la del ping más reciente.
+// Deja puesto el temporizador que la apaga a su hora.
+export function sidebarSirenTs(messages) {
+  const ts = newestPingTs(messages);
+  if (!ts || !isFreshPing(ts)) return 0;
+  watchFresh(ts);
+  return ts;
+}
+
+// Apaga a su hora las sirenas visibles: tarjetas y barra lateral (antes seguían latiendo hasta que se repintaban).
 // Un solo temporizador, puesto para la sirena que antes se apaga; no hay ninguno si no late nada.
+const FRESH_SEL = ".ping-card.fresh, .sb-item.pings.fresh";
 let sweepTimer = null;
 let sweepAt = Infinity;
 function sweepFresh() {
   sweepTimer = null;
   sweepAt = Infinity;
-  for (const card of document.querySelectorAll(".ping-card.fresh")) {
+  for (const card of document.querySelectorAll(FRESH_SEL)) {
     const ts = Number(card.dataset.ts);
     if (!isFreshPing(ts)) card.classList.remove("fresh");
     else watchFresh(ts);
@@ -122,6 +139,7 @@ function watchFresh(ts) {
   clearTimeout(sweepTimer);
   sweepAt = at;
   sweepTimer = setTimeout(sweepFresh, Math.max(0, at - Date.now()) + 250);
+  sweepTimer.unref?.(); // en los tests (Node), que el temporizador no impida terminar
 }
 
 export function pingCard(m) {

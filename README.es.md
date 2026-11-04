@@ -98,7 +98,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 **Pings de flota**
 - Los mensajes de los remitentes de pings que configures (p. ej. un bot de broadcasts como `pingbot@ejemplo.com`) se muestran como **tarjetas**: FC, formup (con enlace a Dotlan), PAP, comms, doctrina, grupo y quién lo envió.
 - Cada tarjeta lleva la hora local y la hora EVE.
-- **La sirena de los pings nuevos late** el tiempo que elijas (de 5 minutos a 2 horas, contados desde que llega el ping) o hasta que abras la vista de pings y vuelvas a salir.
+- **La sirena de los pings nuevos late** el tiempo que elijas (de 5 minutos a 2 horas, contados desde que llega el ping) o hasta que abras la vista de pings y vuelvas a salir. También late la sirena de «Pings de flota» en la barra lateral, para verla desde cualquier conversación.
 - **Lectura de los pings en voz alta** con las voces instaladas en Windows (sin conexión): voz, velocidad, tono, volumen, qué leer (resumen, título, el ping entero o una plantilla propia), solo algunos grupos y solo cuando no estás mirando la ventana.
 - **Se recuperan los pings que llegaron con la app cerrada**: de los registros de Pidgin en el mismo PC y, si tu servidor guarda archivo de mensajes (XEP-0313), del servidor.
 - Todo lo de los pings tiene su propia página de ajustes, a la que también se llega con el botón ⚙ de la vista «Pings de flota».

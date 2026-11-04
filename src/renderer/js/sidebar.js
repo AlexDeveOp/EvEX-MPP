@@ -7,6 +7,7 @@ import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openAccounts, connectWithPrompt, openSwitchAccount } from "./accounts.js";
 import { openBackgroundEditor } from "./settings.js";
 import { openSearch } from "./search.js";
+import { sidebarSirenTs } from "./pings.js";
 
 import { t } from "./i18n.js";
 const collapsed = new Set(JSON.parse(localStorage.getItem("evex.collapsed") || "[]"));
@@ -75,10 +76,17 @@ function renderSidebar() {
   morphChildren($("#sidebar-accounts"), accounts);
 
   const pc = pingsConv();
+  // La sirena late mientras haya pings nuevos (Preferencias → Pings de flota → Aviso visual), aunque estés en otra conversación.
+  const sirenTs = sidebarSirenTs(pc.messages);
   root.append(
     h(
       "div",
-      { class: `sb-item pings ${S.active === PINGS_KEY ? "active" : ""} ${pc.unread ? "unread" : ""}`, "data-key": PINGS_KEY, onclick: () => openConv(null, "*", "pings") },
+      {
+        class: `sb-item pings ${S.active === PINGS_KEY ? "active" : ""} ${pc.unread ? "unread" : ""} ${sirenTs ? "fresh" : ""}`,
+        "data-key": PINGS_KEY,
+        "data-ts": sirenTs ? String(sirenTs) : null,
+        onclick: () => openConv(null, "*", "pings"),
+      },
       icon("siren", "sb-icon"),
       h("span", { class: "sb-name" }, t("Pings de flota")),
       pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,

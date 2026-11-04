@@ -107,3 +107,23 @@ test("pingsSeenAt: en un perfil nuevo cuenta desde ahora, para que no laten de g
   markPingsSeen(seen - 10);
   assert.equal(pingsSeenAt(), seen - 10, "una vez guardado, se respeta");
 });
+
+test("sidebarSirenTs: la sirena de la barra lateral late mientras lata la del ping más reciente", async () => {
+  const { sidebarSirenTs, newestPingTs } = await import("../../src/renderer/js/pings.js");
+  const { S } = await import("../../src/renderer/js/state.js");
+  const prev = S.settings;
+  const now = Date.now();
+  try {
+    S.settings = { ...(prev || {}), pingHighlight: "5" };
+    const msgs = [{ ts: now - 2 * 60e3 }, { ts: now - 30 * 60e3 }, { ts: now - 60e3 }];
+    assert.equal(newestPingTs(msgs), now - 60e3, "el más reciente, aunque no vaya el último");
+    assert.equal(newestPingTs([]), 0);
+    assert.equal(sidebarSirenTs(msgs), now - 60e3, "hay un ping de hace 1 min: late");
+    assert.equal(sidebarSirenTs([{ ts: now - 6 * 60e3 }]), 0, "el más reciente ya pasó de 5 min: no late");
+    assert.equal(sidebarSirenTs([]), 0, "sin pings no late");
+    S.settings = { ...(prev || {}), pingHighlight: "0" };
+    assert.equal(sidebarSirenTs(msgs), 0, "«Nunca»");
+  } finally {
+    S.settings = prev;
+  }
+});

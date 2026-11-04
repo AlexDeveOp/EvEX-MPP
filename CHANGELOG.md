@@ -27,6 +27,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Start with the system* adds the app to `~/.config/autostart`.
 - **Passwords are only saved when the system can really encrypt them.** On Linux they go to the desktop keyring (GNOME Keyring or KWallet). Without a keyring the account is saved without the password, which is asked for when connecting, instead of keeping it with Chromium's fixed, publicly known key.
 - On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
+- **The *Fleet pings* siren in the sidebar pulses too** while there are new pings, with the same setting as the cards (*Preferences → Fleet pings → Visual alert*), so you notice them while you are in another conversation.
 
 ### Changed
 - **Direct TLS checks the account's domain:** with *Direct TLS*, the server certificate is now checked against the domain of your address, as STARTTLS already did, instead of the connection server name. This is what XEP-0368 expects, and it lets you connect through a different host name or a Tor `.onion` address.
