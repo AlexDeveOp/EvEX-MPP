@@ -7,6 +7,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-05
+
 ### Added
 - **Avatar editor** in *Preferences → Avatar*, also opened by clicking your avatar circle in the sidebar or from *Change my avatar…* in the status menu.
   - Choose an image and frame it in a circle: drag to move, wheel, slider or +/− to zoom, arrow keys to move.
@@ -269,7 +271,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.4.2...v0.5.0
