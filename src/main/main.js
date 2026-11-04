@@ -435,6 +435,7 @@ function accountSnapshot(id) {
     rooms: x.roomSnapshot(),
     presences: [...x.presences.values()].flatMap((m) => [...m.values()]),
     avatarHash: x.avatarHash,
+    contactAvatars: Object.fromEntries(x.pepAvatars),
     server: x.serverInfo,
   };
 }

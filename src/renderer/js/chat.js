@@ -68,13 +68,10 @@ export function initChat() {
     renderTabs();
   }
   const rerenderAll = debounce(rerenderAllNow, 120);
+  // Avatares ya pintados (mensajes, cabeceras, participantes): se cambian si el contacto pone otro y vuelven a las
+  // iniciales si lo quita (p. ej. un avatar XEP-0084 retirado).
   on("avatar", () => {
-    for (const p of panes.values()) {
-      for (const img of p.list.querySelectorAll(".avatar[data-avatar-for]")) {
-        const url = avatarUrl(img.dataset.avatarFor);
-        if (url) setAvatar(img, url);
-      }
-    }
+    for (const el of document.querySelectorAll(".avatar[data-avatar-for]")) refreshAvatar(el);
   });
   setInterval(() => {
     const now = Date.now();
@@ -500,11 +497,24 @@ function renderHeader(c, p) {
 
 export function avatarEl(jid, name, cls = "", show) {
   const url = avatarUrl(jid);
-  const el = h("div", { class: `avatar ${cls}`, dataset: { avatarFor: jid }, style: { "--avatar-color": nickColor(name) } });
+  const el = h("div", { class: `avatar ${cls}`, dataset: { avatarFor: jid, avatarName: name || "" }, style: { "--avatar-color": nickColor(name) } });
   if (url) setAvatar(el, url);
   else el.textContent = initials(name);
   if (show) el.append(h("span", { class: `presence-dot ${show}` }));
   return el;
+}
+
+function refreshAvatar(el) {
+  const url = avatarUrl(el.dataset.avatarFor);
+  const img = el.querySelector("img");
+  if (url) {
+    if (img?.getAttribute("src") !== url) setAvatar(el, url);
+  } else if (img) {
+    const dot = el.querySelector(".presence-dot");
+    el.textContent = initials(el.dataset.avatarName || el.dataset.avatarFor);
+    if (dot) el.append(dot);
+    el.classList.remove("has-img");
+  }
 }
 
 function setAvatar(el, url) {

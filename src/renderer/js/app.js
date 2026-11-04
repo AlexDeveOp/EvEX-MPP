@@ -86,6 +86,8 @@ function applySnapshot(id, snap) {
     contact(id, p.jid).resources.set(p.resource, { show: p.show, status: p.status, priority: p.priority });
     if (p.avatar) S.avatarOf.set(p.jid, p.avatar);
   }
+  // Avatares XEP-0084 de los contactos: mandan sobre el de la vCard que traiga la presencia.
+  for (const [jid, hash] of Object.entries(snap.contactAvatars || {})) S.avatarOf.set(jid, hash);
   if (snap.avatarHash) {
     const acc = account(id);
     if (acc) S.avatarOf.set(acc.jid, snap.avatarHash);
@@ -343,6 +345,12 @@ const HANDLERS = {
   },
   avatar(_id, ev) {
     S.avatars.set(ev.hash, `media://evex/avatars/${ev.file}`);
+    emitAvatarSoon();
+  },
+  // Un contacto ha cambiado (o quitado) su avatar XEP-0084; hash vacío = vuelve a sus iniciales.
+  "contact-avatar"(_id, ev) {
+    if (ev.hash) S.avatarOf.set(ev.jid, ev.hash);
+    else S.avatarOf.delete(ev.jid);
     emitAvatarSoon();
   },
   "own-avatar"(id, ev) {
