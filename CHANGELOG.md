@@ -40,6 +40,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
 
 ### Fixed
+- **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
+- **Linux: clean exit on shutdown or reboot.** The app now takes the logind shutdown delay lock and quits before the desktop closes. Before, Ubuntu showed "EvEX-MPP has closed unexpectedly" after rebooting with the app open.
 - **Reconnecting after losing the internet connection.** When the network dropped, the socket often stayed "open", so the app could keep showing an account as connected without receiving anything, or stay stuck on "connecting" after the network was back. It also tried only once at startup, so an account set to *Connect on startup* stayed disconnected if the PC started or woke up before the Wi-Fi.
   - Every 30 s the app pings the server. With no answer in 20 s, it treats the connection as dead and connects again.
   - A retry that stops making progress for 30 s is cut short and replaced by a new one.

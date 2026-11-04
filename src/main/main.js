@@ -39,6 +39,11 @@ if (!app.requestSingleInstanceLock()) app.quit();
 // Linux: Chromium solo usa las voces del sistema (speech-dispatcher) para «Leer en voz alta» si se le pide al arrancar.
 if (process.platform === "linux") app.commandLine.appendSwitch("enable-speech-dispatcher");
 
+// Electron en Linux solo pide a logind el aviso de apagado (el que permite cerrar bien, ver «shutdown» más abajo) si
+// «shutdown» no es el primer oyente de powerMonitor: comprobado en Electron 45 con systemd-inhibit. Este oyente vacío,
+// registrado antes de ready, va primero a propósito.
+powerMonitor.on("resume", () => {});
+
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true } },
   { scheme: "media", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
@@ -851,6 +856,14 @@ app.whenReady().then(async () => {
     },
   });
   startIdleWatcher();
+  // Linux y macOS: al apagar o reiniciar, cerrar bien antes de que se cierre el escritorio. En Wayland, si el
+  // compositor desaparece antes que la app, Chromium se cierra de golpe (SIGTRAP) y Ubuntu muestra «se ha cerrado
+  // inesperadamente» al volver a entrar. preventDefault() retrasa el apagado lo justo para desconectar las cuentas.
+  powerMonitor.on("shutdown", (e) => {
+    e.preventDefault();
+    quitting = true;
+    app.quit();
+  });
 
   for (const a of store.get().accounts) {
     if (a.autoLogin && store.hasPassword(a.id)) connectAccount(a.id).catch(() => {});
@@ -867,7 +880,9 @@ app.on("will-quit", (e) => {
   if (accounts.size && !app.__disconnected) {
     e.preventDefault();
     app.__disconnected = true;
-    Promise.race([Promise.all([...accounts.values()].map((x) => x.disconnect(true))), new Promise((r) => setTimeout(r, 2500))]).finally(() => app.quit());
+    // app.quit() en el siguiente ciclo: si las cuentas ya estaban desconectadas, la promesa se resuelve mientras Electron
+    // aún procesa esta salida e ignora la llamada, y la app se quedaba viva sin ventana (en Linux, el apagado la mataba).
+    Promise.race([Promise.all([...accounts.values()].map((x) => x.disconnect(true))), new Promise((r) => setTimeout(r, 2500))]).finally(() => setImmediate(() => app.quit()));
   }
 });
 
