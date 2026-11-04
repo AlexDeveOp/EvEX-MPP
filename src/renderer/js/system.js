@@ -54,5 +54,6 @@ export async function mayRememberPassword() {
 // Tras account:save: si el proceso principal no pudo guardar la contraseña (sin llavero), se explica.
 export function afterAccountSave(saved) {
   if (saved?.passwordNotSaved === "no-keyring") noKeyringNotice();
+  if (saved?.proxyPasswordInMemory) toast(t("La contraseña del proxy se recordará solo hasta cerrar la app: este sistema no tiene llavero."), { kind: "info", timeout: 8000, icon: "key-round" });
   return saved;
 }

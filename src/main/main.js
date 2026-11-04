@@ -312,12 +312,16 @@ function nativeContextMenu(params) {
 // ---------- cuentas ----------
 
 function publicAccount(a) {
-  return { ...a, rooms: a.rooms.map(({ password, ...r }) => ({ ...r, hasPassword: !!password })), hasPassword: store.hasPassword(a.id), hasProxyPassword: store.hasPassword(store.proxySecretKey(a.id)) };
+  return { ...a, rooms: a.rooms.map(({ password, ...r }) => ({ ...r, hasPassword: !!password })), hasPassword: store.hasPassword(a.id), hasProxyPassword: hasProxyPassword(a.id) };
 }
 
 // ---------- proxy ----------
 
-const proxyPassword = (id) => store.getPassword(store.proxySecretKey(id));
+// Contraseñas de proxy. Sin llavero (Linux) no se guardan en disco: se quedan en memoria hasta cerrar la app, y si
+// faltan se piden al conectar (NEED_PROXY_PASSWORD), igual que la contraseña de la cuenta.
+const sessionProxyPasswords = new Map(); // clave de proxy -> contraseña, solo en memoria
+const proxyPassword = async (id) => sessionProxyPasswords.get(store.proxySecretKey(id)) ?? (await store.getPassword(store.proxySecretKey(id)));
+const hasProxyPassword = (id) => sessionProxyPasswords.has(store.proxySecretKey(id)) || store.hasPassword(store.proxySecretKey(id));
 let bridge = null;
 let bridgeProxy = null; // proxy general con contraseña, ya descifrada, para el puente
 
@@ -368,6 +372,12 @@ function onLogin(event, _wc, _details, authInfo, callback) {
 // Descargas del proceso principal (actualizaciones, GIFs): net.fetch no da credenciales al proxy; esto sí.
 const netFetch = createNetFetch(bridgeAuth);
 
+// El proxy general pide usuario pero no hay contraseña (Linux sin llavero, tras reiniciar): la interfaz la pide al arrancar.
+function globalNeedsPassword() {
+  const g = store.get().settings.proxy;
+  return !!(g.enabled && g.host && g.username && !hasProxyPassword(store.GLOBAL_PROXY));
+}
+
 // Reconecta las cuentas conectadas a las que afecta un cambio de proxy. Las reconexiones de una misma cuenta van en
 // cola: con dos cambios seguidos, la segunda cortaba a la primera a medio abrir. Cada conexión lee el proxy al
 // conectar, así que la última usa siempre la configuración más reciente.
@@ -384,9 +394,19 @@ function reconnectWithNewProxy(filter) {
   }
 }
 
+// Devuelve "memory" si, por no haber llavero, la contraseña se queda solo en memoria.
 async function saveProxyPassword(key, password) {
-  if (password === undefined) return;
-  await store.setPassword(store.proxySecretKey(key), password || null);
+  if (password === undefined) return null;
+  const k = store.proxySecretKey(key);
+  sessionProxyPasswords.delete(k);
+  try {
+    await store.setPassword(k, password || null);
+    return null;
+  } catch (err) {
+    if (err.code !== "NO_KEYRING") throw err;
+    if (password) sessionProxyPasswords.set(k, password);
+    return "memory";
+  }
 }
 
 function accountSnapshot(id) {
@@ -481,6 +501,13 @@ async function connectAccount(id, password) {
   const x = getConn(id);
   const pw = password || (await store.getPassword(id));
   if (!pw) throw new Error("NEED_PASSWORD");
+  // Si el proxy pide usuario y no hay contraseña (p. ej. Linux sin llavero, tras reiniciar), se pide antes de conectar.
+  try {
+    await accountProxy(x.acc, store.get().settings, proxyPassword);
+  } catch (err) {
+    if (err.code === "NEED_PROXY_PASSWORD") throw new Error(x.acc.proxy?.mode === "custom" ? "NEED_PROXY_PASSWORD" : "NEED_GLOBAL_PROXY_PASSWORD", { cause: err });
+    throw err;
+  }
   x.autojoinDone = false;
   await x.connect(pw);
 }
@@ -509,7 +536,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, hasProxyPassword: store.hasPassword(store.proxySecretKey(store.GLOBAL_PROXY)) },
+      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
     };
   });
 
@@ -562,22 +589,19 @@ function registerIpc() {
       passwordNotSaved = "no-keyring";
     }
     if (!acc.savePassword) await store.setPassword(acc.id, null);
-    try {
-      await saveProxyPassword(acc.id, newProxyPassword);
-    } catch (err) {
-      if (err.code !== "NO_KEYRING") throw err;
-      passwordNotSaved = "no-keyring";
-    }
+    // Sin llavero, la contraseña del proxy queda solo en memoria (hasta cerrar la app).
+    const proxyWhere = await saveProxyPassword(acc.id, newProxyPassword);
     const x = accounts.get(acc.id);
     if (x) x.acc = acc;
     if (prev && (JSON.stringify(acc.proxy) !== proxyBefore || newProxyPassword !== undefined)) reconnectWithNewProxy((a) => a.id === acc.id);
-    return { ...publicAccount(acc), ...(passwordNotSaved ? { passwordNotSaved } : {}) };
+    return { ...publicAccount(acc), ...(passwordNotSaved ? { passwordNotSaved } : {}), ...(proxyWhere === "memory" ? { proxyPasswordInMemory: true } : {}) };
   });
 
   handle("account:delete", async (id) => {
     await accounts.get(id)?.disconnect();
     accounts.delete(id);
     store.removeAccount(id);
+    sessionProxyPasswords.delete(store.proxySecretKey(id));
     return true;
   });
 
@@ -585,13 +609,12 @@ function registerIpc() {
 
   // Contraseña del proxy general: "" la borra.
   handle("proxy:password", async (password) => {
-    await saveProxyPassword(store.GLOBAL_PROXY, password ?? "");
+    const where = await saveProxyPassword(store.GLOBAL_PROXY, password ?? "");
     await applyGlobalProxy();
     reconnectWithNewProxy((acc) => acc.proxy?.mode === "global");
-    return { hasProxyPassword: store.hasPassword(store.proxySecretKey(store.GLOBAL_PROXY)) };
+    return { hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), inMemory: where === "memory" };
   });
 
-  // Botón «Probar»: abre un túnel hasta un sitio conocido. Sin contraseña nueva, se usa la guardada.
   // Botón «Probar»: sin «target», abre un túnel hasta un sitio conocido. Con «target» (el servidor XMPP de una cuenta),
   // el túnel va hasta ese servidor: si el proxy responde pero no llega a él, se dice (target.ok = false) sin fallar.
   // Sin contraseña nueva, se usa la guardada.
