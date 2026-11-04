@@ -59,9 +59,9 @@ export function occupantAdminActions(me, o) {
     else out.push({ key: "member", label: t("Hacer miembro"), icon: "user-plus", opts: { jid, affiliation: "member" }, done: t("{nick} ahora es miembro.", { nick: o.nick }) });
   }
   if (isOwner) {
-    if (theirs === "admin") out.push({ key: "unadmin", label: t("Quitar administrador"), icon: "shield", opts: { jid, affiliation: "member" }, done: t("{nick} ya no es administrador.", { nick: o.nick }) });
+    if (theirs === "admin") out.push({ key: "unadmin", label: t("Quitar administrador"), icon: "shield", opts: { jid, affiliation: "none" }, done: t("{nick} ya no es administrador.", { nick: o.nick }) });
     else if (theirs !== "owner") out.push({ key: "admin", label: t("Hacer administrador"), icon: "shield-check", opts: { jid, affiliation: "admin" }, done: t("{nick} ahora es administrador.", { nick: o.nick }) });
-    if (theirs === "owner") out.push({ key: "unowner", label: t("Quitar propietario"), icon: "crown", opts: { jid, affiliation: "admin" }, done: t("{nick} ya no es propietario.", { nick: o.nick }) });
+    if (theirs === "owner") out.push({ key: "unowner", label: t("Quitar propietario"), icon: "crown", opts: { jid, affiliation: "none" }, done: t("{nick} ya no es propietario.", { nick: o.nick }) });
     else out.push({ key: "owner", label: t("Hacer propietario"), icon: "crown", opts: { jid, affiliation: "owner" }, done: t("{nick} ahora es propietario.", { nick: o.nick }) });
   }
   return out;
@@ -85,10 +85,11 @@ export function selfRightsText(before, after) {
   return null;
 }
 
-// Listas de permisos de la ventana de configuración: qué afiliación quita cada «✕».
+// Listas de permisos de la ventana de configuración. La «✕» quita a la persona de la lista del todo (afiliación
+// «none»), no la baja a la lista siguiente.
 export const AFFILIATION_LISTS = [
-  { affiliation: "owner", title: () => t("Propietarios"), hint: () => t("Pueden cambiarlo todo, también la configuración y quién manda."), removeTo: "admin" },
-  { affiliation: "admin", title: () => t("Administradores"), hint: () => t("Entran como moderadores y gestionan miembros y vetos."), removeTo: "member" },
+  { affiliation: "owner", title: () => t("Propietarios"), hint: () => t("Pueden cambiarlo todo, también la configuración y quién manda."), removeTo: "none" },
+  { affiliation: "admin", title: () => t("Administradores"), hint: () => t("Entran como moderadores y gestionan miembros y vetos."), removeTo: "none" },
   { affiliation: "member", title: () => t("Miembros"), hint: () => t("Pueden entrar aunque la sala sea solo para miembros."), removeTo: "none" },
   { affiliation: "outcast", title: () => t("Vetados"), hint: () => t("No pueden entrar en la sala."), removeTo: "none" },
 ];

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { xml } from "@xmpp/client";
 import { XmppAccount, iqErrorMessage, parseChangeSubject, parseDataForm, dataFormSubmit } from "../../src/main/xmpp-account.js";
 import { S } from "../../src/renderer/js/state.js";
-import { canEditTopic, canConfigureRoom, topicLockedReason, topicChangedText, topicErrorText, occupantAdminActions, selfRightsText } from "../../src/renderer/js/room-admin.js";
+import { canEditTopic, canConfigureRoom, topicLockedReason, topicChangedText, topicErrorText, occupantAdminActions, selfRightsText, AFFILIATION_LISTS } from "../../src/renderer/js/room-admin.js";
 import { TEST_SETTINGS, tempDir } from "./helpers.mjs";
 
 S.settings = structuredClone(TEST_SETTINGS);
@@ -66,6 +66,14 @@ test("clic derecho en un participante: cada uno ve lo que su afiliación permite
   const make = occupantAdminActions({ role: "moderator", affiliation: "owner" }, p).find((a) => a.key === "admin");
   assert.deepEqual(make.opts, { jid: "piloto@ejemplo.com", affiliation: "admin" }, "la afiliación va por la dirección sin recurso");
   assert.equal(make.done, "piloto ahora es administrador.");
+});
+
+test("quitar a alguien de una lista o de un cargo lo deja sin afiliación, no lo baja a la lista siguiente", () => {
+  assert.deepEqual(AFFILIATION_LISTS.map((l) => l.removeTo), ["none", "none", "none", "none"]);
+  const owner = { role: "moderator", affiliation: "owner" };
+  const p = { nick: "piloto", jid: "piloto@ejemplo.com", role: "moderator" };
+  assert.equal(occupantAdminActions(owner, { ...p, affiliation: "owner" }).find((a) => a.key === "unowner").opts.affiliation, "none");
+  assert.equal(occupantAdminActions(owner, { ...p, affiliation: "admin" }).find((a) => a.key === "unadmin").opts.affiliation, "none");
 });
 
 test("aviso de nuestros propios permisos", () => {
