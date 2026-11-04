@@ -9,7 +9,8 @@ The app connects only to:
 - websites linked in messages and YouTube (i.ytimg.com) for image and video previews. Turn off: Preferences > Messages > Content > Preview images and YouTube videos;
 - Google, once per language, to download spell-check dictionaries. Turn off: Preferences > Behavior > Typing > Spell checker;
 - GitHub (api.github.com), once a day, only if you turn on "Notify me when a new version is available" (off by default);
-- GIPHY or KLIPY, only if you choose a GIF search service and enter your own key (off by default).
+- GIPHY or KLIPY, only if you choose a GIF search service and enter your own key (off by default);
+- the websites of images you save from a link: GIFs in My GIFs (shown from their website each time you open it) and backgrounds downloaded from an Internet address.
 
 Full policy: https://github.com/AlexDeveOp/EvEX-MPP/blob/main/PRIVACY.md
 
