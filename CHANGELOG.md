@@ -40,6 +40,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Read aloud* explains how to install speech-dispatcher and a voice when there are none. The voice list shows one espeak-ng voice per language instead of more than 13,000 variants.
 
 ### Fixed
+- **Reconnecting after losing the internet connection.** When the network dropped, the socket often stayed "open", so the app could keep showing an account as connected without receiving anything, or stay stuck on "connecting" after the network was back. It also tried only once at startup, so an account set to *Connect on startup* stayed disconnected if the PC started or woke up before the Wi-Fi.
+  - Every 30 s the app pings the server. With no answer in 20 s, it treats the connection as dead and connects again.
+  - A retry that stops making progress for 30 s is cut short and replaced by a new one.
+  - Network errors when connecting are no longer final: the account keeps retrying in the background, waiting 1 s, then 2, 4… up to 30 s. A wrong password or a TLS problem still stops it.
+  - When the network comes back, or the PC wakes from sleep, accounts retry right away.
 - The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
 - With *Until you open the pings again*, the sirens switch off as soon as you leave the pings view (before, they kept pulsing until the view was redrawn), and choosing that mode no longer makes every stored ping pulse at once.
 

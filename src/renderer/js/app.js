@@ -67,6 +67,8 @@ async function boot() {
   bindShortcuts();
   // A partir de aquí el proceso principal entrega los eventos que llegaron durante la carga.
   await api("ready");
+  // Al volver la red, las cuentas desconectadas reintentan al momento (ver XmppAccount.nudge).
+  window.addEventListener("online", () => api("network:online").catch(() => {}));
   pingsConv();
   startFormupWatch();
   document.getElementById("app").classList.remove("booting");
