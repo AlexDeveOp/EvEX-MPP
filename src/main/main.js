@@ -849,7 +849,9 @@ app.on("will-quit", (e) => {
   if (accounts.size && !app.__disconnected) {
     e.preventDefault();
     app.__disconnected = true;
-    Promise.race([Promise.all([...accounts.values()].map((x) => x.disconnect(true))), new Promise((r) => setTimeout(r, 2500))]).finally(() => app.quit());
+    // app.quit() en el siguiente ciclo: si las cuentas ya estaban desconectadas, la promesa se resuelve mientras Electron
+    // aún procesa esta salida e ignora la llamada, y la app se quedaba viva sin ventana (en Linux, el apagado la mataba).
+    Promise.race([Promise.all([...accounts.values()].map((x) => x.disconnect(true))), new Promise((r) => setTimeout(r, 2500))]).finally(() => setImmediate(() => app.quit()));
   }
 });
 
