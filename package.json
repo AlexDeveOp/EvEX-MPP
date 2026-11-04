@@ -112,6 +112,7 @@
       "artifactName": "EvEX-MPP-${version}-portable.${ext}"
     },
     "linux": {
+      "compression": "normal",
       "target": [
         {
           "target": "AppImage",
@@ -145,6 +146,7 @@
       "artifactName": "EvEX-MPP-${version}-x86_64.${ext}"
     },
     "deb": {
+      "compression": "xz",
       "artifactName": "evex-mpp_${version}_amd64.${ext}",
       "recommends": [
         "gnome-keyring | kwalletmanager",
