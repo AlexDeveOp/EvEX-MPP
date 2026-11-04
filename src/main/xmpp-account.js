@@ -26,6 +26,9 @@ const NS = {
   FORWARD: "urn:xmpp:forward:0",
   VCARD: "vcard-temp",
   VCARD_UPDATE: "vcard-temp:x:update",
+  PUBSUB: "http://jabber.org/protocol/pubsub",
+  AVATAR_DATA: "urn:xmpp:avatar:data",
+  AVATAR_META: "urn:xmpp:avatar:metadata",
   PRIVATE: "jabber:iq:private",
   BOOKMARKS: "storage:bookmarks",
   CONFERENCE: "jabber:x:conference",
@@ -1178,18 +1181,48 @@ export class XmppAccount extends EventEmitter {
     this.event("own-avatar", { hash });
   }
 
-  async setOwnAvatar(data, type) {
-    const current = await this.xmpp.iqCaller.get(xml("vCard", NS.VCARD)).catch(() => null);
-    const vc = xml("vCard", NS.VCARD);
-    for (const child of current?.getChildElements() || []) if (child.name !== "PHOTO") vc.append(child);
-    vc.append(xml("PHOTO", {}, xml("TYPE", {}, type), xml("BINVAL", {}, data.toString("base64"))));
-    await this.xmpp.iqCaller.set(vc);
+  // Publica el avatar propio en el perfil (vCard, XEP-0153: lo leen Pidgin y casi todos los clientes) y, si se da `pep`,
+  // también con XEP-0084 (PEP), que usan los clientes actuales. PEP es opcional: si el servidor no lo tiene, no pasa nada.
+  async setOwnAvatar(data, type, { pep = null } = {}) {
+    await this.writeVcardPhoto(xml("PHOTO", {}, xml("TYPE", {}, type), xml("BINVAL", {}, data.toString("base64"))));
     const hash = crypto.createHash("sha1").update(data).digest("hex");
     this.avatarHash = hash;
     fs.mkdirSync(this.avatarDir, { recursive: true });
-    fs.writeFileSync(path.join(this.avatarDir, `${hash}.${type.includes("png") ? "png" : "jpg"}`), data);
+    const ext = /png/.test(type) ? "png" : /gif/.test(type) ? "gif" : "jpg";
+    fs.writeFileSync(path.join(this.avatarDir, `${hash}.${ext}`), data);
     this.event("avatar", { hash, file: this.avatarFile(hash) });
     this.event("own-avatar", { hash });
     await this.sendPresence();
+    const pepPublished = pep ? await this.publishPepAvatar(pep).then(() => true, () => false) : false;
+    return { hash, pep: pepPublished };
+  }
+
+  // Quita el avatar: vCard sin foto, presencia con <photo/> vacío y metadatos PEP vacíos (XEP-0084: «sin avatar»).
+  async removeOwnAvatar() {
+    await this.writeVcardPhoto(null);
+    this.avatarHash = "";
+    this.event("own-avatar", { hash: "" });
+    await this.sendPresence();
+    await this.pepPublish(NS.AVATAR_META, "current", xml("metadata", { xmlns: NS.AVATAR_META })).catch(() => {});
+  }
+
+  // Reescribe la vCard propia conservando todo menos la foto (photo = null la quita).
+  async writeVcardPhoto(photo) {
+    const current = await this.xmpp.iqCaller.get(xml("vCard", NS.VCARD)).catch(() => null);
+    const vc = xml("vCard", NS.VCARD);
+    for (const child of current?.getChildElements() || []) if (child.name !== "PHOTO") vc.append(child);
+    if (photo) vc.append(photo);
+    await friendly(this.xmpp.iqCaller.set(vc));
+  }
+
+  pepPublish(node, id, payload) {
+    return this.xmpp.iqCaller.set(xml("pubsub", { xmlns: NS.PUBSUB }, xml("publish", { node }, xml("item", { id }, payload))), undefined, 20000);
+  }
+
+  // XEP-0084: primero los datos y después los metadatos, que son los que avisan a los contactos.
+  async publishPepAvatar({ data, type, width, height }) {
+    const id = crypto.createHash("sha1").update(data).digest("hex");
+    await this.pepPublish(NS.AVATAR_DATA, id, xml("data", { xmlns: NS.AVATAR_DATA }, data.toString("base64")));
+    await this.pepPublish(NS.AVATAR_META, id, xml("metadata", { xmlns: NS.AVATAR_META }, xml("info", { bytes: String(data.length), id, type, width: String(width), height: String(height) })));
   }
 }

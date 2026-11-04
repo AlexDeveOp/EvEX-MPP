@@ -10,7 +10,7 @@ const outDir = path.join(root, "src", "renderer", "js", "data");
 fs.mkdirSync(outDir, { recursive: true });
 
 const ICONS = [
-  "message-square", "messages-square", "users", "user", "user-plus", "user-x", "user-cog", "hash", "search",
+  "image-plus", "zoom-in", "zoom-out", "circle-user-round", "message-square", "messages-square", "users", "user", "user-plus", "user-x", "user-cog", "hash", "search",
   "settings", "x", "plus", "minus", "star", "star-off", "log-in", "log-out", "door-open", "bell", "bell-off",
   "bell-ring", "smile", "smile-plus", "send", "paperclip", "image", "palette", "type", "sun", "moon", "monitor",
   "list", "compass", "refresh-cw", "trash-2", "pencil", "check", "check-check", "chevron-down", "chevron-right",

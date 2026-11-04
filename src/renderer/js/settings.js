@@ -8,10 +8,12 @@ import { notificationTabs } from "./settings/notifications.js";
 import { pingTabs } from "./settings/pings.js";
 import { dataTabs } from "./settings/data.js";
 import { networkTabs } from "./settings/network.js";
+import { profileTabs } from "./settings/profile.js";
 
 export { openBackgroundEditor } from "./settings/backgrounds.js";
 
 const TABS = [
+  ["profile", t("Perfil"), "circle-user-round"],
   ["appearance", t("Apariencia"), "palette"],
   ["colors", t("Colores"), "brush"],
   ["messages", t("Mensajes"), "message-square"],
@@ -40,4 +42,4 @@ export function openSettings(tab = "appearance") {
   show(tab);
 }
 
-const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs };
+const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...profileTabs };

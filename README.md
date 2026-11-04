@@ -120,6 +120,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Delivery receipts, "typing…" indicator, and image and YouTube previews.
 
 **Customization**
+- **Your avatar**: click your circle (or *Preferences → Profile*) to choose an image, frame it in a circle with drag and zoom, and publish it. Like Pidgin, it is scaled to 96×96 and compressed (under 8 KB, PNG or JPEG) because XMPP sends it inside your profile; animated images can stay animated as a GIF of up to 64 KB. It is published in your vCard (Pidgin and most clients) and with XEP-0084 (modern clients), and *Remove avatar* brings your initials back.
 - Interface in **English and Spanish**, with a language selector.
 - 13 themes (Caldari, Amarr, Gallente, Minmatar, AMOLED, Nord, Dracula…), a per-color editor, and theme import/export.
 - Any Windows font, UI scale and density.

@@ -78,6 +78,9 @@ const configForm = (r) =>
 // Lo que se registra puede venir del cliente: se quitan los saltos de línea para que no pueda fingir líneas del registro.
 const log = (...a) => console.log(`${new Date().toISOString().slice(11, 19)} ${a.map(String).join(" ")}`.replace(/\n|\r/g, ""));
 const MAM = "urn:xmpp:mam:2";
+// vCard y avatar XEP-0084 de cada usuario, en memoria mientras dure el servidor (para probar el avatar propio).
+const VCARDS = new Map();
+const PEP = new Map();
 const ARCHIVE = process.env.MOCK_MAM
   ? [{ id: "arch-1", from: `pingbot@${DOMAIN}/bot`, ts: Date.now() - 40 * 60e3, body: "Fleet up in 20 minutes\nFC Name: Bob FC\nFormup Location: Amarr\nDoctrine: Ferox\n\n~~~ This was a coord broadcast from bob to all ~~~" }]
   : [];
@@ -257,7 +260,24 @@ net
           st,
           xml("query", { xmlns: ns }, xml("storage", { xmlns: "storage:bookmarks" }, xml("conference", { jid: `entrenamiento@${CONF}`, name: "entrenamiento", autojoin: "true" }, xml("nick", {}, user)))),
         );
-      if (q?.is("vCard")) return result(st, xml("vCard", { xmlns: "vcard-temp" }));
+      if (q?.is("vCard")) {
+        const owner = st.attrs.to ? st.attrs.to.split("/")[0] : `${user}@${DOMAIN}`;
+        if (st.attrs.type === "set") {
+          VCARDS.set(owner, q);
+          const photo = q.getChild("PHOTO");
+          log("vCard guardada de", owner, photo ? `con foto ${photo.getChildText("TYPE")} ${Buffer.from(photo.getChildText("BINVAL") || "", "base64").length} bytes` : "sin foto");
+          return result(st);
+        }
+        return result(st, VCARDS.get(owner) || xml("vCard", { xmlns: "vcard-temp" }));
+      }
+      if (ns === "http://jabber.org/protocol/pubsub" && st.attrs.type === "set") {
+        const pub = q.getChild("publish");
+        const item = pub?.getChild("item");
+        PEP.set(`${user}@${DOMAIN} ${pub?.attrs.node}`, item);
+        const info = item?.getChild("metadata")?.getChild("info");
+        log("PEP", pub?.attrs.node, info ? `info ${info.attrs.type} ${info.attrs.width}×${info.attrs.height} ${info.attrs.bytes} bytes` : item?.getChild("data") ? `datos ${Buffer.from(item.getChildText("data") || "", "base64").length} bytes` : "vacío (sin avatar)");
+        return result(st);
+      }
       return result(st);
     }
 

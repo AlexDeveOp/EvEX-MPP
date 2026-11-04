@@ -1,6 +1,6 @@
 // Ficheros del usuario: elegir ficheros, imágenes para los fondos (arrastradas, pegadas o descargadas), emojis propios,
 // temas, avatar, GIFs guardados, sonidos de Pidgin y fuentes del sistema. Todo se copia a userData/media.
-import { dialog, nativeImage } from "electron";
+import { dialog } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
@@ -155,17 +155,23 @@ export function registerMediaIpc(handle, { getWin, getConn, fetchImpl }) {
     return JSON.parse(fs.readFileSync(r.filePaths[0], "utf8"));
   });
 
-  handle("avatar:set", async (id) => {
-    const r = await dialog.showOpenDialog(getWin(), { properties: ["openFile"], filters: fileFilters("image") });
-    if (r.canceled || !r.filePaths[0]) return false;
-    let img = nativeImage.createFromPath(r.filePaths[0]);
-    if (img.isEmpty()) throw new Error(t("No se pudo leer la imagen"));
-    const { width, height } = img.getSize();
-    const side = Math.min(width, height);
-    img = img.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 2), width: side, height: side }).resize({ width: 128, height: 128, quality: "best" });
-    await getConn(id).setOwnAvatar(img.toPNG(), "image/png");
-    return true;
+  // Avatar propio ya recortado y comprimido en la ventana (avatar-image.js). Se comprueba que sea de verdad una imagen
+  // PNG, JPEG o GIF y que no pase del tamaño que acepta un perfil XMPP; pep es la versión fija para XEP-0084.
+  const AVATAR_TYPES = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif" };
+  const AVATAR_MAX = 96 * 1024;
+  const avatarBuffer = (data, type) => {
+    const ext = AVATAR_TYPES[String(type).toLowerCase()];
+    const buffer = Buffer.from(data instanceof Uint8Array ? data : new Uint8Array(data || []));
+    if (!ext || !MAGIC[ext].every((b, i) => buffer[i] === b)) throw new Error(t("No se pudo leer la imagen"));
+    if (buffer.length > AVATAR_MAX) throw new Error(t("La imagen es demasiado grande para un avatar."));
+    return buffer;
+  };
+  handle("avatar:publish", async (id, img, pep) => {
+    const data = avatarBuffer(img?.data, img?.type);
+    const pepData = pep ? { data: avatarBuffer(pep.data, pep.type), type: pep.type, width: Number(pep.width) || 96, height: Number(pep.height) || 96 } : null;
+    return getConn(id).setOwnAvatar(data, img.type, { pep: pepData });
   });
+  handle("avatar:remove", (id) => getConn(id).removeOwnAvatar());
 
   handle("fonts:list", () => listSystemFonts());
 }
