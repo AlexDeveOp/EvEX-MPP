@@ -10,6 +10,10 @@ import { loadImage, cropFor, encodeStatic, encodeAnimated, formatBytes, STATIC_B
 const ACCEPT = "image/png,image/jpeg,image/gif,image/webp,image/avif,image/bmp";
 const MAX_SOURCE = 25 * 1024 * 1024;
 
+// Cuenta que se quiere ver al abrir la pestaña (desde su círculo o desde Gestionar cuentas).
+let focusId = null;
+export const setProfileFocus = (id) => (focusId = id);
+
 export const profileTabs = {
   profile() {
     const wrap = h("div", {});
@@ -17,6 +21,15 @@ export const profileTabs = {
       wrap.replaceChildren(...S.accounts.map(accountBlock), aboutGroup());
     };
     render();
+    if (focusId && S.accounts.length > 1) {
+      const id = focusId;
+      requestAnimationFrame(() => {
+        const block = [...wrap.querySelectorAll(".settings-group")].find((g) => g.dataset.account === id);
+        block?.scrollIntoView({ block: "start" });
+        block?.classList.add("flash");
+      });
+    }
+    focusId = null;
     // Se repinta cuando llega el avatar nuevo; se deja de escuchar al cerrar Preferencias.
     const off = on("avatar", () => (wrap.isConnected ? render() : off()));
     return wrap;
@@ -27,7 +40,7 @@ function accountBlock(acc) {
   const st = conn(acc.id);
   const online = st.state === "online";
   const has = !!st.avatarHash;
-  return group(
+  const block = group(
     S.accounts.length > 1 ? `${t("Avatar")} · ${acc.alias || acc.jid}` : t("Avatar"),
     h(
       "div",
@@ -47,6 +60,8 @@ function accountBlock(acc) {
       ),
     ),
   );
+  block.dataset.account = acc.id;
+  return block;
 }
 
 function aboutGroup() {

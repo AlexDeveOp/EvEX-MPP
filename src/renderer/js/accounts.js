@@ -6,6 +6,8 @@ import { onWindows, noKeyring, passwordStoreHint, mayRememberPassword, afterAcco
 import { proxyFields, PROXY_DEFAULTS, globalProxySummary, xmppTarget } from "./settings/network.js";
 
 import { t, locale } from "./i18n.js";
+import { avatarEl } from "./chat.js";
+import { openProfile } from "./settings.js";
 // Pide la contraseña del proxy que falta (la de la cuenta o la del general) y la guarda: en el llavero, o solo en
 // memoria hasta cerrar la app si no hay llavero. Devuelve true si se ha escrito una.
 export function promptProxyPassword(accountId, global) {
@@ -359,7 +361,16 @@ export function openAccounts(focusId) {
     function renderFormValues() {
       clear(formEl);
       formEl.append(
-        h("h3", {}, a ? a.alias : t("Nueva cuenta XMPP")),
+        a
+          ? // Atajo al avatar de la cuenta: se cambia en Preferencias → Perfil (un solo sitio para todo lo del avatar).
+            h(
+              "div",
+              { class: "acc-form-head" },
+              h("button", { class: "acc-avatar-link", type: "button", title: t("Cambiar el avatar de esta cuenta"), onclick: () => (m.close(), openProfile(a.id)) }, avatarEl(a.jid, a.alias, "account-avatar")),
+              h("h3", {}, a.alias),
+              h("button", { class: "btn ghost small", type: "button", onclick: () => (m.close(), openProfile(a.id)) }, icon("image"), t("Avatar…")),
+            )
+          : h("h3", {}, t("Nueva cuenta XMPP")),
         h(
           "div",
           { class: "form grid2" },

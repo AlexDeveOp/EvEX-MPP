@@ -1955,3 +1955,43 @@ select.input {
   margin: 0;
   text-align: center;
 }
+
+/* Gestionar cuentas: el avatar de la cuenta lleva a Preferencias → Perfil (accounts.js). */
+.acc-form-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.acc-form-head h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+.acc-avatar-link {
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.acc-avatar-link:hover .avatar,
+.acc-avatar-link:focus-visible .avatar {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.acc-avatar-link:focus-visible {
+  outline: none;
+}
+/* Con varias cuentas, la que se ha pedido se resalta un momento al abrir Perfil. */
+.settings-group.flash {
+  animation: profile-flash 1.6s ease-out;
+  border-radius: var(--radius);
+}
+@keyframes profile-flash {
+  from {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  to {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}

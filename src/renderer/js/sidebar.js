@@ -5,7 +5,7 @@ import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
 import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openAccounts, connectWithPrompt, openSwitchAccount } from "./accounts.js";
-import { openBackgroundEditor, openSettings } from "./settings.js";
+import { openBackgroundEditor, openProfile } from "./settings.js";
 import { openSearch } from "./search.js";
 import { sidebarSirenTs } from "./pings.js";
 
@@ -132,8 +132,8 @@ function accountCards() {
         title: t("Cambiar mi avatar"),
         role: "button",
         tabIndex: 0,
-        onclick: () => openSettings("profile"),
-        onkeydown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openSettings("profile")),
+        onclick: () => openProfile(acc.id),
+        onkeydown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openProfile(acc.id)),
       }),
       h(
         "div",
@@ -182,7 +182,7 @@ function statusMenu(acc) {
         if (msg != null) api("presence:set", acc.id, st.show || "", msg);
       },
     },
-    { label: t("Cambiar mi avatar…"), icon: "image", action: () => openSettings("profile") },
+    { label: t("Cambiar mi avatar…"), icon: "image", action: () => openProfile(acc.id) },
     "-",
     online ? { label: t("Desconectar"), icon: "power", action: () => api("account:disconnect", acc.id) } : { label: t("Conectar"), icon: "log-in", action: () => connectWithPrompt(acc.id) },
     { label: t("Cambiar de cuenta…"), icon: "refresh-cw", action: openSwitchAccount },

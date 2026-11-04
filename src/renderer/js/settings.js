@@ -8,7 +8,7 @@ import { notificationTabs } from "./settings/notifications.js";
 import { pingTabs } from "./settings/pings.js";
 import { dataTabs } from "./settings/data.js";
 import { networkTabs } from "./settings/network.js";
-import { profileTabs } from "./settings/profile.js";
+import { profileTabs, setProfileFocus } from "./settings/profile.js";
 
 export { openBackgroundEditor } from "./settings/backgrounds.js";
 
@@ -40,6 +40,12 @@ export function openSettings(tab = "appearance") {
   for (const [id, label, ic] of TABS) nav.append(h("button", { class: "settings-tab", dataset: { tab: id }, onclick: () => show(id) }, icon(ic), label));
   modal({ title: t("Preferencias"), icon: "settings", wide: true, className: "settings-modal", body: h("div", { class: "settings-layout" }, nav, content) });
   show(tab);
+}
+
+// Preferencias → Perfil con el avatar de esa cuenta a la vista.
+export function openProfile(accountId) {
+  setProfileFocus(accountId);
+  openSettings("profile");
 }
 
 const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...profileTabs };

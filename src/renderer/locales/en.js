@@ -1273,4 +1273,6 @@ export default {
   "Se borrará la imagen de tu perfil y se volverán a mostrar tus iniciales.": "The image will be removed from your profile and your initials will be shown again.",
   "Avatar quitado": "Avatar removed",
   "La imagen es demasiado grande para un avatar.": "The image is too large for an avatar.",
+  "Cambiar el avatar de esta cuenta": "Change this account's avatar",
+  "Avatar…": "Avatar…",
 };

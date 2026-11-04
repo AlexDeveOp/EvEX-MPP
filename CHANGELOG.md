@@ -14,6 +14,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Animated GIF, WebP or PNG images can stay animated: they become a GIF of up to 64 KB, with fewer colors, a smaller size or fewer frames if needed. The GIF encoder is built in, with no new dependencies.
   - Published in the vCard (XEP-0153) as before, and now also with XEP-0084 (a still version), which modern clients use. Servers without it just keep the vCard.
   - *Remove avatar* clears the photo from the vCard, sends an empty `<photo/>` and publishes empty XEP-0084 metadata.
+  - With several accounts there is one avatar block per account. *Manage accounts* shows each account's avatar with an *Avatar…* shortcut that opens Profile with that account highlighted.
 
 ## [0.7.0] - 2026-11-04
 
