@@ -203,9 +203,20 @@ function roomsSection(acc) {
     `rooms:${acc.id}`,
     S.accounts.length > 1 ? t("Salas favoritas · {alias}", { alias: acc.alias }) : t("Salas favoritas"),
     `${[...live.values()].filter((r) => r.joined).length}/${favorites.length}`,
-    [iconButton("compass", t("Explorar salas del servidor"), () => openRoomBrowser(acc.id)), iconButton("plus", t("Unirse a una sala"), () => openJoinRoom(acc.id))],
+    [
+      iconButton("compass", t("Explorar salas del servidor (Ctrl+B)"), () => openRoomBrowser(acc.id), "sb-explore"),
+      iconButton("plus", t("Unirse a una sala"), (e) => menuFor(e.currentTarget, joinMenu(acc))),
+    ],
     items.length ? items : h("div", { class: "sb-empty" }, filter ? t("Sin resultados") : t("Sin salas. Usa "), !filter ? h("a", { href: "#", onclick: (e) => (e.preventDefault(), openRoomBrowser(acc.id)) }, t("Explorar salas")) : null),
   );
+}
+
+// Menú del botón + de las salas: entrar por nombre (con sugerencias) o abrir el explorador del servidor.
+function joinMenu(acc) {
+  return [
+    { label: t("Unirse por nombre…"), icon: "log-in", hint: "Ctrl+J", action: () => openJoinRoom(acc.id) },
+    { label: t("Explorar salas del servidor…"), icon: "compass", hint: "Ctrl+B", action: () => openRoomBrowser(acc.id) },
+  ];
 }
 
 function roomItem(acc, room) {

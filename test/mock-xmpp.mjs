@@ -17,6 +17,21 @@ const ROOMS = {
   entrenamiento: { name: "entrenamiento", subject: "", occupants: ["instructor_y"] },
   secret: { name: "secret", subject: "", occupants: [], password: "pw" },
 };
+// Otros servicios del dominio, para el descubrimiento de servidores de salas: un segundo servidor de salas (chat.),
+// una pasarela IRC (conference/irc, no cuenta como servidor de salas) y servicios que no son de salas.
+const CHAT = `chat.${DOMAIN}`;
+const SERVICES = {
+  [CONF]: { category: "conference", type: "text", name: "Salas de test.local" },
+  [CHAT]: { category: "conference", type: "text", name: "Salas de la alianza" },
+  [`irc.${DOMAIN}`]: { category: "conference", type: "irc", name: "Pasarela IRC" },
+  [`upload.${DOMAIN}`]: { category: "store", type: "file", name: "Subida de archivos" },
+  [`pubsub.${DOMAIN}`]: { category: "pubsub", type: "service" },
+};
+const CHAT_ROOMS = {
+  logistica: { name: "Logística", occupants: 12 },
+  mineria: { name: "Minería", occupants: 4 },
+  general: { name: "General de la alianza", occupants: 40 },
+};
 // Lo que se registra puede venir del cliente: se quitan los saltos de línea para que no pueda fingir líneas del registro.
 const log = (...a) => console.log(`${new Date().toISOString().slice(11, 19)} ${a.map(String).join(" ")}`.replace(/\n|\r/g, ""));
 const MAM = "urn:xmpp:mam:2";
@@ -102,6 +117,17 @@ net
             xml("item", { jid: `pingbot@${DOMAIN}`, subscription: "from" }),
           ),
         );
+      // Descubrimiento de servicios del dominio y del segundo servidor de salas.
+      if (ns === "http://jabber.org/protocol/disco#items" && to === DOMAIN)
+        return result(st, xml("query", { xmlns: ns }, Object.entries(SERVICES).map(([j, s]) => xml("item", { jid: j, name: s.name }))));
+      if (ns === "http://jabber.org/protocol/disco#info" && SERVICES[to])
+        return result(st, xml("query", { xmlns: ns }, xml("identity", SERVICES[to]), SERVICES[to].category === "conference" ? xml("feature", { var: "http://jabber.org/protocol/muc" }) : null));
+      if (ns === "http://jabber.org/protocol/disco#items" && to === CHAT)
+        return result(st, xml("query", { xmlns: ns }, Object.entries(CHAT_ROOMS).map(([id, r]) => xml("item", { jid: `${id}@${CHAT}`, name: r.name }))));
+      if (ns === "http://jabber.org/protocol/disco#info" && to.endsWith(`@${CHAT}`) && CHAT_ROOMS[to.split("@")[0]]) {
+        const r = CHAT_ROOMS[to.split("@")[0]];
+        return result(st, xml("query", { xmlns: ns }, xml("identity", { category: "conference", type: "text", name: r.name }), xml("feature", { var: "muc_public" }), xml("x", { xmlns: "jabber:x:data", type: "result" }, xml("field", { var: "muc#roominfo_occupants" }, xml("value", {}, String(r.occupants))))));
+      }
       if (ns === "http://jabber.org/protocol/disco#items" && to === CONF)
         return result(st, xml("query", { xmlns: ns }, Object.entries(ROOMS).map(([id, r]) => xml("item", { jid: `${id}@${CONF}`, name: r.name }))));
       if (ns === "http://jabber.org/protocol/disco#info" && to.endsWith(`@${CONF}`)) {

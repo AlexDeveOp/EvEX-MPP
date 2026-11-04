@@ -664,6 +664,7 @@ function registerIpc() {
   handle("room:leave", (id, room) => getConn(id).leaveRoom(room));
   handle("room:list", (id, server) => getConn(id).listRooms(server));
   handle("room:info", (id, room) => getConn(id).roomInfo(room));
+  handle("room:services", (id, domain) => getConn(id).listMucServices(domain));
   handle("room:nick", (id, room, nick) => getConn(id).changeNick(room, nick));
   handle("room:subject", (id, room, subject) => getConn(id).setSubject(room, subject));
   handle("room:moderate", (id, room, opts) => getConn(id).moderate(room, opts));

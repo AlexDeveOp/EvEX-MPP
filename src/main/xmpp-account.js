@@ -927,6 +927,26 @@ export class XmppAccount extends EventEmitter {
     return out;
   }
 
+  // Servidores de salas (MUC) que anuncia un dominio: disco#items del dominio y disco#info de cada elemento, y se quedan
+  // los que se identifican como conference/text. No todos se llaman conference.: hay muc., chat., rooms.… Las pasarelas
+  // (conference/irc) y los demás servicios (subida de archivos, pubsub, proxy) quedan fuera.
+  async listMucServices(domain) {
+    const res = await this.xmpp.iqCaller.get(xml("query", NS.DISCO_ITEMS), domain, 15000);
+    const jids = [...new Set(res.getChildren("item").map((i) => i.attrs.jid).filter((j) => j && !j.includes("@") && !j.includes("/")))];
+    const found = await Promise.all(
+      jids.slice(0, 40).map(async (jid) => {
+        try {
+          const info = await this.xmpp.iqCaller.get(xml("query", NS.DISCO_INFO), jid, 10000);
+          const id = info.getChildren("identity").find((x) => x.attrs.category === "conference" && x.attrs.type === "text");
+          return id ? { jid: jid.toLowerCase(), name: id.attrs.name || "" } : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    return found.filter(Boolean);
+  }
+
   async roomInfo(roomJid) {
     const res = await this.xmpp.iqCaller.get(xml("query", NS.DISCO_INFO), bare(roomJid), 15000);
     const identity = res.getChild("identity");

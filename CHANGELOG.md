@@ -29,6 +29,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **Passwords are only saved when the system can really encrypt them.** On Linux they go to the desktop keyring (GNOME Keyring or KWallet). Without a keyring the account is saved without the password, which is asked for when connecting, instead of keeping it with Chromium's fixed, publicly known key.
 - On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
 - **The *Fleet pings* siren in the sidebar pulses too** while there are new pings, with the same setting as the cards (*Preferences → Fleet pings → Visual alert*), so you notice them while you are in another conversation.
+- **Finding rooms on the server is easier:**
+  - The **+** next to *Favorite rooms* opens a menu with *Join by name…* (Ctrl+J) and *Browse server rooms…* (Ctrl+B), and the compass that opens the room browser stands out more.
+  - While you type a room name in *Join a room*, the app suggests matching rooms from the server's room list (name or address). Use the arrow keys and Enter, or click, to pick one.
+  - New option *Look for other room servers* (*Preferences → Behavior → Rooms*, also in the room browser): some servers keep rooms on `muc.`, `chat.` or other addresses besides `conference.`. With it on, the browser finds them, lists each server's rooms (or all of them together) and the suggestions include them too. IRC gateways and other services are left out. It is off by default.
 
 ### Changed
 - **Direct TLS checks the account's domain:** with *Direct TLS*, the server certificate is now checked against the domain of your address, as STARTTLS already did, instead of the connection server name. This is what XEP-0368 expects, and it lets you connect through a different host name or a Tor `.onion` address.
@@ -48,6 +52,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Network errors when connecting are no longer final: the account keeps retrying in the background, waiting 1 s, then 2, 4… up to 30 s. A wrong password or a TLS problem still stops it.
   - When the network comes back, or the PC wakes from sleep, accounts retry right away.
 - The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
+- The room browser button in the title bar opened the first account's rooms even when you were in another account's conversation. It now opens the current account's, like Ctrl+B.
 - With *Until you open the pings again*, the sirens switch off as soon as you leave the pings view (before, they kept pulsing until the view was redrawn), and choosing that mode no longer makes every stored ping pulse at once.
 
 ## [0.6.0] - 2026-11-03
