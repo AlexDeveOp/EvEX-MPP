@@ -10,7 +10,7 @@ import { showRecoveredPings } from "./ping-recovery.js";
 import { startFormupWatch } from "./formup.js";
 import { windowFocused as ttsWindowFocused } from "./tts.js";
 import { openSettings } from "./settings.js";
-import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount } from "./accounts.js";
+import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount, promptProxyPassword } from "./accounts.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openSearch } from "./search.js";
 import { showUpdate } from "./updates.js";
@@ -71,6 +71,8 @@ async function boot() {
   startFormupWatch();
   document.getElementById("app").classList.remove("booting");
   setTimeout(() => offerPidginRepair().catch(console.error), 1500);
+  // Proxy general con usuario y sin contraseña (Linux sin llavero, tras reiniciar): sin ella, la app no sale a Internet.
+  if (S.system.globalProxyNeedsPassword) setTimeout(() => promptProxyPassword(null, true).catch(console.error), 800);
 }
 
 function applySnapshot(id, snap) {

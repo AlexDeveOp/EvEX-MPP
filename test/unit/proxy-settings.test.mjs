@@ -49,3 +49,11 @@ test("los datos del proxy se sanean al guardar", () => {
   assert.equal(normalizeAccountProxy({ mode: "raro" }).mode, "global");
   assert.deepEqual(normalizeAccount({ jid: "a@ejemplo.com" }).proxy, { mode: "global", type: "socks5", host: "", port: 1080, username: "" });
 });
+
+test("con usuario y sin contraseña (p. ej. Linux sin llavero, tras reiniciar) se pide en vez de intentarlo sin ella", async () => {
+  const none = async () => null;
+  await assert.rejects(accountProxy({ id: "acc1", proxy: { mode: "custom", type: "socks5", host: "p.ejemplo.com", port: 1080, username: "u" } }, settings({}), none), { code: "NEED_PROXY_PASSWORD" });
+  await assert.rejects(globalProxy(settings({ enabled: true, host: "g.ejemplo.com", username: "u" }), none), { code: "NEED_PROXY_PASSWORD" });
+  // Sin usuario no hace falta contraseña.
+  assert.equal((await accountProxy({ id: "acc1", proxy: { mode: "custom", type: "socks5", host: "p.ejemplo.com", port: 1080 } }, settings({}), none)).password, "");
+});
