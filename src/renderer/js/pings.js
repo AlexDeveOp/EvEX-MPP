@@ -68,17 +68,26 @@ function fieldValue(key, value, rules) {
 
 const SEEN_KEY = "evex.pingsSeenAt";
 // Momento en que se salió por última vez de la vista de pings (para el modo «hasta volver a abrirlos»).
+// Si aún no hay ninguno (perfil nuevo), cuenta desde ahora: si no, al elegir ese modo latirían todos los pings guardados.
+let seenFallback = 0; // por si localStorage no funciona
 export function pingsSeenAt() {
+  let v;
   try {
-    return Number(localStorage.getItem(SEEN_KEY)) || 0;
+    v = Number(localStorage.getItem(SEEN_KEY)) || 0;
   } catch {
-    return 0;
+    return (seenFallback ||= Date.now());
   }
+  if (v) return v;
+  markPingsSeen();
+  return seenFallback;
 }
+// La vista de pings no se vuelve a pintar al salir y entrar: se apagan ya las sirenas de los que pasan a estar vistos.
 export function markPingsSeen(ts = Date.now()) {
+  seenFallback = ts;
   try {
     localStorage.setItem(SEEN_KEY, String(ts));
   } catch {}
+  if (typeof document !== "undefined" && document.querySelector?.(".ping-card.fresh")) sweepFresh();
 }
 
 // ¿Late la sirena de este ping? Según Preferencias → Pings de flota.

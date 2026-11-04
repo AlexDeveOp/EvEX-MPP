@@ -39,6 +39,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ### Fixed
 - The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
+- With *Until you open the pings again*, the sirens switch off as soon as you leave the pings view (before, they kept pulsing until the view was redrawn), and choosing that mode no longer makes every stored ping pulse at once.
 
 ## [0.6.0] - 2026-11-03
 

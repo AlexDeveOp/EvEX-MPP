@@ -95,3 +95,15 @@ test("freshUntil: la sirena se apaga al acabar el tiempo elegido, no a los pocos
   assert.equal(isFreshPing(ts, "5", freshUntil(ts, "5") - 1), true, "sigue latiendo hasta el último momento");
   assert.equal(isFreshPing(ts, "5", freshUntil(ts, "5")), false);
 });
+
+test("pingsSeenAt: en un perfil nuevo cuenta desde ahora, para que no laten de golpe todos los pings guardados", async () => {
+  const { pingsSeenAt, isFreshPing, markPingsSeen } = await import("../../src/renderer/js/pings.js");
+  localStorage.removeItem("evex.pingsSeenAt");
+  const before = Date.now();
+  const seen = pingsSeenAt();
+  assert.ok(seen >= before && seen <= Date.now(), "se toma la hora actual");
+  assert.equal(Number(localStorage.getItem("evex.pingsSeenAt")), seen, "y se guarda");
+  assert.equal(isFreshPing(before - 60e3, "unseen"), false, "un ping de antes de elegir el modo no late");
+  markPingsSeen(seen - 10);
+  assert.equal(pingsSeenAt(), seen - 10, "una vez guardado, se respeta");
+});
