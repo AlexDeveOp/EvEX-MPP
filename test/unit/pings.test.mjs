@@ -84,3 +84,14 @@ test("isFreshPing: «hasta volver a abrir los pings» depende de cuándo se sali
   assert.equal(isFreshPing(seenAt + 1000, "unseen", now, seenAt), true, "llegó después: late aunque tenga horas");
   assert.equal(isFreshPing(seenAt - 1000, "unseen", now, seenAt), false, "ya estaba al salir: no late");
 });
+
+test("freshUntil: la sirena se apaga al acabar el tiempo elegido, no a los pocos latidos", async () => {
+  const { freshUntil, isFreshPing } = await import("../../src/renderer/js/pings.js");
+  const ts = Date.UTC(2026, 10, 4, 12, 0, 0);
+  const min = 60e3;
+  assert.equal(freshUntil(ts, "5"), ts + 5 * min);
+  assert.equal(freshUntil(ts, "0"), ts, "«Nunca»: ya está apagada");
+  assert.equal(freshUntil(ts, "unseen"), Infinity, "«hasta volver a abrirlos» no tiene hora");
+  assert.equal(isFreshPing(ts, "5", freshUntil(ts, "5") - 1), true, "sigue latiendo hasta el último momento");
+  assert.equal(isFreshPing(ts, "5", freshUntil(ts, "5")), false);
+});
