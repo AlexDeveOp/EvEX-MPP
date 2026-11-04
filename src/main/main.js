@@ -820,6 +820,14 @@ app.whenReady().then(async () => {
     },
   });
   startIdleWatcher();
+  // Linux y macOS: al apagar o reiniciar, cerrar bien antes de que se cierre el escritorio. En Wayland, si el
+  // compositor desaparece antes que la app, Chromium se cierra de golpe (SIGTRAP) y Ubuntu muestra «se ha cerrado
+  // inesperadamente» al volver a entrar. preventDefault() retrasa el apagado lo justo para desconectar las cuentas.
+  powerMonitor.on("shutdown", (e) => {
+    e.preventDefault();
+    quitting = true;
+    app.quit();
+  });
 
   for (const a of store.get().accounts) {
     if (a.autoLogin && store.hasPassword(a.id)) connectAccount(a.id).catch(() => {});
