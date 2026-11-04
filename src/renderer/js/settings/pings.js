@@ -167,7 +167,7 @@ export const pingTabs = {
             s.pingHighlight ?? "60",
             (v) => full((x) => (x.pingHighlight = v)),
           ),
-          t("Con «hasta que vuelvas a abrir los pings» solo laten los que han llegado desde la última vez que saliste de la vista de pings. Si desactivas las animaciones (Apariencia), no late nunca."),
+          t("Los minutos cuentan desde que llega el ping, lo mires o no. Con «hasta que vuelvas a abrir los pings» laten los que han llegado desde la última vez que saliste de la vista de pings, y siguen latiendo hasta que vuelves a salir. Si desactivas las animaciones (Apariencia), no late nunca."),
         ),
       ),
       voiceGroup(),

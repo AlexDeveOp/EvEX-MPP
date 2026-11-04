@@ -826,8 +826,10 @@
   white-space: nowrap;
 }
 .animations .ping-card.fresh .ping-icon {
-  /* Latidos limitados: una animación infinita hace que Chromium redibuje a 60 fps aunque no pase nada. */
-  animation: pulse 1.4s 8;
+  /* Late todo el tiempo elegido en Preferencias → Pings de flota: pings.js quita «fresh» a su hora.
+     Solo cambia la opacidad, en su propia capa, para que la anime la GPU sin repintar la ventana. */
+  animation: pulse 1.4s infinite;
+  will-change: opacity;
 }
 .ping-head {
   display: flex;

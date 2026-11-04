@@ -532,6 +532,11 @@ body.resizing {
 .sb-item.pings .sb-icon {
   color: var(--warn);
 }
+.animations .sb-item.pings.fresh .sb-icon {
+  /* Como la sirena de las tarjetas: late mientras haya pings nuevos; pings.js quita «fresh» a su hora. */
+  animation: pulse 1.4s infinite;
+  will-change: opacity;
+}
 .sb-icon {
   width: 1.05em;
   opacity: 0.85;

@@ -28,6 +28,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - *Start with the system* adds the app to `~/.config/autostart`.
 - **Passwords are only saved when the system can really encrypt them.** On Linux they go to the desktop keyring (GNOME Keyring or KWallet). Without a keyring the account is saved without the password, which is asked for when connecting, instead of keeping it with Chromium's fixed, publicly known key.
 - On desktops without a system tray, *close/minimize to tray* and *start minimized* minimize the window instead of hiding it, so it can always be opened again.
+- **The *Fleet pings* siren in the sidebar pulses too** while there are new pings, with the same setting as the cards (*Preferences → Fleet pings → Visual alert*), so you notice them while you are in another conversation.
 
 ### Changed
 - **Direct TLS checks the account's domain:** with *Direct TLS*, the server certificate is now checked against the domain of your address, as STARTTLS already did, instead of the connection server name. This is what XEP-0368 expects, and it lets you connect through a different host name or a Tor `.onion` address.
@@ -41,6 +42,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ### Fixed
 - **Quitting could leave the app running without a window** when the accounts were already disconnected: the second quit request came too early and was ignored. This could also happen on Windows.
 - **Linux: clean exit on shutdown or reboot.** The app now takes the logind shutdown delay lock and quits before the desktop closes. Before, Ubuntu showed "EvEX-MPP has closed unexpectedly" after rebooting with the app open.
+- The siren on recent fleet ping cards pulses for the whole time chosen in *Preferences → Fleet pings* (5 minutes, 1 hour…) and stops right when it ends. Since 0.6.0 it stopped after about 11 seconds.
+- With *Until you open the pings again*, the sirens switch off as soon as you leave the pings view (before, they kept pulsing until the view was redrawn), and choosing that mode no longer makes every stored ping pulse at once.
 
 ## [0.6.0] - 2026-11-03
 
