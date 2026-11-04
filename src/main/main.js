@@ -236,14 +236,23 @@ function createWindow() {
     );
   }
 
-  win.once("ready-to-show", async () => {
+  // En Wayland (GNOME) Chromium a veces no pinta una ventana oculta y «ready-to-show» no llega nunca: la app se
+  // quedaba abierta solo en la bandeja. Se muestra con lo primero que llegue: ese evento o la página ya cargada.
+  let revealed = false;
+  const reveal = async () => {
+    if (revealed) return;
+    revealed = true;
     // Arrancar oculta (inicio automático o «Iniciar minimizada») solo si hay bandeja; sin ella, minimizada en la barra.
     await trayCheck;
+    if (!win || win.isDestroyed()) return;
     const hidden = START_HIDDEN || s.behavior.startMinimized;
     if (!hidden) win.show();
     else if (!trayAvailable) win.minimize();
     if (DEV) win.webContents.openDevTools({ mode: "detach" });
-  });
+  };
+  win.once("ready-to-show", reveal);
+  // Un pequeño margen tras la carga deja que «ready-to-show» llegue primero cuando sí funciona (sin parpadeo).
+  win.webContents.once("did-finish-load", () => setTimeout(reveal, 250));
   win.loadURL("app://evex/index.html");
 }
 
@@ -664,10 +673,16 @@ function registerIpc() {
   handle("room:leave", (id, room) => getConn(id).leaveRoom(room));
   handle("room:list", (id, server) => getConn(id).listRooms(server));
   handle("room:info", (id, room) => getConn(id).roomInfo(room));
+  handle("room:services", (id, domain) => getConn(id).listMucServices(domain));
   handle("room:nick", (id, room, nick) => getConn(id).changeNick(room, nick));
   handle("room:subject", (id, room, subject) => getConn(id).setSubject(room, subject));
   handle("room:moderate", (id, room, opts) => getConn(id).moderate(room, opts));
   handle("room:invite", (id, room, jid, reason) => getConn(id).invite(room, jid, reason));
+  handle("room:affiliations", (id, room, affiliation) => getConn(id).getAffiliations(room, affiliation));
+  handle("room:config-get", (id, room, lang) => getConn(id).getRoomConfig(room, lang));
+  handle("room:config-set", (id, room, fields, values) => getConn(id).setRoomConfig(room, fields, values));
+  handle("xmpp:ping", (id, target) => getConn(id).pingJid(target));
+  handle("msg:attention", (id, to) => getConn(id).sendAttention(to));
   handle("disco:items", (id, target) => getConn(id).discoItems(target));
 
   handle("rooms:update", (id, rooms) => {

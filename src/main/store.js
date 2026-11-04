@@ -100,6 +100,7 @@ export const DEFAULT_SETTINGS = {
     showOffline: false,
     groupMessagesMinutes: 5,
     autoAwayMinutes: 10,
+    discoverMucServices: false, // el explorador de salas busca también otros servidores de salas del dominio (muc., chat.…)
   },
   // Proxy general: lo usan las cuentas en modo «global» y todo el tráfico web de la app. La contraseña va en secrets.json.
   proxy: { enabled: false, type: "socks5", host: "", port: 1080, username: "" },

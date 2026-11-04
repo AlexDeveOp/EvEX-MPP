@@ -40,6 +40,15 @@ export const dataTabs = {
         toggle(b.restoreOpenTabs, (v) => set((x) => (x.restoreOpenTabs = v)), t("Restaurar las pestañas abiertas al iniciar")),
       ),
       group(t("Presencia"), field(t("Ponerme «Ausente» tras inactividad"), range(0, 60, 1, b.autoAwayMinutes, (v) => set((x) => (x.autoAwayMinutes = v)), (v) => (v ? `${v} min` : "nunca")))),
+      group(
+        t("Salas"),
+        toggle(
+          b.discoverMucServices,
+          (v) => set((x) => (x.discoverMucServices = v)),
+          t("Buscar otros servidores de salas"),
+          t("El explorador y las sugerencias del + incluyen también los demás servidores de salas del dominio (muc., chat.…), no solo conference."),
+        ),
+      ),
     );
   },
 

@@ -36,7 +36,7 @@ Verify them first like the Windows files (`sha256sum -c` and `gh attestation ver
 
 What it needs on Linux:
 
-- **A keyring** to store your passwords encrypted: GNOME Keyring (`gnome-keyring`) or KWallet. GNOME and KDE include one; on other desktops install it, or the password cannot be saved encrypted.
+- **A keyring** to store your passwords encrypted: GNOME Keyring (`gnome-keyring`) or KWallet. GNOME and KDE include one; on other desktops install it, or the password cannot be saved encrypted. With **automatic login**, the keyring stays locked because you never typed your password, so the first time EvEX-MPP needs it (right at startup if it starts with the system) the desktop asks you to unlock it: type your login password. It is how the desktop protects the keyring, not an EvEX-MPP error, and it does not happen if you log in with your password.
 - **Speech Dispatcher and a voice** to read fleet pings aloud: `sudo apt install speech-dispatcher espeak-ng`.
 - **Alerts on Wayland:** a Wayland desktop does not let apps place their own windows or keep them on top, so EvEX-MPP shows alerts as system notifications there instead of its own pop-ups (on X11 the pop-ups work as on Windows). If the desktop has no notification service, it falls back to its own pop-ups.
 - **Tray icon:** GNOME shows it only with the *AppIndicator and KStatusNotifierItem Support* extension (included in Ubuntu). KDE, Xfce and Cinnamon show it out of the box.
@@ -91,7 +91,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 **Rooms**
 - ★ marks a room as a **favorite** and ⚡ makes it **open on connect**. ⚡ implies ★, and removing the ★ takes the room off the list (with "Undo").
 - On connect, only ⚡ rooms are joined. Open rooms that are not favorites are listed separately under "Open now".
-- Server room browser with search, user counts and details.
+- Server room browser with search, user counts and details, and room suggestions as you type a name in *Join a room*. Optionally it also finds the domain's other room servers (`muc.`, `chat.`…).
 - Occupants grouped by role, per-room nickname, room passwords, invitations and moderation.
 - The list is synced with server bookmarks (XEP-0048). If the server does not allow saving them (some don't), the list is kept on your PC and rooms you remove do not come back.
 
@@ -115,7 +115,8 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Local time (grey) and **EVE/UTC time** (amber) on every message; either can be hidden. EVE clock in the title bar.
 - Local history with search, and mentions with custom keywords.
 - Correct your last message with ↑, quotes and `/me`.
-- IRC-style commands (`/help`), and nickname (Tab) and `:emoji:` completion.
+- Pidgin's XMPP commands, with suggestions as you type `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` and `/help`. Nickname (Tab) and `:emoji:` completion.
+- **Edit the room topic** from the header: an *edit* tag appears when the server lets you change it (moderators always, participants when the room allows it). It opens a box with the current topic to edit it or paste a new one, with ✓ and ✕. Room owners can open the room's settings from the ⋮ menu or with `/config`, including the lists of owners, admins, members and banned users. Right-click a participant to make them a moderator, member, admin or owner, as far as your own permissions allow.
 - Delivery receipts, "typing…" indicator, and image and YouTube previews.
 
 **Customization**

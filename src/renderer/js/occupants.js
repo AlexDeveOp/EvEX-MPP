@@ -3,6 +3,7 @@ import { S, api, on, roomState, convKey } from "./state.js";
 import { h, icon, $, showMenu, toast, prompt, rafThrottle, keepHover, morphChildren } from "./dom.js";
 import { openConv } from "./convs.js";
 import { avatarEl } from "./chat.js";
+import { occupantAdminActions } from "./room-admin.js";
 import { SHOW_LABEL } from "./state.js";
 
 import { t } from "./i18n.js";
@@ -107,9 +108,11 @@ function occupantMenu(c, r, o) {
     { label: t("Mencionar"), icon: "at-sign", action: () => mention(o.nick) },
     o.jid ? { label: t("Copiar JID"), icon: "copy", action: () => navigator.clipboard.writeText(o.jid) } : null,
     o.jid && !o.self ? { label: t("Añadir a contactos"), icon: "user-plus", action: () => api("roster:add", c.accountId, o.jid, o.nick, []).then(() => toast(t("Solicitud enviada"), { kind: "ok" })) } : null,
-    isMod && !o.self ? "-" : null,
+    (isMod || isAdmin) && !o.self ? "-" : null,
     isMod && !o.self ? { label: t("Expulsar…"), icon: "user-x", danger: true, action: async () => { const reason = await ask(t("Expulsar a {nick}", { nick: o.nick })); if (reason != null) mod({ nick: o.nick, role: "none", reason }, t("{nick} ha sido expulsado", { nick: o.nick })); } } : null,
     isMod && !o.self ? { label: o.role === "visitor" ? t("Dar voz") : t("Quitar voz"), icon: "mic-off", action: () => mod({ nick: o.nick, role: o.role === "visitor" ? "participant" : "visitor" }, t("Hecho")) } : null,
+    // Moderador, miembro, administrador y propietario, según lo que permitan nuestros permisos (room-admin.js).
+    ...occupantAdminActions(me, o).map((a) => ({ label: a.label, icon: a.icon, action: () => mod(a.opts, a.done) })),
     isAdmin && o.jid && !o.self ? { label: t("Vetar…"), icon: "ban", danger: true, action: async () => { const reason = await ask(t("Vetar a {nick}", { nick: o.nick })); if (reason != null) mod({ jid: o.jid, affiliation: "outcast", reason }, t("{nick} ha sido vetado", { nick: o.nick })); } } : null,
   ];
 }
