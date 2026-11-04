@@ -120,6 +120,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Recibos de entrega, «escribiendo…» y vistas previas de imágenes y YouTube.
 
 **Personalización**
+- **Tu avatar**: clic en tu círculo (o *Preferencias → Avatar*) para elegir una imagen, encuadrarla en un círculo arrastrando y con zoom, y publicarla. Como en Pidgin, se reduce a 96×96 y se comprime (menos de 8 KB, PNG o JPEG), porque XMPP la envía dentro de tu perfil; las animadas pueden seguir animadas como GIF de hasta 64 KB. Se publica en tu vCard (Pidgin y casi todos los clientes) y con XEP-0084 (clientes actuales), y *Quitar avatar* vuelve a tus iniciales.
 - Interfaz en **español e inglés**, con selector de idioma.
 - 13 temas (Caldari, Amarr, Gallente, Minmatar, AMOLED, Nord, Dracula…), editor de cada color, y exportar/importar temas.
 - Cualquier fuente de Windows, escala y densidad.
