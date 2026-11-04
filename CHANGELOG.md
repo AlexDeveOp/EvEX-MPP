@@ -24,6 +24,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ### Fixed
 - **Repeated fleet pings.** Some ping bots send one copy of the broadcast to each connection of the account. With Pidgin (or another client) connected at the same time, the server also forwards Pidgin's copy to EvEX-MPP (Message Carbons), so the same ping showed up twice, with only the time in the footer one second apart. A ping from a ping sender with the same text as another received less than 10 seconds before (ignoring dates, times and invisible characters) is now neither saved nor announced again.
 
+### Security
+- **Images from a link are no longer saved as downloaded** (CodeQL alerts #24 and #25). The app checks what a link really is from the file itself, not from what the server says, and no longer writes the downloaded bytes to disk:
+  - *My GIFs* keeps only the link (sending a GIF already used the link). Thumbnails saved by earlier versions keep working.
+  - A background added from a link (or dragged from the browser) is redrawn by Chromium and saved as a new PNG (JPEG for photos), so nothing hidden in the original file is kept. Animated images can't be added from a link: save them and drag them from File Explorer or use *Choose file…*, which keeps them animated.
+
 ## [0.7.0] - 2026-11-04
 
 ### Added

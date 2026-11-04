@@ -1274,4 +1274,6 @@ export default {
   "La imagen es demasiado grande para un avatar.": "The image is too large for an avatar.",
   "Cambiar el avatar de esta cuenta": "Change this account's avatar",
   "Avatar…": "Avatar…",
+  // Imágenes desde un enlace (alertas CodeQL #24 y #25)
+  "Las imágenes animadas no se pueden añadir desde un enlace. Guárdala en tu PC y arrástrala desde el Explorador, o usa «Elegir archivo…».": "Animated images can't be added from a link. Save it to your PC and drag it from File Explorer, or use “Choose file…”.",
 };
