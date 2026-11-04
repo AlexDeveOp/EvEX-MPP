@@ -1139,6 +1139,7 @@ export default {
   "{nick} te está llamando la atención.": "{nick} is trying to get your attention.",
   "Los visitantes no pueden cambiarlo": "Visitors can't change it",
   "Solo los moderadores pueden cambiarlo en esta sala": "Only moderators can change it in this room",
+  "La sala no indica que los participantes puedan cambiarlo": "The room doesn't say participants can change it",
   "No se ha podido cambiar el tema: {message}": "Couldn't change the topic: {message}",
   "{by} quitó el tema de la sala.": "{by} removed the room topic.",
   "Tema de la sala": "Room topic",
