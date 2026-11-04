@@ -43,7 +43,8 @@ export class BrowserWindow {
     this.options = options;
     this.handlers = {};
     this.destroyed = false;
-    this.webContents = { send: () => {} };
+    // executeJavaScript responde con BrowserWindow.executeResult(código) si un test lo pone.
+    this.webContents = { send: () => {}, executeJavaScript: async (code) => BrowserWindow.executeResult?.(code) };
     BrowserWindow.created.push(this);
   }
   setAlwaysOnTop() {}
@@ -75,4 +76,13 @@ export const screen = {
   getCursorScreenPoint: () => ({ x: 0, y: 0 }),
   getDisplayNearestPoint: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1040 } }),
 };
-export default { app, safeStorage, Notification, nativeImage, BrowserWindow, screen };
+// Sesiones: guardan el filtro de webRequest.onBeforeRequest para que los tests comprueben qué se deja pasar.
+const partitions = new Map();
+export const session = {
+  fromPartition: (name) => {
+    if (!partitions.has(name)) partitions.set(name, { name, webRequest: { onBeforeRequest(fn) { this.filter = fn; } } });
+    return partitions.get(name);
+  },
+};
+export const dialog = {};
+export default { app, safeStorage, Notification, nativeImage, BrowserWindow, screen, session, dialog };

@@ -9,6 +9,7 @@ import * as store from "./store.js";
 import { scanPidginSounds } from "./pidgin-import.js";
 import { searchGifs, downloadGif } from "./gifs.js";
 import { mediaDir } from "./paths.js";
+import { sniffImage, isAnimated, reencodeImage } from "./image-reencode.js";
 import { parseFcList } from "./platform.js";
 import { t, tk, currentLang } from "./i18n.js";
 
@@ -67,12 +68,12 @@ export function registerMediaIpc(handle, { getWin, getConn, fetchImpl }) {
     const g = store.get().settings.gifs;
     return searchGifs({ provider: g.provider, key: g.keys?.[g.provider], query, page, rating: g.rating, lang: currentLang(), fetchImpl });
   });
+  // «Mis GIFs» guarda solo el enlace (al enviarlo también se manda el enlace): se descarga para comprobar que de
+  // verdad es una imagen, pero no se escribe en disco. Las miniaturas copiadas por versiones anteriores siguen sirviendo.
   handle("gifs:save", async (url) => {
-    const { buffer, ext } = await downloadGif(url, { fetchImpl });
-    const name = `${crypto.createHash("sha1").update(buffer).digest("hex").slice(0, 20)}.${ext}`;
-    fs.mkdirSync(mediaDir("gifs"), { recursive: true });
-    fs.writeFileSync(mediaDir("gifs", name), buffer);
-    return { url, thumb: `media://evex/gifs/${name}` };
+    const { buffer } = await downloadGif(url, { fetchImpl });
+    if (!sniffImage(buffer)) throw new Error(t("Ese enlace no es una imagen ({type}).", { type: "?" }));
+    return { url };
   });
   handle("gifs:remove", (thumb) => {
     const m = String(thumb || "").match(/^media:\/\/evex\/gifs\/([0-9a-f]{20}\.[a-z]{3,4})$/);
@@ -129,9 +130,20 @@ export function registerMediaIpc(handle, { getWin, getConn, fetchImpl }) {
     if (buffer.length > MAX_IMAGE) throw new Error(t("La imagen es demasiado grande (máximo {mb} MB).", { mb: 25 }));
     return saveImageBuffer(buffer, ext);
   });
+  // Imagen desde una dirección de Internet (también al arrastrarla desde el navegador): se comprueba por su cabecera, las
+  // animadas no se admiten y las demás se vuelven a codificar (image-reencode.js): nunca se guardan los bytes descargados.
   handle("image:importUrl", async (url) => {
-    const { buffer, ext } = await downloadGif(String(url || "").trim(), { fetchImpl, maxBytes: MAX_IMAGE });
-    return saveImageBuffer(buffer, ext);
+    const { buffer } = await downloadGif(String(url || "").trim(), { fetchImpl, maxBytes: MAX_IMAGE });
+    const kind = sniffImage(buffer);
+    if (!kind) throw new Error(t("Ese enlace no es una imagen ({type}).", { type: "?" }));
+    if (isAnimated(buffer, kind)) throw new Error(t("Las imágenes animadas no se pueden añadir desde un enlace. Guárdala en tu PC y arrástrala desde el Explorador, o usa «Elegir archivo…»."));
+    let out;
+    try {
+      out = await reencodeImage(buffer, kind);
+    } catch {
+      throw new Error(t("No se pudo leer la imagen"));
+    }
+    return saveImageBuffer(out.buffer, out.ext);
   });
 
   handle("emoji:import", async () => {

@@ -73,7 +73,8 @@ export async function searchGifs({ provider, key, query, page = 0, rating = "pg-
 
 const TYPES = { "image/gif": "gif", "image/webp": "webp", "image/png": "png", "image/jpeg": "jpg", "image/avif": "avif" };
 
-// Descarga un GIF para «Mis GIFs» (copia local para la miniatura; al enviarlo se manda su URL original).
+// Descarga una imagen de Internet para comprobarla: «Mis GIFs» (solo se guarda el enlace) y los fondos por enlace
+// (media-ipc.js la vuelve a codificar antes de guardarla). Nunca se escribe en disco tal cual llega.
 export async function downloadGif(url, { fetchImpl = fetch, maxBytes = 15 * 1024 * 1024 } = {}) {
   let u;
   try {
