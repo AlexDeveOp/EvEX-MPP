@@ -2,7 +2,7 @@ import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
 import { srpSettings, srpEnabled, isMarked, toggleMark, updateMark, clearMarks, srpDeadline, srpText, srpTextAll, validKillmail, markedCount } from "../../src/renderer/js/srp.js";
-import { pingMatches } from "../../src/renderer/js/pings.js";
+import { pingMatches, visiblePings } from "../../src/renderer/js/pings.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
 // saveSettings llama al proceso principal: aquí no hace nada.
@@ -110,4 +110,16 @@ test("burbuja de estado: solo en los marcados, con su estado (y «Sin pedir» si
   }
   updateMark("a", { status: "raro" });
   assert.equal(chipStatus(a), "pending");
+});
+
+test("apagar el SRP con el filtro «Marcados» puesto vuelve a enseñar todos los pings", () => {
+  S.settings.srp = { enabled: true, deadlineDays: 0, marks: {} };
+  const a = ping("a", 1000);
+  const b = ping("b", 2000);
+  toggleMark(a);
+  const filter = { query: "", group: "", srpOnly: true };
+  assert.deepEqual(visiblePings([a, b], filter).map((m) => m.key), ["a"], "con el SRP encendido, solo los marcados");
+  S.settings.srp.enabled = false;
+  assert.deepEqual(visiblePings([a, b], filter).map((m) => m.key), ["b", "a"], "con el SRP apagado, todos (lo más nuevo primero)");
+  assert.equal(filter.srpOnly, false, "el filtro «Marcados» se quita");
 });
