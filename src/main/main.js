@@ -10,7 +10,7 @@ import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
-import { createTray, buildTrayMenu, refreshTray, setUnread } from "./tray.js";
+import { createTray, getTray, buildTrayMenu, refreshTray, setUnread } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
@@ -50,7 +50,6 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 let win = null;
-let tray = null;
 let quitting = false;
 let logs = null;
 // Los eventos XMPP que llegan mientras la interfaz carga se guardan y se entregan cuando avisa de que está lista.
@@ -93,7 +92,7 @@ async function runUpdateCheck() {
     updateNotified.add(r.latest);
     if (rendererReady) send("update-available", r);
     else updateFound = r;
-    if (tray && (!win || !win.isVisible())) tray.displayBalloon({ title: t("Hay una versión nueva de EvEX-MPP"), content: t("Versión {version}. Ábrela desde la ventana de la app.", { version: r.latest }), iconType: "info" });
+    if (getTray() && (!win || !win.isVisible())) getTray().displayBalloon({ title: t("Hay una versión nueva de EvEX-MPP"), content: t("Versión {version}. Ábrela desde la ventana de la app.", { version: r.latest }), iconType: "info" });
   }
   return r;
 }
@@ -272,6 +271,7 @@ function hideToTray() {
   win.hide();
   const cfg = store.get();
   // La primera vez se avisa de dónde ha ido la ventana.
+  const tray = getTray();
   if (!cfg.imported.__trayHintShown && tray) {
     cfg.imported.__trayHintShown = 1;
     store.save();
@@ -585,7 +585,7 @@ function registerIpc() {
     setLanguage(s.language);
     applySystemSettings(s);
     // El menú de la bandeja se construye con textos traducidos: rehacerlo si cambia el idioma.
-    if (tray && currentLang() !== before) tray.setContextMenu(buildTrayMenu());
+    if (getTray() && currentLang() !== before) getTray().setContextMenu(buildTrayMenu());
     return s;
   });
 
@@ -860,7 +860,7 @@ app.whenReady().then(async () => {
 
   trayCheck = detectTray().then((ok) => (trayAvailable = ok));
   createWindow();
-  tray = createTray({
+  createTray({
     getWin: () => win,
     accounts,
     showWindow,
