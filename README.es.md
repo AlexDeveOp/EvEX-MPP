@@ -36,7 +36,7 @@ Verifícalos antes, igual que los archivos de Windows (`sha256sum -c` y `gh atte
 
 Qué necesita en Linux:
 
-- **Un llavero** para guardar tus contraseñas cifradas: el de GNOME (`gnome-keyring`) o KWallet. GNOME y KDE ya traen uno; en otros escritorios, instálalo, o la contraseña no se podrá guardar cifrada.
+- **Un llavero** para guardar tus contraseñas cifradas: el de GNOME (`gnome-keyring`) o KWallet. GNOME y KDE ya traen uno; en otros escritorios, instálalo, o la contraseña no se podrá guardar cifrada. Con el **inicio de sesión automático**, el llavero sigue bloqueado porque no has escrito tu contraseña, así que la primera vez que EvEX-MPP lo necesita (nada más arrancar, si se inicia con el sistema) el escritorio te pide desbloquearlo: escribe la contraseña con la que entras en tu sesión. Es la forma en que el escritorio protege el llavero, no un fallo de EvEX-MPP, y no pasa si entras escribiendo tu contraseña.
 - **Speech Dispatcher y una voz** para leer en voz alta los pings de flota: `sudo apt install speech-dispatcher espeak-ng`.
 - **Avisos en Wayland:** un escritorio Wayland no deja que las apps coloquen sus ventanas ni las pongan por encima, así que allí EvEX-MPP muestra los avisos como notificaciones del sistema en vez de sus burbujas (en X11 las burbujas funcionan como en Windows). Si el escritorio no tiene servicio de notificaciones, vuelve a sus burbujas.
 - **Icono de la bandeja:** GNOME solo lo muestra con la extensión *AppIndicator and KStatusNotifierItem Support* (Ubuntu ya la trae). KDE, Xfce y Cinnamon lo muestran sin más.
