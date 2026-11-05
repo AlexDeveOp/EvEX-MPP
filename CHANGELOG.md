@@ -37,6 +37,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **Connection log** (`connection.log` in the data folder, at most 1 MB with the previous one): connects, disconnects, errors and server notices (which until now only reached the developer console), and why each reconnection happened. No messages, contacts or passwords. See [PRIVACY.md](PRIVACY.md).
 
 ### Fixed
+- **Sharper tray icon on scaled displays.** The tray icon used to be a single 16 px image, so Windows at 125–150 % scaling enlarged it and it looked blurry. It now comes in 16, 24 and 32 px, each drawn at its own size, for the normal icon, the fleet ping siren and the do-not-disturb badge.
 - A network change notice (for example from a virtual network adapter) no longer cuts a connection that is still logging in and making progress, which with a distant server takes a few seconds; it was retried from scratch. An attempt that has been stuck for more than 5 seconds is still retried at once.
 - A connection reset by the server during login, or after disconnecting while the server did not answer, no longer leaves an unhandled error in the main process.
 - When a connection attempt failed after you had disconnected or reconnected, it could put the account in the error state or cut the new connection.
