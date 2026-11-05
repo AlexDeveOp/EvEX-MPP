@@ -104,6 +104,11 @@ call("mini:get")
   .then(update)
   .catch(() => {});
 setInterval(tick, 1000);
+// Los datos los prepara la ventana principal: si se cerró (sin «cerrar a la bandeja») no llega nada. Pulsar la mini la
+// vuelve a abrir, y con ella los datos.
+setTimeout(() => {
+  if (!state) ui.empty.textContent = t("Abre EvEX-MPP para ver los pings (pulsa aquí)");
+}, 3000);
 
 // ---------- asa para cambiar el tamaño ----------
 

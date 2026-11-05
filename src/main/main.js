@@ -209,6 +209,14 @@ function createWindow() {
   for (const evt of ["maximize", "unmaximize"]) win.on(evt, () => send("window-maximized", win.isMaximized()));
   // Si arranca maximizada, el aviso llega antes que la página: se repite al cargarla.
   win.webContents.on("did-finish-load", () => send("window-maximized", win.isMaximized()));
+  // Sin «cerrar a la bandeja», la ventana se destruye y la app sigue en la bandeja (y con la mini ventana): se olvida,
+  // para que «Mostrar EvEX-MPP» o la mini la vuelvan a crear en vez de fallar con una ventana destruida.
+  const self = win;
+  win.on("closed", () => {
+    if (win !== self) return;
+    win = null;
+    rendererReady = false;
+  });
   win.on("close", (e) => {
     if (!quitting && store.get().settings.behavior.closeToTray) {
       e.preventDefault();
@@ -282,7 +290,7 @@ function hideToTray() {
 }
 
 function showWindow() {
-  if (!win) return createWindow();
+  if (!win || win.isDestroyed()) return createWindow();
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
