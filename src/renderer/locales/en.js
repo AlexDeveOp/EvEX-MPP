@@ -1307,5 +1307,6 @@ export default {
   "También desde la bandeja o con el botón de la vista de pings": "Also from the tray or with the button in the pings view",
   "Opacidad": "Opacity",
   "Dejar pasar los clics al juego": "Let clicks through to the game",
+  "Arrastra para cambiar el tamaño": "Drag to resize",
   "La mini ventana no se puede pulsar ni mover: los clics llegan a lo que haya debajo. Desactívalo aquí para volver a moverla.": "The mini window can't be clicked or moved: clicks reach whatever is underneath. Turn this off here to move it again.",
 };
