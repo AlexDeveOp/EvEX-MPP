@@ -30,6 +30,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Optionally read aloud ("Formup in 15 minutes. <title>"), with the voice and speed of *Read pings aloud*.
   - Two copies of the same ping (another connection, the server archive) now give one reminder, not two.
 
+### Security
+- Updated the development dependency minimatch to 11.0.4 (GHSA-g3hv-75wg-m249, denial of service in glob patterns). It is only used by the build tools, not shipped in the app.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added
