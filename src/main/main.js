@@ -578,6 +578,8 @@ function registerIpc() {
     updateFound = null;
     if (pendingRecovered) send("pings-recovered", { count: pendingRecovered });
     pendingRecovered = 0;
+    if (pendingNav) send("nav", pendingNav);
+    pendingNav = null;
     // Pings que recibió Pidgin con la app cerrada; después se revisa cada 2 minutos (por si Pidgin, con más
     // prioridad, se los queda mientras la app está abierta).
     syncPings({ server: false }).catch(() => {});
@@ -804,9 +806,13 @@ function toggleMiniWindow() {
   send("mini-changed", s.mini);
 }
 
+// Si la ventana se acaba de crear (estaba cerrada), la página aún no escucha: el destino se manda al estar lista.
+let pendingNav = null;
 function openFromNotification(data) {
   showWindow();
-  send("nav", { accountId: data.accountId, conv: data.conv, convType: data.convType });
+  const nav = { accountId: data.accountId, conv: data.conv, convType: data.convType };
+  if (rendererReady) send("nav", nav);
+  else pendingNav = nav;
 }
 
 // Linux no tiene «iniciar con el sistema» en Electron: se crea o se quita el .desktop de ~/.config/autostart.
