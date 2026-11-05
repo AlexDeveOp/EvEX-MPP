@@ -109,6 +109,8 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 - Optionally Windows notifications instead of the bubble, or both.
 - **Blinking amber "!" in the tray** while there are unread pings, plus taskbar flashing.
 - **A different sound for each kind of alert**: private message, mention, room, message sent, ping, connection lost and restored, contacts coming online or going offline, contact requests and room invitations. 13 built-in sounds or your own file, each with its own volume, a choice of audio output (e.g. your headset), optional ping repeat until you look at the window, and **Import Pidgin sounds** (copied from your Pidgin installation).
+- **Alerts per room and per chat**: *Everything*, *Only mentions and keywords* or *Nothing* (or the general setting), from the bell in the header, the ⋮ menu or a right-click in the sidebar. Rooms set to *Nothing* show a crossed-out bell and don't add to the unread counts.
+- **Do not disturb**, by hand or **on a schedule** (e.g. 01:00–08:00 on chosen days), optionally letting mentions through. Toggle it from your status menu, the tray or the notice in the title bar. Fleet pings always get through.
 - Everything works the same with the window **minimized or hidden in the tray**.
 
 **Messages**

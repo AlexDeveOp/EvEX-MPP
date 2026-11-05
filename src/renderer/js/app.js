@@ -18,6 +18,7 @@ import { openSearch } from "./search.js";
 import { showUpdate } from "./updates.js";
 import { offerPidginRepair } from "./pidgin-repair.js";
 import { playSound, stopPingRepeat } from "./sounds.js";
+import { initDnd } from "./dnd.js";
 
 import { t, locale, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
@@ -59,6 +60,7 @@ async function boot() {
 
   initSidebar();
   initChat();
+  initDnd();
   initOccupants();
   bindTitlebar();
   renderWelcome();

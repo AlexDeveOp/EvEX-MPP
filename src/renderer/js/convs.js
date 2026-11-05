@@ -11,11 +11,13 @@ import { replaceShortcodes } from "./emoji.js";
 
 import { t } from "./i18n.js";
 import { speakPing } from "./tts.js";
+import { effectiveLevel, shouldAlert, badgeCount } from "./notify-rules.js";
+import { dndNow } from "./dnd.js";
 export function getConv(accountId, conv, type) {
   const key = convKey(accountId, conv);
   let c = S.convs.get(key);
   if (!c) {
-    c = { key, accountId, conv, type: type || "chat", messages: [], keys: new Set(), unread: 0, mentions: 0, loaded: false, typing: new Map(), draft: "", firstUnreadKey: null, exhausted: false };
+    c = { key, accountId, conv, type: type || "chat", messages: [], keys: new Set(), unread: 0, mentions: 0, mentionHits: 0, loaded: false, typing: new Map(), draft: "", firstUnreadKey: null, exhausted: false };
     S.convs.set(key, c);
   }
   if (type && c.type !== type && type !== "headline") c.type = type;
@@ -193,23 +195,32 @@ export function markRead(key) {
   if (!c) return;
   // Lo que ya has visto en la sala deja de estar pendiente en la bandeja de menciones.
   if (c.type === "groupchat") markRoomMentionsSeen(c.accountId, c.conv);
-  if (c.unread || c.mentions) {
+  if (c.unread || c.mentions || c.mentionHits) {
     c.unread = 0;
     c.mentions = 0;
+    c.mentionHits = 0;
     emit("sidebar");
     emit("tabs");
     updateBadge();
   }
 }
 
+// Lo que cuenta en la barra de tareas: cada conversación según su nivel de aviso («Nada» no cuenta).
 export function totalUnread() {
   let n = 0;
-  for (const c of S.convs.values()) {
-    const mode = notifyMode(c);
-    if (c.type === "groupchat" && mode !== "all") n += c.mentions;
-    else n += c.unread;
-  }
+  for (const c of S.convs.values()) n += convBadge(c).count;
   return n;
+}
+
+// Número de la pestaña y de la barra lateral: { count, mention, level }. mention: se pinta en rojo.
+// En los chats privados c.mentions cuenta todos los mensajes (cada privado es como una mención); para «solo menciones»
+// se usa c.mentionHits, las menciones reales sin leer (tu nombre, una palabra clave o una regla).
+export function convBadge(c) {
+  const level = notifyMode(c);
+  const isChat = c.type === "chat";
+  const mentions = isChat && level === "mentions" ? c.mentionHits || 0 : c.mentions;
+  const count = badgeCount(level, { unread: c.unread, mentions });
+  return { count, mention: level !== "none" && count > 0 && (isChat || mentions > 0), level };
 }
 
 export function updateBadge() {
@@ -231,12 +242,12 @@ function popupTime(ts, seconds) {
 
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
 
+// Nivel de aviso de una sala o un chat: "all", "mentions" o "none" (notify-rules.js). Se elige por conversación en
+// roomModes (clave de la conversación; vale también para los chats privados) o, en las salas, en su marcador.
 export function notifyMode(c) {
-  if (c.type !== "groupchat") return "all";
-  const room = account(c.accountId)?.rooms.find((r) => r.jid === c.conv);
-  const m = S.settings.notifications.roomModes[c.key] || (room?.notify !== "default" ? room?.notify : null);
-  if (m) return m;
-  return S.settings.notifications.allRoomMessages ? "all" : "mentions";
+  const n = S.settings.notifications;
+  const room = c.type === "groupchat" ? account(c.accountId)?.rooms.find((r) => r.jid === c.conv) : null;
+  return effectiveLevel(c.type, n.roomModes[c.key] || room?.notify, n);
 }
 
 export function mentionWords(c) {
@@ -338,6 +349,8 @@ export function ingestMessage(ev) {
     if (!c.unread) c.firstUnreadKey = key;
     c.unread++;
     if (msg.mention || type === "chat") c.mentions++;
+    // Menciones reales sin leer: también las de una regla por palabra clave en un chat privado.
+    if (msg.mention || (rule && rule.notify !== "never")) c.mentionHits = (c.mentionHits || 0) + 1;
     emit("sidebar");
     emit("tabs");
     updateBadge();
@@ -353,18 +366,12 @@ function ruleExtras(rule) {
 function maybeNotify(c, msg, rule) {
   const n = S.settings.notifications;
   const forced = rule && rule.notify !== "never";
-  if (!n.enabled) return;
-  if ((n.dnd || conn(c.accountId).show === "dnd") && !(forced && rule.dnd)) return;
-  const mode = notifyMode(c);
-  let should = false;
-  if (forced && rule.notify === "always") should = true;
-  else if (c.type === "chat") should = n.privateMessages || forced;
-  else if (mode === "all") should = true;
-  else if (mode === "mentions") should = msg.mention && (n.mentions || forced);
+  const should = shouldAlert({ type: c.type, level: notifyMode(c), chosen: n.roomModes[c.key] || "default", mention: msg.mention, rule, n, dnd: dndNow(), presenceDnd: conn(c.accountId).show === "dnd" });
   if (!should) return;
   const kind = c.type === "chat" ? "private" : msg.mention ? "mention" : "room";
-  if (forced) playRuleSound(rule, kind);
-  else playSound(kind);
+  // Si avisa es porque shouldAlert ya lo ha permitido (también con «No molestar» y menciones permitidas).
+  if (forced) playRuleSound(rule, kind, { dndOk: true });
+  else playSound(kind, { dndOk: true });
   const title = c.type === "groupchat" ? t("{nick} en {room}", { nick: msg.nick, room: convTitle(c) }) : convTitle(c);
   api("notify", {
     ...ruleExtras(rule),
@@ -384,7 +391,7 @@ function maybeNotify(c, msg, rule) {
 export function notifyAttention(c, nick) {
   systemMessage(c, t("{nick} te está llamando la atención.", { nick }), { icon: "bell-ring" });
   const n = S.settings.notifications;
-  if (!n.enabled || n.dnd || conn(c.accountId).show === "dnd") return;
+  if (!n.enabled || dndNow().active || conn(c.accountId).show === "dnd" || notifyMode(c) === "none") return;
   playSound("private");
   api("notify", {
     kind: "msg",

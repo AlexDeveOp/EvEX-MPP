@@ -1016,3 +1016,82 @@ body.tts-speaking .icon-btn.tts-stop {
 .voice-preview {
   font-style: italic;
 }
+
+/* ---------- avisos por sala y «No molestar» (dnd.js, notify-rules.js) ---------- */
+
+/* Indicador de la barra de título: solo se ve mientras «No molestar» está activo; un clic lo apaga. */
+.tb-dnd {
+  display: flex;
+  flex: none;
+  align-items: center;
+  /* En una línea aunque la ventana sea estrecha (en inglés, «Do not disturb» se partía en dos). */
+  white-space: nowrap;
+  gap: 6px;
+  padding: 0 10px;
+  height: 26px;
+  margin-right: 6px;
+  border-radius: 7px;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.tb-dnd[hidden] {
+  display: none;
+}
+.tb-dnd .icon {
+  width: 14px;
+  color: var(--danger);
+}
+.tb-dnd:hover {
+  background: color-mix(in srgb, var(--danger) 26%, transparent);
+}
+/* Con la ventana estrecha queda solo la campana (el texto está en el título): si no, empuja los botones de la ventana
+   fuera de la barra. */
+@media (max-width: 1000px) {
+  .tb-dnd {
+    padding: 0 7px;
+  }
+  .tb-dnd > span:not(.icon) {
+    display: none;
+  }
+}
+/* Campana tachada discreta en las salas y chats con los avisos en «Nada». */
+.sb-muted {
+  display: inline-flex;
+  flex: none;
+  color: var(--text2);
+  opacity: 0.75;
+}
+.sb-muted .icon {
+  width: 13px;
+}
+.icon-btn.muted-bell {
+  color: var(--text2);
+}
+/* Preferencias → Notificaciones → No molestar */
+.dnd-range {
+  align-items: center;
+  gap: 8px;
+}
+.dnd-time {
+  width: 7.5em;
+}
+.dnd-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dnd-days .chip {
+  cursor: pointer;
+  min-width: 2.6em;
+  justify-content: center;
+}
+.dnd-days .chip.on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg3));
+}

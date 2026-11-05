@@ -1,6 +1,7 @@
 // Cuenta atrás del formup: lee la hora del formup de un ping (hora EVE = UTC), la muestra en la tarjeta
 // y avisa unos minutos antes y a la hora, según Preferencias → Pings de flota → Cuenta atrás del formup.
 import { S, api } from "./state.js";
+import { dndState } from "./notify-rules.js";
 import { parsePing } from "./pings.js";
 import { pingsConv, loadHistory } from "./convs.js";
 import { playRuleSound } from "./sounds.js";
@@ -182,7 +183,7 @@ function notifyFormup({ m, at, minutes }, cfg) {
   playRuleSound({ id: "formup", sound: cfg.sound, dnd: true }, "ping");
   if (cfg.speak && speechAvailable()) {
     const voice = voiceSettings();
-    if (voice.dnd || !S.settings.notifications?.dnd) setTimeout(() => speak(reminderSpeech(minutes, clean(p.title)), { ...voice, repeat: 1 }), 1500);
+    if (voice.dnd || !dndState(S.settings.notifications).active) setTimeout(() => speak(reminderSpeech(minutes, clean(p.title)), { ...voice, repeat: 1 }), 1500);
   }
   const c = themeColors();
   api("notify", {
