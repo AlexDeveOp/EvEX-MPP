@@ -1,5 +1,6 @@
 // Conversaciones abiertas: pestañas, entrada de mensajes, no leídos, menciones, notificaciones y pings.
-import { S, api, emit, convKey, account, roomState, displayName, saveSettings, PINGS_KEY, conn } from "./state.js";
+import { S, api, emit, convKey, account, roomState, displayName, saveSettings, PINGS_KEY, MENTIONS_KEY, conn } from "./state.js";
+import { mentionsConv, loadMentions, addMention, markMentionsSeen, markRoomMentionsSeen } from "./mentions.js";
 import { mentionRegex, fmtTime, fmtEve } from "./format.js";
 import { playSound, playRuleSound, startPingRepeat } from "./sounds.js";
 import { matchRule, ruleLabel } from "./keywords.js";
@@ -42,6 +43,7 @@ export function isPingSender(jid) {
 
 export function convTitle(c) {
   if (c.type === "pings") return t("Pings de flota");
+  if (c.type === "mentions") return t("Menciones");
   const name = displayName(c.accountId, c.conv);
   // Si la misma sala o contacto está abierto con otra cuenta, se añade el nombre de la cuenta.
   const clash = S.tabs.some((k) => {
@@ -61,6 +63,7 @@ function persistTabs() {
 
 export async function loadHistory(c, more = false) {
   if (c.type === "pings") return loadPings(c);
+  if (c.type === "mentions") return loadMentions(c);
   if (c.exhausted && more) return 0;
   const before = more && c.messages.length ? c.messages[0].ts : undefined;
   const entries = await api("logs:tail", c.accountId, c.conv, 150, before);
@@ -118,7 +121,7 @@ function applyEdit(c, m) {
 }
 
 export async function openConv(accountId, conv, type, { focus = true, join = true, password } = {}) {
-  const c = type === "pings" ? pingsConv() : getConv(accountId, conv, type);
+  const c = type === "pings" ? pingsConv() : type === "mentions" ? mentionsConv() : getConv(accountId, conv, type);
   if (!S.tabs.includes(c.key)) {
     S.tabs.push(c.key);
     persistTabs();
@@ -141,12 +144,17 @@ export async function openConv(accountId, conv, type, { focus = true, join = tru
 }
 
 // Cerrar la app estando en la vista de pings también cuenta como haberlos visto.
-window.addEventListener("beforeunload", () => S.active === PINGS_KEY && markPingsSeen());
+window.addEventListener("beforeunload", () => {
+  if (S.active === PINGS_KEY) markPingsSeen();
+  if (S.active === MENTIONS_KEY) markMentionsSeen();
+});
 
 export function activate(key) {
   if (!S.convs.has(key)) return;
   // Al salir de la vista de pings, los que había ya cuentan como vistos (modo «hasta volver a abrirlos»).
   if (S.active === PINGS_KEY && key !== PINGS_KEY) markPingsSeen();
+  // Igual con la bandeja de menciones: al salir, lo que había pasa a visto.
+  if (S.active === MENTIONS_KEY && key !== MENTIONS_KEY) markMentionsSeen();
   S.active = key;
   markRead(key);
   emit("active", S.convs.get(key));
@@ -184,6 +192,8 @@ export function moveTab(from, to) {
 export function markRead(key) {
   const c = S.convs.get(key);
   if (!c) return;
+  // Lo que ya has visto en la sala deja de estar pendiente en la bandeja de menciones.
+  if (c.type === "groupchat") markRoomMentionsSeen(c.accountId, c.conv);
   if (c.unread || c.mentions) {
     c.unread = 0;
     c.mentions = 0;
@@ -325,6 +335,8 @@ export function ingestMessage(ev) {
     emit("typing", { key: c.key });
   }
   emit("message", { conv: c, msg });
+  // Las menciones y palabras clave de las salas también van a la bandeja de menciones.
+  if (type === "groupchat") addMention(c.accountId, c.conv, msg, { visible: S.active === c.key && S.focused });
 
   if (msg.out || msg.sys) {
     if (msg.out && S.active === c.key) markRead(c.key);

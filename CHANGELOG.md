@@ -8,6 +8,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Mentions inbox:** a *Mentions* entry under *Fleet pings* in the sidebar gathers the room messages that mention you (your nickname, alias, username or room nickname, and the mention words in *Preferences → Notifications*) or match one of your keyword rules.
+  - Each entry shows the room, who wrote it, how long ago, local and EVE time, and the text with the mention highlighted. Click it (or press Enter) to open the room at that message, loading older history if needed; the message is highlighted for a moment.
+  - Filter by text or by room. The counter shows the ones you haven't seen. They count as seen when you leave the inbox, with *Mark all as seen*, or when you read them in their room.
+  - It is filled from the local history when the app starts (rooms active in the last 30 days, the last 1,000 messages of each), so mentions from before you opened the app are there too, and new ones arrive live. Large rooms are read from the end of the file, not in full.
+  - The count does not add to the taskbar badge, which already counts the room's mentions.
 - **Alerts per room and per chat.** Each room and private chat can be set to *Use the general setting*, *Everything*, *Only mentions and keywords* or *Nothing*.
   - Set it from the bell in the conversation header, the ⋮ menu or a right-click on the room or contact in the sidebar.
   - It affects sound, pop-up, taskbar flashing and the unread numbers on tabs, sidebar and taskbar. *Nothing* doesn't count at all and shows a crossed-out bell in the sidebar.

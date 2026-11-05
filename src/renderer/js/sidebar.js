@@ -1,5 +1,6 @@
 // Barra lateral: cuentas y estado, pings, salas (favoritas / abiertas) y contactos.
-import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
+import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, MENTIONS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
+import { mentionsConv } from "./mentions.js";
 import { h, icon, iconButton, $, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle, keepHover, morphChildren } from "./dom.js";
 import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
 import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";
@@ -94,6 +95,22 @@ function renderSidebar() {
       icon("siren", "sb-icon"),
       h("span", { class: "sb-name" }, t("Pings de flota")),
       pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,
+    ),
+  );
+  // Bandeja de menciones: los mensajes de las salas que te mencionan o coinciden con tus palabras clave.
+  const mc = mentionsConv();
+  root.append(
+    h(
+      "div",
+      {
+        class: `sb-item mentions ${S.active === MENTIONS_KEY ? "active" : ""} ${mc.pending ? "unread" : ""}`,
+        "data-key": MENTIONS_KEY,
+        title: t("Mensajes de las salas que te mencionan o coinciden con tus palabras clave"),
+        onclick: () => openConv(null, "*", "mentions"),
+      },
+      icon("at-sign", "sb-icon"),
+      h("span", { class: "sb-name" }, t("Menciones")),
+      mc.pending ? h("span", { class: "badge mention" }, mc.pending > 99 ? "99+" : mc.pending) : null,
     ),
   );
 

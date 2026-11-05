@@ -1,0 +1,130 @@
+/* ---------- bandeja de menciones ---------- */
+
+.sb-item.mentions {
+  color: var(--text);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent);
+}
+.sb-item.mentions .sb-icon {
+  color: var(--accent);
+}
+.conv-avatar.mentions {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+.tab-icon.mentions {
+  color: var(--accent);
+}
+
+.type-mentions .msg-list {
+  padding: 16px;
+  gap: 10px;
+}
+.mention-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+  overflow: hidden;
+  /* Las tarjetas fuera de la vista no se maquetan: la bandeja puede tener cientos. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 110px;
+}
+.mention-card:hover,
+.mention-card:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  outline: none;
+}
+.mention-card.unseen {
+  box-shadow: inset 4px 0 0 var(--accent), 0 2px 8px rgb(0 0 0 / 0.1);
+}
+.mention-card.kw {
+  border-color: color-mix(in srgb, var(--kw) 55%, var(--border));
+}
+.mention-card.kw.unseen {
+  box-shadow: inset 4px 0 0 var(--kw), 0 2px 8px rgb(0 0 0 / 0.1);
+}
+.mention-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px 4px;
+  min-width: 0;
+}
+.mention-icon {
+  color: var(--accent);
+  width: 1.05em;
+  flex: none;
+}
+.mention-room {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mention-acc {
+  font-size: 0.82em;
+}
+.mention-nick {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mention-ago {
+  margin-left: auto;
+  font-size: 0.82em;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.mention-body {
+  padding: 2px 14px 6px;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mention-card mark.mention {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+.mention-card mark.kw {
+  background: color-mix(in srgb, var(--kw) 32%, transparent);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+.mention-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px 9px;
+  font-size: 0.8em;
+}
+.mention-foot .eve {
+  color: var(--accent);
+}
+.mention-go {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text2);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.mention-card:hover .mention-go,
+.mention-card:focus-visible .mention-go {
+  opacity: 1;
+}
+
+/* Mensaje al que se salta desde la bandeja: se resalta un momento. */
+.msg.flash {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: background 1.2s;
+}

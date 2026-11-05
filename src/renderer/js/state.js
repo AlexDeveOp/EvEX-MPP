@@ -38,6 +38,7 @@ export const S = {
 
 export const convKey = (accountId, conv) => `${accountId}|${conv}`;
 export const PINGS_KEY = "pings|*";
+export const MENTIONS_KEY = "mentions|*";
 
 export const account = (id) => S.accounts.find((a) => a.id === id);
 export const conn = (id) => S.conn[id] || (S.conn[id] = { state: "offline" });
