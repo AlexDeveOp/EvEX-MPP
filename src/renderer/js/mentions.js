@@ -78,6 +78,9 @@ function toItem(accountId, room, m, match) {
 const SEEN_AT = "evex.mentionsSeenAt";
 const SEEN_KEYS = "evex.mentionsSeen";
 let seenAt = 0;
+// Momento en que se abrió la app: en un perfil nuevo, lo de antes cuenta como visto, pero no lo que llega en los
+// primeros segundos (antes de que nada consulte la bandeja), p. ej. una mención al entrar en una sala.
+const OPENED_AT = Date.now();
 let seenKeys = null;
 
 function loadSeen() {
@@ -88,7 +91,7 @@ function loadSeen() {
     for (const k of JSON.parse(localStorage.getItem(SEEN_KEYS) || "[]")) seenKeys.add(k);
   } catch {}
   // Perfil nuevo: lo de antes no cuenta como nuevo (si no, la primera vez saldría todo el historial sin leer).
-  if (!seenAt) saveSeenAt(Date.now());
+  if (!seenAt) saveSeenAt(OPENED_AT);
 }
 
 function saveSeenAt(ts) {

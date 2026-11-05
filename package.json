@@ -13,6 +13,7 @@
     "dist:dir": "electron-builder --win dir --publish never",
     "dist:linux": "node scripts/build-icon.mjs && electron-builder --linux AppImage deb --publish never && node scripts/check-build-clean.mjs",
     "mock": "node test/mock-xmpp.mjs",
+    "demo": "node scripts/demo.mjs",
     "i18n": "node scripts/i18n-check.mjs",
     "check": "node scripts/check.mjs",
     "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\" \"test/unit/*.test.js\"",

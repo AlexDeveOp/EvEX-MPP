@@ -231,6 +231,8 @@ Los textos se escriben en español dentro del código con `t("…")`. Cada idiom
 3. Añade la cuenta `tester@test.local`, contraseña `test`, servidor `127.0.0.1`, puerto `5299`, seguridad «TLS si está disponible».
 4. Añade `pingbot` a los remitentes de pings para que el ping simulado salga como tal.
 
+**Modo demo:** `npm run demo` abre la app ya llena de datos de ejemplo genéricos (pings de flota con formups hoy, mañana y el sábado, una flota sugerida y otra añadida a mano, menciones sin ver, salas con distintos niveles de aviso, la mini ventana) para revisar toda la interfaz. Usa un perfil nuevo en la carpeta temporal del sistema (nunca toca el tuyo; solo se guardan los 3 últimos de la demo), arranca el servidor simulado en `127.0.0.1` y lo cierra al cerrar la app. `npm run demo -- --keep` reutiliza el último perfil de la demo; un ping nuevo llega al minuto de conectar.
+
 Variables de diagnóstico:
 - `EVEX_DEBUG=1` muestra por consola la consola de la interfaz, los sonidos y el estado de la bandeja.
 - `EVEX_SHOT=ruta.png` guarda una captura al arrancar.
