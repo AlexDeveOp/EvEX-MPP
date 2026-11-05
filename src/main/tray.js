@@ -8,6 +8,8 @@ import { t } from "./i18n.js";
 
 let tray = null;
 let unread = 0;
+// «No molestar» de la app, tal como lo calcula la ventana (manual o por horario): { active, label }.
+let dnd = { active: false, label: "" };
 let options = { getWin: () => null, accounts: new Map(), showWindow: () => {}, send: () => {}, quit: () => {} };
 
 // Los iconos se dibujan píxel a píxel: se hace una vez y se reutilizan (el parpadeo de la bandeja los cambia cada 650 ms).
@@ -43,6 +45,9 @@ export function buildTrayMenu() {
     setAll("away", t("Ausente")),
     setAll("dnd", t("No molestar")),
     setAll("xa", t("Ausente (extendido)")),
+    { type: "separator" },
+    // Silencia los avisos de la app sin cambiar el estado XMPP; los pings de flota siguen sonando.
+    { label: dnd.active ? dnd.label : t("No molestar en la app (silenciar avisos)"), type: "checkbox", checked: dnd.active, click: () => options.send("dnd-toggle") },
     { type: "separator" },
     {
       label: t("Desconectar todo"),
@@ -88,6 +93,12 @@ export function createTray(o) {
     }, 3000);
   }
   return tray;
+}
+
+// La ventana avisa cuando «No molestar» cambia (también al empezar o acabar el horario): se rehace el menú.
+export function setTrayDnd(state) {
+  dnd = { active: !!state?.active, label: String(state?.label || "") };
+  getTray()?.setContextMenu(buildTrayMenu());
 }
 
 // El objeto de la bandeja puede cambiar (ver createTray): quien lo use debe pedirlo aquí cada vez.

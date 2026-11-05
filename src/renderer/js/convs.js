@@ -10,6 +10,7 @@ import { replaceShortcodes } from "./emoji.js";
 
 import { t } from "./i18n.js";
 import { speakPing } from "./tts.js";
+import { effectiveLevel, dndState, shouldAlert, badgeCount } from "./notify-rules.js";
 export function getConv(accountId, conv, type) {
   const key = convKey(accountId, conv);
   let c = S.convs.get(key);
@@ -192,15 +193,24 @@ export function markRead(key) {
   }
 }
 
+// Lo que cuenta en la barra de tareas: cada conversación según su nivel de aviso («Nada» no cuenta).
 export function totalUnread() {
   let n = 0;
-  for (const c of S.convs.values()) {
-    const mode = notifyMode(c);
-    if (c.type === "groupchat" && mode !== "all") n += c.mentions;
-    else n += c.unread;
-  }
+  for (const c of S.convs.values()) n += convBadge(c).count;
   return n;
 }
+
+// Número de la pestaña y de la barra lateral: { count, mention, level }.
+// En los chats privados, c.mentions cuenta todos los mensajes; para «solo menciones» se cuentan los que mencionan de
+// verdad entre los no leídos.
+export function convBadge(c) {
+  const level = notifyMode(c);
+  const mentions = c.type === "chat" && level === "mentions" ? c.messages.slice(-c.unread).filter((m) => m.mention && !m.out && !m.sys).length : c.mentions;
+  return { count: badgeCount(level, { unread: c.unread, mentions }), mention: mentions > 0 && level !== "none", level };
+}
+
+// «No molestar» ahora mismo (manual o por horario): { active, manual, scheduled, until }.
+export const dndNow = () => dndState(S.settings.notifications);
 
 export function updateBadge() {
   api("window:unread", totalUnread(), pingsConv().unread).catch(() => {});
@@ -221,12 +231,12 @@ function popupTime(ts, seconds) {
 
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
 
+// Nivel de aviso de una sala o un chat: "all", "mentions" o "none" (notify-rules.js). Se elige por conversación en
+// roomModes (clave de la conversación; vale también para los chats privados) o, en las salas, en su marcador.
 export function notifyMode(c) {
-  if (c.type !== "groupchat") return "all";
-  const room = account(c.accountId)?.rooms.find((r) => r.jid === c.conv);
-  const m = S.settings.notifications.roomModes[c.key] || (room?.notify !== "default" ? room?.notify : null);
-  if (m) return m;
-  return S.settings.notifications.allRoomMessages ? "all" : "mentions";
+  const n = S.settings.notifications;
+  const room = c.type === "groupchat" ? account(c.accountId)?.rooms.find((r) => r.jid === c.conv) : null;
+  return effectiveLevel(c.type, n.roomModes[c.key] || room?.notify, n);
 }
 
 export function mentionWords(c) {
@@ -341,18 +351,12 @@ function ruleExtras(rule) {
 function maybeNotify(c, msg, rule) {
   const n = S.settings.notifications;
   const forced = rule && rule.notify !== "never";
-  if (!n.enabled) return;
-  if ((n.dnd || conn(c.accountId).show === "dnd") && !(forced && rule.dnd)) return;
-  const mode = notifyMode(c);
-  let should = false;
-  if (forced && rule.notify === "always") should = true;
-  else if (c.type === "chat") should = n.privateMessages || forced;
-  else if (mode === "all") should = true;
-  else if (mode === "mentions") should = msg.mention && (n.mentions || forced);
+  const should = shouldAlert({ type: c.type, level: notifyMode(c), mention: msg.mention, rule, n, dnd: dndNow(), presenceDnd: conn(c.accountId).show === "dnd" });
   if (!should) return;
   const kind = c.type === "chat" ? "private" : msg.mention ? "mention" : "room";
-  if (forced) playRuleSound(rule, kind);
-  else playSound(kind);
+  // Si avisa es porque shouldAlert ya lo ha permitido (también con «No molestar» y menciones permitidas).
+  if (forced) playRuleSound(rule, kind, { dndOk: true });
+  else playSound(kind, { dndOk: true });
   const title = c.type === "groupchat" ? t("{nick} en {room}", { nick: msg.nick, room: convTitle(c) }) : convTitle(c);
   api("notify", {
     ...ruleExtras(rule),
@@ -372,7 +376,7 @@ function maybeNotify(c, msg, rule) {
 export function notifyAttention(c, nick) {
   systemMessage(c, t("{nick} te está llamando la atención.", { nick }), { icon: "bell-ring" });
   const n = S.settings.notifications;
-  if (!n.enabled || n.dnd || conn(c.accountId).show === "dnd") return;
+  if (!n.enabled || dndNow().active || conn(c.accountId).show === "dnd" || notifyMode(c) === "none") return;
   playSound("private");
   api("notify", {
     kind: "msg",

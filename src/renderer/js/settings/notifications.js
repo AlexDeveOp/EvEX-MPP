@@ -6,6 +6,7 @@ import { newRule, normalizeRule, compileRule } from "../keywords.js";
 import { t } from "../i18n.js";
 import { isWindows, onWindows, trayAvailable } from "../system.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
+import { dndGroup } from "./dnd-schedule.js";
 
 export const notificationTabs = {
   notifications() {
@@ -26,10 +27,10 @@ export const notificationTabs = {
       group(
         t("General"),
         toggle(n.enabled, (v) => set((x) => (x.enabled = v)), t("Notificaciones de escritorio")),
-        toggle(n.dnd, (v) => set((x) => (x.dnd = v)), t("No molestar"), t("Silencia todo excepto los pings de flota y los avisos de conexión perdida o recuperada")),
         toggle(n.showPreview, (v) => set((x) => (x.showPreview = v)), t("Mostrar el texto del mensaje en la notificación")),
         isWindows() ? toggle(n.flashTaskbar, (v) => set((x) => (x.flashTaskbar = v)), t("Hacer parpadear la barra de tareas")) : null,
       ),
+      dndGroup(),
       group(
         t("Aspecto del aviso"),
         field(

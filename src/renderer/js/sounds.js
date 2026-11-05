@@ -1,5 +1,6 @@
 // Sonidos sintetizados con WebAudio (sin ficheros) y reproducción de sonidos propios por tipo de aviso.
 import { S } from "./state.js";
+import { dndState } from "./notify-rules.js";
 
 import { t, tk } from "./i18n.js";
 let ctx = null;
@@ -105,10 +106,13 @@ function play(sound) {
   } catch {}
 }
 
-export function playSound(kind) {
+// dndOk: quien llama ya ha decidido que puede sonar aunque esté «No molestar» (p. ej. una mención con
+// «dejar pasar las menciones»).
+export function playSound(kind, { dndOk = false } = {}) {
   const n = S.settings.notifications;
   if (!n.sound) return;
-  if (n.dnd && !ALWAYS.has(kind)) return;
+  // «No molestar» (manual o por horario) calla todo menos los pings y los avisos de conexión.
+  if (dndState(n).active && !dndOk && !ALWAYS.has(kind)) return;
   const now = Date.now();
   if (now - (lastPlayed.get(kind) || 0) < COOLDOWN_MS) return;
   lastPlayed.set(kind, now);
@@ -118,10 +122,10 @@ export function playSound(kind) {
 
 // Sonido de una regla por palabra clave: el suyo propio o, con "default", el del aviso normal (kind).
 // Con «aunque esté en No molestar» activado en la regla, suena también en ese modo.
-export function playRuleSound(rule, kind) {
+export function playRuleSound(rule, kind, { dndOk = false } = {}) {
   const n = S.settings.notifications;
   if (!n.sound) return;
-  if (n.dnd && !rule.dnd && !ALWAYS.has(kind)) return;
+  if (dndState(n).active && !rule.dnd && !dndOk && !ALWAYS.has(kind)) return;
   const id = `rule:${rule.id}`;
   const now = Date.now();
   if (now - (lastPlayed.get(id) || 0) < COOLDOWN_MS) return;

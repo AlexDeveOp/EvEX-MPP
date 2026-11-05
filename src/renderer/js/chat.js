@@ -17,6 +17,7 @@ import { searchMissedPings } from "./ping-recovery.js";
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
 import { t } from "./i18n.js";
+import { convBadge, updateBadge } from "./convs.js";
 const panes = new Map();
 
 export function initChat() {
@@ -101,7 +102,7 @@ function renderTabs() {
     const c = S.convs.get(key);
     if (!c) return;
     const r = c.type === "groupchat" ? roomState(c.accountId, c.conv) : null;
-    const badge = c.type === "groupchat" && notifyMode(c) !== "all" ? c.mentions : c.unread;
+    const badge = convBadge(c).count;
     const tab = h(
       "div",
       {
@@ -178,13 +179,7 @@ export function convMenu(c) {
       { label: isFavorite(room) ? t("Quitar de favoritas") : t("Añadir a favoritas"), icon: isFavorite(room) ? "star-off" : "star", action: () => toggleFavorite(c.accountId, c.conv) },
       { label: t("Entrar automáticamente"), icon: "zap", checked: !!room?.autojoin, action: () => toggleAutojoin(c.accountId, c.conv) },
       "-",
-      { header: t("Notificaciones") },
-      ...[
-        ["default", t("Por defecto")],
-        ["all", t("Todos los mensajes")],
-        ["mentions", t("Solo menciones")],
-        ["none", t("Silenciada")],
-      ].map(([v, l]) => ({ label: l, checked: (S.settings.notifications.roomModes[c.key] || "default") === v, action: () => setRoomNotify(c, v) })),
+      ...notifyItems(c.key, c.type),
       "-",
       { label: t("Cambiar el tema…"), icon: "pencil", disabled: !canEditTopic(rs), hint: canEditTopic(rs) ? null : topicLockedReason(rs), action: () => openTopicEditor(c, pane(c)) },
       ...(rs.subject ? [{ label: t("Copiar el tema"), icon: "copy", action: () => navigator.clipboard.writeText(rs.subject) }] : []),
@@ -195,6 +190,7 @@ export function convMenu(c) {
       { label: t("Volver a entrar"), icon: "refresh-cw", action: () => rejoin(c) },
     );
   }
+  if (c.type === "chat") items.push(...notifyItems(c.key, c.type), "-");
   items.push(
     { label: t("Fondo de esta conversación…"), icon: "image", action: () => openBackgroundEditor(c.key) },
     { label: t("Buscar en el historial"), icon: "search", action: () => openSearch({ accountId: c.accountId, conv: c.conv }) },
@@ -213,12 +209,33 @@ async function rejoin(c) {
   await api("room:join", c.accountId, c.conv, r.nick || null).catch((e) => toast(e.message, { kind: "error" }));
 }
 
-function setRoomNotify(c, v) {
-  updateSettings((s) => {
-    if (v === "default") delete s.notifications.roomModes[c.key];
-    else s.notifications.roomModes[c.key] = v;
-  });
+// Nivel de aviso de una sala o un chat (clave de la conversación): «Como el ajuste general», «Todo», «Solo menciones y
+// palabras clave» o «Nada». Lo usan el menú ⋮, la campana de la cabecera y el clic derecho de la barra lateral.
+export function notifyItems(key, type) {
+  const general = type === "groupchat" && !S.settings.notifications.allRoomMessages ? t("solo menciones") : t("todo");
+  const cur = S.settings.notifications.roomModes[key] || "default";
+  return [
+    { header: t("Avisos") },
+    ...[
+      ["default", t("Como el ajuste general ({x})", { x: general })],
+      ["all", t("Todo")],
+      ["mentions", t("Solo menciones y palabras clave")],
+      ["none", t("Nada")],
+    ].map(([v, l]) => ({ label: l, checked: cur === v, action: () => setConvNotify(key, v) })),
+  ];
 }
+
+export function setConvNotify(key, v) {
+  updateSettings((s) => {
+    if (v === "default") delete s.notifications.roomModes[key];
+    else s.notifications.roomModes[key] = v;
+  });
+  emit("sidebar");
+  emit("tabs");
+  updateBadge();
+}
+
+const bellIcon = (c) => ({ none: "bell-off", all: "bell-ring" })[notifyMode(c)] || "bell";
 
 // Reglas: ⚡ (entrar al iniciar) implica ★ (favorita). Quitar la ★ saca la sala de la lista y también quita el ⚡.
 const isFavorite = (r) => !!r && (r.favorite || r.autojoin);
@@ -466,7 +483,7 @@ function renderHeader(c, p) {
         topicBtn,
         iconButton("star", isFavorite(room) ? t("Favorita (clic para quitarla de la lista)") : t("Añadir a favoritas"), () => toggleFavorite(c.accountId, c.conv), isFavorite(room) ? "on star" : ""),
         iconButton("zap", room?.autojoin ? t("Se abre al iniciar (clic para desactivar)") : t("Abrir automáticamente al iniciar"), () => toggleAutojoin(c.accountId, c.conv), room?.autojoin ? "on zap" : ""),
-        iconButton(notifyMode(c) === "none" ? "bell-off" : notifyMode(c) === "all" ? "bell-ring" : "bell", t("Notificaciones"), (e) => menuFor(e.currentTarget, convMenu(c).filter((x) => x.checked !== undefined || x.header))),
+        iconButton(bellIcon(c), t("Avisos de esta sala"), (e) => menuFor(e.currentTarget, notifyItems(c.key, c.type)), notifyMode(c) === "none" ? "on muted-bell" : ""),
         iconButton("search", t("Buscar en el historial"), () => openSearch({ accountId: c.accountId, conv: c.conv })),
         iconButton("panel-right", t("Mostrar/ocultar participantes"), () => updateSettings((s) => (s.layout.showOccupants = !s.layout.showOccupants))),
         iconButton("ellipsis-vertical", t("Más opciones"), (e) => menuFor(e.currentTarget, convMenu(c))),
@@ -489,6 +506,7 @@ function renderHeader(c, p) {
     h(
       "div",
       { class: "conv-actions" },
+      iconButton(bellIcon(c), t("Avisos de este chat"), (e) => menuFor(e.currentTarget, notifyItems(c.key, c.type)), notifyMode(c) === "none" ? "on muted-bell" : ""),
       iconButton("search", t("Buscar en el historial"), () => openSearch({ accountId: c.accountId, conv: c.conv })),
       iconButton("ellipsis-vertical", t("Más opciones"), (e) => menuFor(e.currentTarget, convMenu(c))),
     ),
