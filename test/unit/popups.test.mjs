@@ -1,7 +1,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { app, Notification, BrowserWindow } from "electron";
-import { systemPopups, showPopup, closeAllPopups, configurePopups } from "../../src/main/popups.js";
+import { systemPopups, showPopup, closeAllPopups, configurePopups, isSticky } from "../../src/main/popups.js";
 
 const saved = { platform: process.platform, env: { ...process.env } };
 const setPlatform = (p) => Object.defineProperty(process, "platform", { value: p, configurable: true });
@@ -97,4 +97,15 @@ test("si la notificación del sistema falla (sin servicio de notificaciones), sa
   assert.equal(BrowserWindow.created.length, 1, "y al fallar, la burbuja propia (una sola)");
   assert.match(BrowserWindow.created[0].url, /^app:\/\/evex\/popup\.html\?id=\d+$/);
   closeAllPopups();
+});
+
+test("el aviso antes del formup obedece solo a su opción, aunque los pings se queden en pantalla", () => {
+  // Antes «los pings se quedan» lo dejaba fijo aunque «El aviso se queda en pantalla» estuviera desactivado.
+  assert.equal(isSticky({ kind: "ping", reminder: true, sticky: false }, true), false);
+  assert.equal(isSticky({ kind: "ping", reminder: true, sticky: true }, false), true);
+  // Un ping normal sigue la opción de los pings; una regla con «se queda» siempre se queda.
+  assert.equal(isSticky({ kind: "ping" }, true), true);
+  assert.equal(isSticky({ kind: "ping" }, false), false);
+  assert.equal(isSticky({ kind: "message", sticky: true }, false), true);
+  assert.equal(isSticky({ kind: "message" }, true), false);
 });

@@ -99,10 +99,18 @@ export function systemPopups() {
 
 const systemNotes = new Map(); // id → { note, data }
 
+// ¿La burbuja se queda hasta cerrarla? Un ping, si así lo dice «Los pings se quedan en pantalla»; una regla, según la
+// suya. Los recordatorios (el aviso antes del formup) solo obedecen a su propia opción: antes la de los pings la pisaba
+// y el recordatorio se quedaba fijo aunque se hubiera desactivado.
+export function isSticky(data, pingSticky = options.pingSticky) {
+  if (data.reminder) return !!data.sticky;
+  return !!(data.sticky || (data.kind === "ping" && pingSticky));
+}
+
 function showSystemNotification(id, data) {
   const body = [data.text, ...(data.fields || []).map((f) => `${f.key}: ${f.value}`)].filter(Boolean).join("\n");
   const ping = data.kind === "ping";
-  const sticky = data.sticky || (ping && options.pingSticky);
+  const sticky = isSticky(data);
   const note = new Notification({
     title: data.title || "EvEX-MPP",
     body: body.slice(0, 400),
@@ -170,7 +178,7 @@ function showCustomPopup(id, data) {
 
 function armTimer(p) {
   clearTimeout(p.timer);
-  const sticky = p.data.sticky || (p.data.kind === "ping" && options.pingSticky);
+  const sticky = isSticky(p.data);
   if (!sticky) p.timer = setTimeout(() => closePopup(p.id), Math.max(3, options.duration) * 1000);
 }
 
