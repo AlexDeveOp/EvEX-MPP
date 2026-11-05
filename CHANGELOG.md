@@ -15,10 +15,20 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Move it by its top bar and resize it from the corner grip. It remembers its size and place on each monitor, and comes back on screen if that monitor is unplugged.
   - On Wayland the desktop decides where windows go, so it may not stay on top. Preferences says so.
 - **Mentions inbox:** a *Mentions* entry under *Fleet pings* in the sidebar gathers the room messages that mention you (your nickname, alias, username or room nickname, and the mention words in *Preferences → Notifications*) or match one of your keyword rules.
+  - The entry only appears when there are mentions you haven't seen, and stays while its tab is open; after you see them and leave the inbox, it hides again. *Always show the mentions inbox* (*Preferences → Notifications*) keeps it visible, and Ctrl+K opens it at any time. Mentions are gathered either way.
   - Each entry shows the room, who wrote it, how long ago, local and EVE time, and the text with the mention highlighted. Click it (or press Enter) to open the room at that message, loading older history if needed; the message is highlighted for a moment.
   - Filter by text or by room. The counter shows the ones you haven't seen. They count as seen when you leave the inbox, with *Mark all as seen*, or when you read them in their room.
   - It is filled from the local history when the app starts (rooms active in the last 30 days, the last 1,000 messages of each), so mentions from before you opened the app are there too, and new ones arrive live. Large rooms are read from the end of the file, not in full.
   - The count does not add to the taskbar badge, which already counts the room's mentions.
+- **Alerts per room and per chat.** Each room and private chat can be set to *Use the general setting*, *Everything*, *Only mentions and keywords* or *Nothing*.
+  - Set it from the bell in the conversation header, the ⋮ menu or a right-click on the room or contact in the sidebar.
+  - It affects sound, pop-up, taskbar flashing and the unread numbers on tabs, sidebar and taskbar. *Nothing* doesn't count at all and shows a crossed-out bell in the sidebar.
+  - Messages are still saved. Keyword rules set to *always alert* still win, as before.
+- **Do not disturb on a schedule** (*Preferences → Notifications → Do not disturb*).
+  - From–to times that can cross midnight (23:00–07:00), on chosen days of the week.
+  - Optionally *Let mentions through*.
+  - A quick toggle in your status menu and in the tray menu, and a notice in the title bar while it is on. Clicking the notice turns it off; during the schedule, it stays off until that window ends.
+  - It doesn't change your XMPP status. Fleet pings and connection lost or restored alerts always get through; the voice of pings and of the formup reminder follows the same rule.
 
 ### Changed
 - **Pop-ups now appear on the main screen by default.** Before, they appeared on the screen where the mouse was, so with two monitors a ping could show up on the secondary one. New option *Pop-up screen* (*Preferences → Notifications*, next to the corner): *Main screen* (the default), *Where the mouse is* (the old behavior), *Screen with the EvEX-MPP window*, or a specific monitor by number and resolution. Picking one shows a test pop-up there.

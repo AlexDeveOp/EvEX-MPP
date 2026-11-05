@@ -47,6 +47,8 @@ export const DEFAULT_SETTINGS = {
     mentions: true,
     allRoomMessages: false,
     pings: true,
+    // La entrada «Menciones» de la barra lateral solo sale con menciones sin ver, salvo que se pida verla siempre.
+    alwaysShowMentions: false,
     keywords: [],
     // Reglas por palabra clave: palabras, dónde se aplican y su aviso, sonido y color (ver renderer/js/keywords.js).
     keywordRules: [],
@@ -79,6 +81,12 @@ export const DEFAULT_SETTINGS = {
     pingSticky: true,
     trayBlink: true,
     dnd: false,
+    // «No molestar» por horario (renderer/js/notify-rules.js): de–a (puede cruzar la medianoche) y días (0 = domingo).
+    // dndSkipUntil: se apagó a mano durante el horario; no vuelve hasta ese momento (fin del tramo).
+    dndSchedule: { enabled: false, from: "01:00", to: "08:00", days: [1, 2, 3, 4, 5, 6, 0] },
+    dndAllowMentions: false,
+    dndSkipUntil: 0,
+    // Nivel de aviso por sala o chat (clave de la conversación): "all", "mentions" o "none".
     roomModes: {},
   },
   pingSenders: [],

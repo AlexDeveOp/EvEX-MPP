@@ -3,7 +3,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { app, Tray } from "electron";
-import { createTray, getTray, buildTrayMenu, refreshTray, setUnread } from "../../src/main/tray.js";
+import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd, trayLook } from "../../src/main/tray.js";
 import * as store from "../../src/main/store.js";
 import { tempDir } from "./helpers.mjs";
 
@@ -47,9 +47,34 @@ test("createTray pone el icono reducido a 16 px, el nombre de la app y el menú"
   assert.deepEqual(tray.image.size, { width: 16, height: 16, quality: "best" });
   assert.deepEqual(
     tray.menu.items.filter((i) => i.label).map((i) => i.label),
-    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "Desconectar todo", "Mini ventana para jugar", "Salir"],
+    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "No molestar en la app (silenciar avisos)", "Desconectar todo", "Mini ventana para jugar", "Salir"],
   );
-  assert.equal(tray.menu.items.filter((i) => i.type === "separator").length, 3);
+  assert.equal(tray.menu.items.filter((i) => i.type === "separator").length, 4);
+});
+
+test("la casilla «No molestar en la app» refleja el estado de la ventana y al pulsarla se lo pide a la ventana", (t) => {
+  const tray = setup(t);
+  const off = item(buildTrayMenu(), "No molestar en la app (silenciar avisos)");
+  assert.equal(off.type, "checkbox");
+  assert.equal(off.checked, false);
+  setTrayDnd({ active: true, label: "No molestar hasta las 08:00 (horario)" });
+  const on = item(tray.menu, "No molestar hasta las 08:00 (horario)");
+  assert.ok(on, "el menú de la bandeja se rehace con la etiqueta del estado");
+  assert.equal(on.checked, true);
+  on.click();
+  assert.deepEqual(calls.sent, ["dnd-toggle"]);
+  setTrayDnd({ active: false });
+  assert.equal(item(tray.menu, "No molestar en la app (silenciar avisos)").checked, false);
+});
+
+test("al pulsar la casilla, el menú vuelve al estado real hasta que la ventana lo confirme", (t) => {
+  const tray = setup(t);
+  setTrayDnd({ active: false });
+  const box = item(tray.menu, "No molestar en la app (silenciar avisos)");
+  box.checked = true; // lo que hace el menú nativo al pulsarla
+  box.click();
+  assert.equal(calls.sent.at(-1), "dnd-toggle");
+  assert.equal(item(tray.menu, "No molestar en la app (silenciar avisos)").checked, false, "sin confirmación de la ventana sigue desmarcada");
 });
 
 test("el menú de la bandeja muestra la ventana, cambia de cuenta, de estado, desconecta y sale", (t) => {
@@ -199,4 +224,25 @@ test("la casilla «Mini ventana para jugar» enseña si está abierta y pide abr
   open = true;
   mini = item(buildTrayMenu(), "Mini ventana para jugar");
   assert.equal(mini.checked, true, "al rehacer el menú, marcada");
+});
+
+test("trayLook: icono, insignias y texto según sin leer, pings y «No molestar»", () => {
+  assert.deepEqual(trayLook({}), { kind: "normal", badge: false, muted: false, tooltip: "EvEX-MPP" });
+  assert.deepEqual(trayLook({ unread: 3 }), { kind: "normal", badge: true, muted: false, tooltip: "EvEX-MPP — 3 sin leer" });
+  assert.deepEqual(trayLook({ dnd: { active: true, label: "No molestar activado" } }), { kind: "normal", badge: false, muted: true, tooltip: "EvEX-MPP · No molestar activado" });
+  const all = trayLook({ unread: 2, pings: 1, dnd: { active: true, label: "No molestar hasta las 08:00 (horario)" } });
+  assert.deepEqual(all, { kind: "alert", badge: true, muted: true, tooltip: "¡1 ping de flota sin leer! · No molestar hasta las 08:00 (horario)" });
+  assert.equal(trayLook({ dnd: { active: true } }).tooltip, "EvEX-MPP · No molestar", "sin etiqueta, el texto genérico");
+});
+
+test("setTrayDnd cambia el icono de la bandeja y su texto, y vuelve al quitarlo", (t) => {
+  const tray = setup(t);
+  setTrayDnd({ active: false });
+  const plain = tray.image;
+  setTrayDnd({ active: true, label: "No molestar activado" });
+  assert.notEqual(tray.image, plain, "icono con la campana tachada");
+  assert.equal(tray.tooltip, "EvEX-MPP · No molestar activado");
+  setTrayDnd({ active: false });
+  assert.equal(tray.image, plain);
+  assert.equal(tray.tooltip, "EvEX-MPP");
 });

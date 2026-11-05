@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
-import { mentionMatch, mentionsConv, addMention, loadMentions, markMentionsSeen, markRoomMentionsSeen, isRoomLog, visibleMentions, mentionRooms, HISTORY_DAYS } from "../../src/renderer/js/mentions.js";
+import { mentionMatch, mentionsConv, addMention, loadMentions, markMentionsSeen, markRoomMentionsSeen, isRoomLog, visibleMentions, mentionRooms, showMentionsEntry, HISTORY_DAYS } from "../../src/renderer/js/mentions.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
 const ROOM = "ops@conference.example.com";
@@ -137,4 +137,28 @@ test("la entrada guarda el texto tal cual, con sus caracteres invisibles", () =>
   assert.ok(it);
   assert.equal(it.body, body);
   assert.equal(mentionsConv().messages.find((x) => x.key === "zw1").body, body);
+});
+
+test("la entrada «Menciones» está oculta salvo con menciones sin ver, con su pestaña abierta o con «Mostrar siempre»", () => {
+  assert.equal(showMentionsEntry({ always: false, pending: 0, open: false, active: false }), false);
+  assert.equal(showMentionsEntry({ always: false, pending: 2, open: false, active: false }), true);
+  assert.equal(showMentionsEntry({ always: false, pending: 0, open: true, active: false }), true);
+  assert.equal(showMentionsEntry({ always: false, pending: 0, open: false, active: true }), true);
+  assert.equal(showMentionsEntry({ always: true, pending: 0, open: false, active: false }), true);
+  // Con los valores de la app: al ver las menciones y cerrar la pestaña, se vuelve a ocultar.
+  S.settings.notifications.alwaysShowMentions = false;
+  const c = mentionsConv();
+  addMention("a1", OTHER, msg({ key: "hide1", ts: Date.now() + 5000, body: "Bob, mira" }));
+  S.tabs = [];
+  S.active = null;
+  assert.ok(c.pending > 0);
+  assert.equal(showMentionsEntry(), true);
+  markMentionsSeen(Date.now() + 10000);
+  assert.equal(c.pending, 0);
+  assert.equal(showMentionsEntry(), false, "la recogida sigue, pero la entrada no se ve");
+  S.tabs = ["mentions|*"];
+  assert.equal(showMentionsEntry(), true);
+  S.settings.notifications.alwaysShowMentions = true;
+  S.tabs = [];
+  assert.equal(showMentionsEntry(), true);
 });

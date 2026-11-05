@@ -1,9 +1,9 @@
 // Barra lateral: cuentas y estado, pings, salas (favoritas / abiertas) y contactos.
 import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, MENTIONS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
-import { mentionsConv } from "./mentions.js";
+import { mentionsConv, showMentionsEntry } from "./mentions.js";
 import { h, icon, iconButton, $, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle, keepHover, morphChildren } from "./dom.js";
-import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
-import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";
+import { openConv, closeConv, notifyMode, pingsConv, convBadge } from "./convs.js";
+import { toggleFavorite, toggleAutojoin, avatarEl, notifyItems } from "./chat.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openAccounts, connectWithPrompt, openSwitchAccount } from "./accounts.js";
 import { openBackgroundEditor, openAvatarSettings } from "./settings.js";
@@ -11,6 +11,8 @@ import { openSearch } from "./search.js";
 import { sidebarSirenTs } from "./pings.js";
 
 import { t } from "./i18n.js";
+import { effectiveLevel } from "./notify-rules.js";
+import { dndNow, dndLabel, toggleDndNow } from "./dnd.js";
 const collapsed = new Set(JSON.parse(localStorage.getItem("evex.collapsed") || "[]"));
 let filter = "";
 let reapplyHover = null;
@@ -93,9 +95,10 @@ function renderSidebar() {
       pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,
     ),
   );
-  // Bandeja de menciones: los mensajes de las salas que te mencionan o coinciden con tus palabras clave.
+  // Bandeja de menciones: los mensajes de las salas que te mencionan o coinciden con tus palabras clave. Solo sale
+  // cuando hay algo sin ver o su pestaña está abierta (o con «Mostrar siempre…»); Ctrl+K la abre siempre.
   const mc = mentionsConv();
-  root.append(
+  if (showMentionsEntry()) root.append(
     h(
       "div",
       {
@@ -201,6 +204,9 @@ function statusMenu(acc) {
     },
     { label: t("Cambiar mi avatar…"), icon: "image", action: () => openAvatarSettings(acc.id) },
     "-",
+    // «No molestar» de la app (solo avisos; tu estado XMPP no cambia). Los pings de flota siguen sonando.
+    { label: dndNow().active ? dndLabel() : t("No molestar en la app (silenciar avisos)"), icon: "bell-off", checked: dndNow().active, hint: t("Solo suenan los pings de flota"), action: toggleDndNow },
+    "-",
     online ? { label: t("Desconectar"), icon: "power", action: () => api("account:disconnect", acc.id) } : { label: t("Conectar"), icon: "log-in", action: () => connectWithPrompt(acc.id) },
     { label: t("Cambiar de cuenta…"), icon: "refresh-cw", action: openSwitchAccount },
     { label: t("Configurar cuenta…"), icon: "user-cog", action: () => openAccounts(acc.id) },
@@ -243,19 +249,28 @@ function joinMenu(acc) {
   ];
 }
 
+// Nivel de aviso de una fila de la barra lateral, aunque la conversación aún no esté abierta.
+function rowLevel(key, type, room) {
+  const c = S.convs.get(key);
+  return c ? notifyMode(c) : effectiveLevel(type, S.settings.notifications.roomModes[key] || room?.notify, S.settings.notifications);
+}
+// Campana tachada discreta para las salas y chats en «Nada».
+const mutedMark = (level) => (level === "none" ? h("span", { class: "sb-muted", title: t("Avisos: nada") }, icon("bell-off")) : null);
+
 function roomItem(acc, room) {
   const fav = !!(room.favorite || room.autojoin);
   const key = convKey(acc.id, room.jid);
   const c = S.convs.get(key);
   const r = roomState(acc.id, room.jid);
-  const mode = c ? notifyMode(c) : "mentions";
-  const badge = c ? (mode === "all" ? c.unread : c.mentions) : 0;
-  const dim = c && !c.mentions && c.unread && mode !== "all";
+  const mode = rowLevel(key, "groupchat", room);
+  const b = c ? convBadge(c) : null;
+  const badge = b ? b.count : 0;
+  const dim = c && !b.mention && c.unread && mode !== "all";
   return h(
     "div",
     {
       "data-key": key,
-      class: `sb-item room ${S.active === key ? "active" : ""} ${r.joined ? "joined" : r.joining ? "joining" : "parted"} ${c?.unread ? "unread" : ""} ${dim ? "quiet-unread" : ""}`,
+      class: `sb-item room ${S.active === key ? "active" : ""} ${r.joined ? "joined" : r.joining ? "joining" : "parted"} ${c?.unread && mode !== "none" ? "unread" : ""} ${dim && mode !== "none" ? "quiet-unread" : ""}`,
       title: `${room.jid}${r.subject ? `\n${r.subject}` : ""}`,
       onclick: () => openConv(acc.id, room.jid, "groupchat"),
       oncontextmenu: (e) => {
@@ -265,8 +280,9 @@ function roomItem(acc, room) {
     },
     icon(r.error ? "triangle-alert" : "hash", "sb-icon"),
     h("span", { class: "sb-name" }, room.name || room.jid.split("@")[0]),
+    mutedMark(mode),
     r.joined ? h("span", { class: "sb-meta" }, r.occupants.size) : null,
-    badge ? h("span", { class: `badge ${c.mentions ? "mention" : ""}` }, badge > 99 ? "99+" : badge) : null,
+    badge ? h("span", { class: `badge ${b.mention ? "mention" : ""}` }, badge > 99 ? "99+" : badge) : null,
     h(
       "span",
       { class: "sb-quick" },
@@ -285,21 +301,7 @@ function roomMenu(acc, room) {
     "-",
     { label: t("Favorita"), icon: "star", checked: !!(room.favorite || room.autojoin), action: () => toggleFavorite(acc.id, room.jid) },
     { label: t("Entrar automáticamente al iniciar"), icon: "zap", checked: !!room.autojoin, action: () => toggleAutojoin(acc.id, room.jid) },
-    { header: t("Notificaciones") },
-    ...[
-      ["default", t("Por defecto")],
-      ["all", t("Todos los mensajes")],
-      ["mentions", t("Solo menciones")],
-      ["none", t("Silenciada")],
-    ].map(([v, l]) => ({
-      label: l,
-      checked: (S.settings.notifications.roomModes[key] || "default") === v,
-      action: () =>
-        updateSettings((s) => {
-          if (v === "default") delete s.notifications.roomModes[key];
-          else s.notifications.roomModes[key] = v;
-        }),
-    })),
+    ...notifyItems(key, "groupchat", room),
     "-",
     {
       label: t("Renombrar…"),
@@ -399,11 +401,13 @@ function contactsSection(acc) {
 function contactItem(acc, c, p) {
   const key = convKey(acc.id, c.jid);
   const conv = S.convs.get(key);
+  const level = rowLevel(key, "chat");
+  const badge = conv ? convBadge(conv).count : 0;
   return h(
     "div",
     {
       "data-key": key,
-      class: `sb-item contact ${p.show} ${S.active === key ? "active" : ""} ${conv?.unread ? "unread" : ""}`,
+      class: `sb-item contact ${p.show} ${S.active === key ? "active" : ""} ${conv?.unread && level !== "none" ? "unread" : ""}`,
       title: `${c.jid}${p.status ? `\n${p.status}` : ""}`,
       onclick: () => openConv(acc.id, c.jid, "chat"),
       oncontextmenu: (e) => {
@@ -413,7 +417,8 @@ function contactItem(acc, c, p) {
     },
     avatarEl(c.jid, c.name || c.jid, "sb-avatar", p.show),
     h("span", { class: "sb-name-wrap" }, h("span", { class: "sb-name" }, c.name || c.jid.split("@")[0]), p.status ? h("span", { class: "sb-status" }, p.status) : null),
-    conv?.unread ? h("span", { class: "badge mention" }, conv.unread) : null,
+    mutedMark(level),
+    badge ? h("span", { class: "badge mention" }, badge) : null,
   );
 }
 
@@ -421,6 +426,8 @@ function contactMenu(acc, c) {
   return [
     { label: t("Enviar mensaje"), icon: "message-square", action: () => openConv(acc.id, c.jid, "chat") },
     { label: t("Buscar en el historial"), icon: "search", action: () => openSearch({ accountId: acc.id, conv: c.jid }) },
+    "-",
+    ...notifyItems(convKey(acc.id, c.jid), "chat"),
     "-",
     {
       label: t("Renombrar…"),

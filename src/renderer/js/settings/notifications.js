@@ -6,6 +6,7 @@ import { newRule, normalizeRule, compileRule } from "../keywords.js";
 import { t } from "../i18n.js";
 import { isWindows, onWindows, trayAvailable } from "../system.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
+import { dndGroup } from "./dnd-schedule.js";
 
 // Pantalla de las burbujas. Los monitores se piden al abrir Preferencias (pueden cambiar); al elegir una opción sale
 // una burbuja de prueba en esa pantalla. En Wayland las burbujas son notificaciones del sistema: la opción no aplica.
@@ -64,10 +65,10 @@ export const notificationTabs = {
       group(
         t("General"),
         toggle(n.enabled, (v) => set((x) => (x.enabled = v)), t("Notificaciones de escritorio")),
-        toggle(n.dnd, (v) => set((x) => (x.dnd = v)), t("No molestar"), t("Silencia todo excepto los pings de flota y los avisos de conexión perdida o recuperada")),
         toggle(n.showPreview, (v) => set((x) => (x.showPreview = v)), t("Mostrar el texto del mensaje en la notificación")),
         isWindows() ? toggle(n.flashTaskbar, (v) => set((x) => (x.flashTaskbar = v)), t("Hacer parpadear la barra de tareas")) : null,
       ),
+      dndGroup(),
       group(
         t("Aspecto del aviso"),
         field(
@@ -111,6 +112,7 @@ export const notificationTabs = {
         t("Cuándo avisar"),
         toggle(n.privateMessages, (v) => set((x) => (x.privateMessages = v)), t("Mensajes privados")),
         toggle(n.mentions, (v) => set((x) => (x.mentions = v)), t("Cuando te mencionan en una sala")),
+        toggle(!!n.alwaysShowMentions, (v) => set((x) => (x.alwaysShowMentions = v)), t("Mostrar siempre la bandeja de menciones"), t("Si no, «Menciones» solo aparece en la barra lateral cuando hay menciones sin ver. También se abre con Ctrl+K.")),
         toggle(n.allRoomMessages, (v) => set((x) => (x.allRoomMessages = v)), t("Todos los mensajes de todas las salas"), t("Se puede ajustar por sala con clic derecho")),
         toggle(n.pings, (v) => set((x) => (x.pings = v)), t("Pings de flota (remitentes configurados en «Pings de flota»)")),
         field(t("Palabras clave que cuentan como mención"), kw),

@@ -11,7 +11,7 @@ import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
 import { configureMini, applyMini, miniIpc, isMiniOpen, miniOnTop } from "./mini-window.js";
-import { createTray, getTray, buildTrayMenu, refreshTray, setUnread } from "./tray.js";
+import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
 import { registerMediaIpc } from "./media-ipc.js";
@@ -770,6 +770,7 @@ function registerIpc() {
   });
 
   handle("window:unread", (count, pings) => setUnread(count, pings));
+  handle("dnd:state", (state) => setTrayDnd(state));
   // Botones propios de la ventana (la barra de título la dibuja la app). Cerrar pasa por win.on("close"):
   // con «cerrar a la bandeja» activado, la ventana solo se oculta.
   handle("window:minimize", () => win?.minimize());

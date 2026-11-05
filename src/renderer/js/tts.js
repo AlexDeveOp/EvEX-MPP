@@ -1,6 +1,7 @@
 // Lectura en voz alta de los pings de flota con las voces instaladas en Windows (speechSynthesis de Chromium, que en
 // Windows usa las voces del sistema: no se envía nada a Internet). Ajustes en Preferencias → Pings de flota.
 import { S } from "./state.js";
+import { dndState } from "./notify-rules.js";
 import { parsePing } from "./pings.js";
 
 export const VOICE_DEFAULTS = {
@@ -101,7 +102,7 @@ export function pingSpeech(body, cfg = voiceSettings()) {
 }
 
 // ¿Se lee este ping? (activado, ventana, «No molestar» y grupos de destino).
-export function shouldSpeak(body, cfg = voiceSettings(), { focused = S.focused, dnd = S.settings?.notifications?.dnd } = {}) {
+export function shouldSpeak(body, cfg = voiceSettings(), { focused = S.focused, dnd = dndState(S.settings?.notifications).active } = {}) {
   if (!cfg.enabled) return false;
   if (cfg.when === "unfocused" && focused) return false;
   if (dnd && !cfg.dnd) return false;

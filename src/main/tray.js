@@ -8,6 +8,8 @@ import { t } from "./i18n.js";
 
 let tray = null;
 let unread = 0;
+// «No molestar» de la app, tal como lo calcula la ventana (manual o por horario): { active, label }.
+let dnd = { active: false, label: "" };
 let options = { getWin: () => null, accounts: new Map(), showWindow: () => {}, send: () => {}, quit: () => {} };
 
 // Los iconos se dibujan píxel a píxel: se hace una vez y se reutilizan (el parpadeo de la bandeja los cambia cada 650 ms).
@@ -17,9 +19,17 @@ function cachedIcon(key, make) {
   return iconCache.get(key);
 }
 
+// Qué enseña la bandeja: el icono (normal o la sirena de pings), el punto rojo de sin leer, la campana tachada de
+// «No molestar» (abajo a la derecha, compatible con los otros dos) y el texto al pasar el ratón.
+export function trayLook({ unread: n = 0, pings = 0, dnd: d = { active: false, label: "" } } = {}) {
+  const muted = !!d.active;
+  const base = pings ? t("¡{pingAlert} ping{x} de flota sin leer!", { pingAlert: pings, x: pings > 1 ? "s" : "" }) : n ? t("EvEX-MPP — {unread} sin leer", { unread: n }) : "EvEX-MPP";
+  return { kind: pings ? "alert" : "normal", badge: n > 0, muted, tooltip: muted ? `${base} · ${d.label || t("No molestar")}` : base };
+}
+
 function trayImage() {
-  const badge = unread > 0;
-  return cachedIcon(`tray:${badge}`, () => nativeImage.createFromBuffer(renderIcon(64, { badge })).resize({ width: 16, height: 16, quality: "best" }));
+  const { badge, muted } = trayLook({ unread, dnd });
+  return cachedIcon(`tray:${badge}:${muted}`, () => nativeImage.createFromBuffer(renderIcon(64, { badge, muted })).resize({ width: 16, height: 16, quality: "best" }));
 }
 
 export function buildTrayMenu() {
@@ -43,6 +53,19 @@ export function buildTrayMenu() {
     setAll("away", t("Ausente")),
     setAll("dnd", t("No molestar")),
     setAll("xa", t("Ausente (extendido)")),
+    { type: "separator" },
+    // Silencia los avisos de la app sin cambiar el estado XMPP; los pings de flota siguen sonando.
+    {
+      label: dnd.active ? dnd.label : t("No molestar en la app (silenciar avisos)"),
+      type: "checkbox",
+      checked: dnd.active,
+      // El menú marca la casilla solo al pulsarla: se rehace con el estado real hasta que la ventana lo confirme con
+      // setTrayDnd (si aún no ha arrancado, el clic no cambia nada y la casilla no debe quedar marcada).
+      click: () => {
+        options.send("dnd-toggle");
+        getTray()?.setContextMenu(buildTrayMenu());
+      },
+    },
     { type: "separator" },
     {
       label: t("Desconectar todo"),
@@ -97,6 +120,14 @@ export function createTray(o) {
   return tray;
 }
 
+// La ventana avisa cuando «No molestar» cambia (también al empezar o acabar el horario): se rehace el menú.
+export function setTrayDnd(state) {
+  dnd = { active: !!state?.active, label: String(state?.label || "") };
+  getTray()?.setContextMenu(buildTrayMenu());
+  // El icono lleva la campana tachada mientras está activo, y el texto al pasar el ratón dice hasta cuándo.
+  refreshTray();
+}
+
 // El objeto de la bandeja puede cambiar (ver createTray): quien lo use debe pedirlo aquí cada vez.
 export const getTray = () => (tray && !tray.isDestroyed() ? tray : null);
 
@@ -104,7 +135,10 @@ export const getTray = () => (tray && !tray.isDestroyed() ? tray : null);
 let pingAlert = 0;
 let blinkTimer = null;
 let blinkOn = false;
-const alertImage = () => cachedIcon("alert", () => nativeImage.createFromBuffer(renderAlertIcon(64)).resize({ width: 16, height: 16, quality: "best" }));
+const alertImage = () => {
+  const muted = !!dnd.active;
+  return cachedIcon(`alert:${muted}`, () => nativeImage.createFromBuffer(renderAlertIcon(64, undefined, undefined, { muted })).resize({ width: 16, height: 16, quality: "best" }));
+};
 
 export function refreshTray() {
   if (!tray) return;
@@ -112,9 +146,10 @@ export function refreshTray() {
   if (process.env.EVEX_DEBUG) console.log(`[bandeja] sin leer=${unread} pings=${pingAlert}`);
   clearInterval(blinkTimer);
   blinkTimer = null;
+  const look = trayLook({ unread, pings: pingAlert, dnd });
   if (pingAlert) {
     tray.setImage(alertImage());
-    tray.setToolTip(t("¡{pingAlert} ping{x} de flota sin leer!", { pingAlert, x: pingAlert > 1 ? "s" : "" }));
+    tray.setToolTip(look.tooltip);
     if (store.get().settings.notifications.trayBlink) {
       blinkOn = true;
       blinkTimer = setInterval(() => {
@@ -124,7 +159,7 @@ export function refreshTray() {
     }
   } else {
     tray.setImage(trayImage());
-    tray.setToolTip(unread ? t("EvEX-MPP — {unread} sin leer", { unread }) : "EvEX-MPP");
+    tray.setToolTip(look.tooltip);
   }
   if (win && process.platform === "win32") {
     const overlay = pingAlert ? cachedIcon("overlay:alert", () => nativeImage.createFromBuffer(renderAlertIcon(32))) : unread ? cachedIcon("overlay:badge", () => nativeImage.createFromBuffer(renderBadge())) : null;

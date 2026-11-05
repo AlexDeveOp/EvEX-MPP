@@ -110,12 +110,14 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Opcionalmente, la notificación de Windows en lugar de la burbuja, o ambas.
 - **«!» ámbar parpadeando en la bandeja** mientras haya pings sin leer, y parpadeo de la barra de tareas.
 - **Sonido distinto para cada tipo de aviso**: privado, mención, sala, mensaje enviado, ping, conexión perdida y recuperada, contactos que se conectan o desconectan, solicitudes de contacto e invitaciones a salas. 13 sonidos incluidos o un archivo tuyo, cada uno con su volumen, elección de la salida de audio (p. ej. los auriculares), repetición opcional del ping hasta que mires la ventana e **Importar sonidos de Pidgin** (se copian de tu Pidgin instalado).
+- **Avisos por sala y por chat**: *Todo*, *Solo menciones y palabras clave* o *Nada* (o el ajuste general), desde la campana de la cabecera, el menú ⋮ o el clic derecho en la barra lateral. Las salas en *Nada* muestran una campana tachada y no suman en los contadores.
+- **No molestar**, a mano o **con horario** (p. ej. 01:00–08:00 los días que elijas), con la opción de dejar pasar las menciones. Se activa desde el menú de tu estado, la bandeja o el aviso de la barra de título. Los pings de flota pasan siempre.
 - Todo funciona igual con la ventana **minimizada o escondida en la bandeja**.
 
 **Mensajes**
 - Hora local (gris) y **hora EVE/UTC** (ámbar) en cada mensaje; cualquiera de las dos se puede ocultar. Reloj EVE en la barra de título.
 - Historial local con búsqueda y menciones con palabras clave.
-- **Bandeja de menciones**: una vista con los mensajes de las salas que te mencionan o coinciden con tus palabras clave, también los de antes de abrir la app, con filtro por sala y por texto. Con un clic vas a ese mensaje en su sala.
+- **Bandeja de menciones**: una vista con los mensajes de las salas que te mencionan o coinciden con tus palabras clave, también los de antes de abrir la app, con filtro por sala y por texto. Con un clic vas a ese mensaje en su sala. Aparece en la barra lateral cuando hay menciones sin ver (o siempre, si lo prefieres), y Ctrl+K la abre.
 - Corregir el último mensaje con ↑, citas y `/me`.
 - Los comandos de Pidgin para XMPP, con sugerencias al escribir `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` y `/help`. Autocompletado de apodos (Tab) y de `:emoji:`.
 - **Editar el tema de la sala** desde la cabecera: sale una etiqueta *editar* cuando el servidor te deja cambiarlo (los moderadores siempre; los participantes, solo si la sala dice que lo permite; si no, `/topic` permite intentarlo). Abre un cuadro con el tema actual para editarlo o pegar uno nuevo, con ✓ y ✕. Los propietarios abren la configuración de la sala desde el menú ⋮ o con `/config`, con las listas de propietarios, administradores, miembros y vetados. Con clic derecho en un participante se le hace moderador, miembro, administrador o propietario, hasta donde lleguen tus permisos.
