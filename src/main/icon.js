@@ -123,40 +123,115 @@ export function renderAlertIcon(size = 64, color = "#f59e0b", glyph = "#ffffff",
   return encodePng(size, size, buf);
 }
 
+// ---------- icono de la app: un cyno (columna de luz con su anillo) y la flota llegando ----------
+
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const WHITE = [255, 255, 255];
+const BEAM = hex("#bfe6ff");
+
+// Distancia aproximada a una elipse centrada en el origen (negativa dentro).
+function sdEllipse(dx, dy, rx, ry) {
+  const k = Math.hypot(dx / rx, dy / ry);
+  const grad = Math.hypot(dx / (rx * rx), dy / (ry * ry));
+  return k === 0 ? -Math.min(rx, ry) : (k * (k - 1)) / Math.max(grad, 1e-9);
+}
+
+// Distancia con signo a un polígono (Inigo Quilez); negativa dentro.
+function sdPolygon(x, y, pts) {
+  let d = (x - pts[0][0]) ** 2 + (y - pts[0][1]) ** 2;
+  let sign = 1;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [ax, ay] = pts[j];
+    const [bx, by] = pts[i];
+    const ex = bx - ax;
+    const ey = by - ay;
+    const wx = x - ax;
+    const wy = y - ay;
+    const h = clamp((wx * ex + wy * ey) / (ex * ex + ey * ey));
+    d = Math.min(d, (wx - ex * h) ** 2 + (wy - ey * h) ** 2);
+    const c = [y >= ay, y < by, ex * wy > ey * wx];
+    if (c.every(Boolean) || c.every((v) => !v)) sign = -sign;
+  }
+  return sign * Math.sqrt(d);
+}
+
+// Nave en punta de flecha (chevron) centrada en (x, y), de tamaño k.
+const chevron = (x, y, k) => [
+  [x, y - k],
+  [x + k * 0.9, y + k * 0.7],
+  [x, y + k * 0.25],
+  [x - k * 0.9, y + k * 0.7],
+];
+
+// Medidas sobre una rejilla de 256. En grande, cuatro naves; en la bandeja (≤ 32 px), un haz más grueso, un anillo
+// más marcado y solo dos naves grandes, para que se reconozca a 16 px.
+const SMALL = 32;
+const FULL_LAYOUT = {
+  top: 26 + 11,
+  base: 190,
+  half: 11,
+  glow: 16,
+  ringX: 72.6,
+  ringY: 20.9,
+  ringW: 10,
+  coreX: 35,
+  coreY: 10,
+  coreBlur: 6,
+  ships: [
+    [52, 150, 22],
+    [204, 150, 22],
+    [74, 96, 17],
+    [182, 96, 17],
+  ],
+};
+const TRAY_LAYOUT = {
+  top: 22 + 13,
+  base: 196,
+  half: 14,
+  glow: 12,
+  ringX: 86,
+  ringY: 26,
+  ringW: 18,
+  coreX: 40,
+  coreY: 12,
+  coreBlur: 6,
+  ships: [
+    [50, 146, 34],
+    [206, 146, 34],
+  ],
+};
+
 // badge: punto rojo de mensajes sin leer (arriba a la derecha); muted: insignia de «No molestar» (abajo a la derecha).
-export function renderIcon(size = 256, { accent = "#3b9bff", accent2 = "#8b5cf6", badge = false, muted = false } = {}) {
+// accent y accent2: el centro y el borde del fondo (azul espacio por defecto).
+export function renderIcon(size = 256, { accent = "#1b3a66", accent2 = "#070b12", badge = false, muted = false } = {}) {
   const buf = Buffer.alloc(size * size * 4);
   const a1 = hex(accent);
   const a2 = hex(accent2);
   const s = size / 256;
+  const L = size <= SMALL ? TRAY_LAYOUT : FULL_LAYOUT;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const px = x + 0.5;
       const py = y + 0.5;
-      // Fondo: cuadrado redondeado con degradado diagonal
+      // Fondo: cuadrado redondeado con un degradado radial (espacio), más claro abajo, donde está el cyno.
       const dBg = sdRoundRect(px, py, size / 2, size / 2, 120 * s, 120 * s, 56 * s);
       const aBg = clamp(0.5 - dBg);
-      const t = clamp((px + py) / (2 * size));
-      let r = a1[0] + (a2[0] - a1[0]) * t;
-      let g = a1[1] + (a2[1] - a1[1]) * t;
-      let b = a1[2] + (a2[2] - a1[2]) * t;
-      // Burbuja de chat
-      const dBubble = sdRoundRect(px, py, 128 * s, 116 * s, 76 * s, 56 * s, 34 * s);
-      const tx = px - 84 * s;
-      const ty = py - 160 * s;
-      const inTail = tx > 0 && ty > 0 && ty < 44 * s && tx < 44 * s - ty * 0.9;
-      const aBubble = Math.max(clamp(0.5 - dBubble), inTail ? 1 : 0);
-      r += (255 - r) * aBubble;
-      g += (255 - g) * aBubble;
-      b += (255 - b) * aBubble;
-      // Tres puntos
-      for (const cx of [96, 128, 160]) {
-        const d = Math.hypot(px - cx * s, py - 116 * s) - 11 * s;
-        const ad = clamp(0.5 - d) * aBubble;
-        r += (a1[0] * 0.7 - r) * ad;
-        g += (a1[1] * 0.7 - g) * ad;
-        b += (a1[2] * 0.7 - b) * ad;
-      }
+      const t = clamp(Math.hypot(px - 128 * s, py - 205 * s) / (218 * s));
+      let rgb = mix(a1, a2, t);
+      const paint = (c, a) => (rgb = mix(rgb, c, clamp(a)));
+      // Resplandor del haz: cae con la distancia (más suave en grande, más marcado en pequeño).
+      const dBeam = sdSegment(px, py, 128 * s, L.top * s, 128 * s, L.base * s, 0) - L.half * s;
+      paint(BEAM, 0.55 * Math.exp(-Math.max(dBeam, 0) / (L.glow * s)));
+      // Haz: blanco abajo y azulado arriba, y se desvanece en el último tramo.
+      const along = clamp((L.base * s - py) / ((L.base - L.top) * s));
+      const fade = clamp((1 - along) / 0.25);
+      paint(mix(WHITE, BEAM, clamp(along / 0.75)), clamp(0.5 - dBeam) * fade);
+      // Anillo en perspectiva y el núcleo brillante de la base.
+      paint(BEAM, clamp(0.5 - (Math.abs(sdEllipse(px - 128 * s, py - L.base * s, L.ringX * s, L.ringY * s)) - (L.ringW / 2) * s)) * 0.95);
+      paint(WHITE, clamp(0.6 - sdEllipse(px - 128 * s, py - L.base * s, L.coreX * s, L.coreY * s) / (L.coreBlur * s)));
+      // Naves de la flota en punta de flecha, a los lados del haz.
+      for (const [cx, cy, k] of L.ships) paint(WHITE, clamp(0.5 - sdPolygon(px, py, chevron(cx * s, cy * s, k * s))));
+      let [r, g, b] = rgb;
       let alpha = aBg;
       if (badge) {
         const dRing = Math.hypot(px - 206 * s, py - 50 * s) - 50 * s;

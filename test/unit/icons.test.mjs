@@ -48,6 +48,21 @@ test("el icono de aviso es una sirena blanca sobre un círculo ámbar, con las e
   assert.deepEqual(px(32, 9)[0], 255, "rayo de arriba");
 });
 
+test("el icono de la app es un cyno con la flota: haz claro en el centro, naves blancas a los lados y fondo oscuro", () => {
+  const { px } = decodePng(renderIcon(256));
+  assert.equal(px(0, 0)[3], 0, "esquina transparente");
+  const beam = px(128, 150);
+  assert.ok(beam[0] > 230 && beam[1] > 240 && beam[2] > 245, `haz casi blanco (${beam})`);
+  assert.deepEqual(px(52, 150), [255, 255, 255, 255], "nave grande de la izquierda");
+  assert.deepEqual(px(182, 96), [255, 255, 255, 255], "nave pequeña de la derecha");
+  const space = px(30, 40);
+  assert.ok(space[0] < 40 && space[1] < 60 && space[2] < 90 && space[3] === 255, `fondo oscuro (${space})`);
+  // En la bandeja (≤ 32 px) se dibuja la versión simplificada: solo dos naves grandes, más abajo.
+  const tray = decodePng(renderIcon(32));
+  assert.deepEqual(tray.px(6, 17), [255, 255, 255, 255], "nave de la izquierda a 32 px");
+  assert.notDeepEqual(tray.px(9, 12), [255, 255, 255, 255], "sin las naves pequeñas de arriba");
+});
+
 test("la insignia de mensajes sin leer añade un punto rojo arriba a la derecha", () => {
   const plain = decodePng(renderIcon(256));
   const badge = decodePng(renderIcon(256, { badge: true }));
