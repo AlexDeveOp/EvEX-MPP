@@ -151,10 +151,12 @@ const oid = (s) => {
 const name = (cn) => seq(tlv(0x31, seq(oid("2.5.4.3"), tlv(0x0c, Buffer.from(cn)))));
 const utcTime = (d) => tlv(0x17, Buffer.from(d.toISOString().replace(/[-:T]/g, "").slice(2, 14) + "Z"));
 
-export function makeSelfSignedCert(cn = "localhost") {
+export function makeSelfSignedCert(cn = "localhost", { serial: fixedSerial } = {}) {
   const { privateKey, publicKey } = crypto.generateKeyPairSync("ec", { namedCurve: "prime256v1" });
-  const serial = crypto.randomBytes(8);
-  serial[0] &= 0x7f;
+  const serial = Buffer.from(fixedSerial ?? crypto.randomBytes(8));
+  // INTEGER en DER: positivo (primer bit a 0) y mínimo (sin un 0x00 delante que sobre). Un primer byte 0x00
+  // seguido de otro < 0x80 hace que OpenSSL rechace el certificado («illegal padding»), 1 vez de cada 256.
+  serial[0] = serial[0] & 0x7f || 0x01;
   const now = Date.now();
   const ecdsaSha256 = seq(oid("1.2.840.10045.4.3.2"));
   const san = seq(oid("2.5.29.17"), tlv(0x04, seq(tlv(0x82, Buffer.from(cn)), tlv(0x87, Buffer.from([127, 0, 0, 1])))));
