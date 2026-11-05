@@ -1,6 +1,6 @@
 // «No molestar» en la interfaz: interruptor rápido (menú de estado, bandeja y barra de título), indicador en la barra
 // de título y comprobación cada minuto del horario (para el indicador y el menú de la bandeja).
-import { S, api, on, onMain, emit, updateSettings } from "./state.js";
+import { S, api, on, onMain, updateSettings } from "./state.js";
 import { h, icon } from "./dom.js";
 import { dndState, toggleDnd } from "./notify-rules.js";
 import { fmtTime } from "./format.js";
@@ -36,7 +36,6 @@ export function refreshDnd() {
   if (key !== last) {
     last = key;
     api("dnd:state", { active: st.active, label: st.active ? dndLabel(st) : "" }).catch(() => {});
-    emit("dnd", st);
   }
 }
 

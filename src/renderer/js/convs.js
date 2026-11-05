@@ -366,7 +366,7 @@ function ruleExtras(rule) {
 function maybeNotify(c, msg, rule) {
   const n = S.settings.notifications;
   const forced = rule && rule.notify !== "never";
-  const should = shouldAlert({ type: c.type, level: notifyMode(c), mention: msg.mention, rule, n, dnd: dndNow(), presenceDnd: conn(c.accountId).show === "dnd" });
+  const should = shouldAlert({ type: c.type, level: notifyMode(c), chosen: n.roomModes[c.key] || "default", mention: msg.mention, rule, n, dnd: dndNow(), presenceDnd: conn(c.accountId).show === "dnd" });
   if (!should) return;
   const kind = c.type === "chat" ? "private" : msg.mention ? "mention" : "room";
   // Si avisa es porque shouldAlert ya lo ha permitido (también con «No molestar» y menciones permitidas).

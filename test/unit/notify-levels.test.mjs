@@ -1,7 +1,7 @@
 // Avisos por sala y por chat, y «No molestar» con horario (notify-rules.js).
 import test from "node:test";
 import assert from "node:assert/strict";
-import { effectiveLevel, parseHM, scheduleActive, scheduleEnd, dndState, toggleDnd, shouldAlert, badgeCount } from "../../src/renderer/js/notify-rules.js";
+import { effectiveLevel, parseHM, scheduleActive, scheduleEnd, dndState, toggleDnd, shouldAlert, badgeCount, scheduleChange } from "../../src/renderer/js/notify-rules.js";
 
 // 2026-11-02 es lunes (getDay() = 1).
 const at = (day, hm) => {
@@ -74,7 +74,8 @@ test("shouldAlert: niveles", () => {
   assert.equal(shouldAlert({ type: "groupchat", level: "mentions", mention: true, n: N }), true);
   assert.equal(shouldAlert({ type: "groupchat", level: "none", mention: true, n: N }), false, "«Nada»: ni las menciones");
   assert.equal(shouldAlert({ type: "chat", level: "all", n: N }), true);
-  assert.equal(shouldAlert({ type: "chat", level: "all", n: { ...N, privateMessages: false } }), false);
+  assert.equal(shouldAlert({ type: "chat", level: "all", n: { ...N, privateMessages: false } }), false, "ajuste general con «Mensajes privados» apagado");
+  assert.equal(shouldAlert({ type: "chat", level: "all", chosen: "all", n: { ...N, privateMessages: false } }), true, "«Todo» elegido a mano avisa aunque el general no");
   assert.equal(shouldAlert({ type: "chat", level: "mentions", n: N }), false, "chat en «solo menciones»");
   assert.equal(shouldAlert({ type: "chat", level: "mentions", mention: true, n: N }), true);
   assert.equal(shouldAlert({ type: "chat", level: "none", n: N }), false);
@@ -100,4 +101,16 @@ test("badgeCount", () => {
   assert.equal(badgeCount("all", { unread: 5, mentions: 1 }), 5);
   assert.equal(badgeCount("mentions", { unread: 5, mentions: 1 }), 1);
   assert.equal(badgeCount("none", { unread: 5, mentions: 1 }), 0);
+});
+
+test("scheduleChange: cambiar el horario borra el salto hasta el final del tramo anterior", () => {
+  const sched = { enabled: true, from: "01:00", to: "08:00", days: [0, 1, 2, 3, 4, 5, 6] };
+  // Apagado a las 02:00 hasta las 08:00; luego se cambia el final a las 10:00.
+  const n = { dndSchedule: sched, ...toggleDnd({ dndSchedule: sched }, at(3, "02:00")) };
+  assert.equal(dndState(n, at(3, "09:00")).active, false, "con el horario viejo, a las 09:00 ya no hay tramo");
+  const changed = { ...n, ...scheduleChange(n.dndSchedule, { to: "10:00" }) };
+  assert.equal(changed.dndSkipUntil, 0);
+  assert.deepEqual(changed.dndSchedule, { ...sched, to: "10:00" });
+  assert.equal(dndState(changed, at(3, "09:00")).active, true, "el horario nuevo cuenta desde ya, sin el salto viejo");
+  assert.deepEqual(scheduleChange(undefined, { enabled: true }).dndSchedule.days.length, 7, "sin horario previo, los valores por defecto");
 });

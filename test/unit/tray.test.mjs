@@ -67,6 +67,16 @@ test("la casilla «No molestar en la app» refleja el estado de la ventana y al 
   assert.equal(item(tray.menu, "No molestar en la app (silenciar avisos)").checked, false);
 });
 
+test("al pulsar la casilla, el menú vuelve al estado real hasta que la ventana lo confirme", (t) => {
+  const tray = setup(t);
+  setTrayDnd({ active: false });
+  const box = item(tray.menu, "No molestar en la app (silenciar avisos)");
+  box.checked = true; // lo que hace el menú nativo al pulsarla
+  box.click();
+  assert.equal(calls.sent.at(-1), "dnd-toggle");
+  assert.equal(item(tray.menu, "No molestar en la app (silenciar avisos)").checked, false, "sin confirmación de la ventana sigue desmarcada");
+});
+
 test("el menú de la bandeja muestra la ventana, cambia de cuenta, de estado, desconecta y sale", (t) => {
   setup(t);
   const menu = buildTrayMenu();

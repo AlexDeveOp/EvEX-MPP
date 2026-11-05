@@ -2,8 +2,8 @@
 import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, MENTIONS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
 import { mentionsConv } from "./mentions.js";
 import { h, icon, iconButton, $, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle, keepHover, morphChildren } from "./dom.js";
-import { openConv, closeConv, notifyMode, pingsConv } from "./convs.js";
-import { toggleFavorite, toggleAutojoin, avatarEl } from "./chat.js";
+import { openConv, closeConv, notifyMode, pingsConv, convBadge } from "./convs.js";
+import { toggleFavorite, toggleAutojoin, avatarEl, notifyItems } from "./chat.js";
 import { openRoomBrowser, openJoinRoom } from "./rooms.js";
 import { openAccounts, connectWithPrompt, openSwitchAccount } from "./accounts.js";
 import { openBackgroundEditor, openAvatarSettings } from "./settings.js";
@@ -11,8 +11,6 @@ import { openSearch } from "./search.js";
 import { sidebarSirenTs } from "./pings.js";
 
 import { t } from "./i18n.js";
-import { convBadge } from "./convs.js";
-import { notifyItems } from "./chat.js";
 import { effectiveLevel } from "./notify-rules.js";
 import { dndNow, dndLabel, toggleDndNow } from "./dnd.js";
 const collapsed = new Set(JSON.parse(localStorage.getItem("evex.collapsed") || "[]"));
@@ -271,7 +269,7 @@ function roomItem(acc, room) {
     "div",
     {
       "data-key": key,
-      class: `sb-item room ${S.active === key ? "active" : ""} ${r.joined ? "joined" : r.joining ? "joining" : "parted"} ${c?.unread ? "unread" : ""} ${dim ? "quiet-unread" : ""}`,
+      class: `sb-item room ${S.active === key ? "active" : ""} ${r.joined ? "joined" : r.joining ? "joining" : "parted"} ${c?.unread && mode !== "none" ? "unread" : ""} ${dim && mode !== "none" ? "quiet-unread" : ""}`,
       title: `${room.jid}${r.subject ? `\n${r.subject}` : ""}`,
       onclick: () => openConv(acc.id, room.jid, "groupchat"),
       oncontextmenu: (e) => {
@@ -302,7 +300,7 @@ function roomMenu(acc, room) {
     "-",
     { label: t("Favorita"), icon: "star", checked: !!(room.favorite || room.autojoin), action: () => toggleFavorite(acc.id, room.jid) },
     { label: t("Entrar automáticamente al iniciar"), icon: "zap", checked: !!room.autojoin, action: () => toggleAutojoin(acc.id, room.jid) },
-    ...notifyItems(key, "groupchat"),
+    ...notifyItems(key, "groupchat", room),
     "-",
     {
       label: t("Renombrar…"),

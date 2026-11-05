@@ -69,8 +69,9 @@ export function toggleDnd(n, now = new Date()) {
 }
 
 // ¿Avisa este mensaje (sonido, burbuja y parpadeo)?
-// level: el nivel efectivo; mention: menciona tu nombre o una palabra clave; rule: regla por palabra clave (keywords.js).
-export function shouldAlert({ type, level, mention = false, rule = null, n = {}, dnd = { active: false }, presenceDnd = false }) {
+// level: el nivel efectivo; chosen: el elegido para esa conversación ("default" o ausente = el ajuste general);
+// mention: menciona tu nombre o una palabra clave; rule: regla por palabra clave (keywords.js).
+export function shouldAlert({ type, level, chosen = "default", mention = false, rule = null, n = {}, dnd = { active: false }, presenceDnd = false }) {
   if (!n.enabled) return false;
   const forced = !!rule && rule.notify !== "never";
   // Una regla «avisar siempre» manda sobre el nivel de la sala; con «aunque esté en No molestar», también sobre eso.
@@ -82,7 +83,15 @@ export function shouldAlert({ type, level, mention = false, rule = null, n = {},
   if (forced && rule.notify === "always") return true;
   if (level === "none") return false;
   if (level === "mentions") return mention || forced ? (type === "chat" ? true : !!(n.mentions || forced)) : false;
-  return type === "chat" ? !!(n.privateMessages || forced) : true;
+  // Un chat en «Todo» elegido a mano avisa siempre; con el ajuste general, según «Mensajes privados».
+  if (type === "chat") return chosen === "all" || !!(n.privateMessages || forced);
+  return true;
+}
+
+// Cambios al tocar el horario: el salto «apagado hasta el final del tramo» se calculó con el horario anterior, así que
+// se borra (si no, podría reactivarse a mitad de un tramo o tapar uno nuevo).
+export function scheduleChange(current, patch) {
+  return { dndSchedule: { ...DEFAULT_SCHEDULE, ...(current || {}), ...patch }, dndSkipUntil: 0 };
 }
 
 // Número que se muestra (pestaña, barra lateral, barra de tareas) según el nivel.

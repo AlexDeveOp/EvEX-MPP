@@ -47,7 +47,17 @@ export function buildTrayMenu() {
     setAll("xa", t("Ausente (extendido)")),
     { type: "separator" },
     // Silencia los avisos de la app sin cambiar el estado XMPP; los pings de flota siguen sonando.
-    { label: dnd.active ? dnd.label : t("No molestar en la app (silenciar avisos)"), type: "checkbox", checked: dnd.active, click: () => options.send("dnd-toggle") },
+    {
+      label: dnd.active ? dnd.label : t("No molestar en la app (silenciar avisos)"),
+      type: "checkbox",
+      checked: dnd.active,
+      // El menú marca la casilla solo al pulsarla: se rehace con el estado real hasta que la ventana lo confirme con
+      // setTrayDnd (si aún no ha arrancado, el clic no cambia nada y la casilla no debe quedar marcada).
+      click: () => {
+        options.send("dnd-toggle");
+        getTray()?.setContextMenu(buildTrayMenu());
+      },
+    },
     { type: "separator" },
     {
       label: t("Desconectar todo"),

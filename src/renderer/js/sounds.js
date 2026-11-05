@@ -107,7 +107,8 @@ function play(sound) {
 }
 
 // dndOk: quien llama ya ha decidido que puede sonar aunque esté «No molestar» (p. ej. una mención con
-// «dejar pasar las menciones»).
+// «dejar pasar las menciones»: lo decide shouldAlert en convs.js). El filtro de aquí se queda para los demás sonidos
+// (contactos que se conectan, invitaciones, solicitudes…), que no pasan por shouldAlert.
 export function playSound(kind, { dndOk = false } = {}) {
   const n = S.settings.notifications;
   if (!n.sound) return;

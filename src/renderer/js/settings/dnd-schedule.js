@@ -4,7 +4,7 @@ import { h, toggle, field } from "../dom.js";
 import { t, tk } from "../i18n.js";
 import { full, group } from "./common.js";
 import { dndNow, dndLabel, toggleDndNow } from "../dnd.js";
-import { DEFAULT_SCHEDULE, parseHM } from "../notify-rules.js";
+import { DEFAULT_SCHEDULE, parseHM, scheduleChange } from "../notify-rules.js";
 
 // Lunes primero; los valores son los de Date.getDay() (0 = domingo).
 const DAYS = [
@@ -21,7 +21,7 @@ export function dndGroup() {
   const n = S.settings.notifications;
   const sched = { ...DEFAULT_SCHEDULE, ...(n.dndSchedule || {}) };
   const save = (fn) => full((x) => fn(x.notifications));
-  const setSched = (patch) => save((x) => (x.dndSchedule = { ...DEFAULT_SCHEDULE, ...(x.dndSchedule || {}), ...patch }));
+  const setSched = (patch) => save((x) => Object.assign(x, scheduleChange(x.dndSchedule, patch)));
   const status = h("p", { class: "muted small dnd-status" });
   // El interruptor refleja «activo ahora» (manual o por horario), como la barra de título, la bandeja y el menú de estado.
   let nowInput = null;

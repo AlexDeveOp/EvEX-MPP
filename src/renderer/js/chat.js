@@ -5,7 +5,7 @@ import { formatBody, previewHtml, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes
 import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
 import { playSound } from "./sounds.js";
 import { openGifPicker } from "./gifs.js";
-import { activate, closeConv, openConv, convTitle, markRead, loadHistory, systemMessage, mentionWords, moveTab, notifyMode, getConv } from "./convs.js";
+import { activate, closeConv, openConv, convTitle, markRead, loadHistory, systemMessage, mentionWords, moveTab, notifyMode, getConv, convBadge, updateBadge } from "./convs.js";
 import { applyBackgroundLayer } from "./themes.js";
 import { pingCard, pingMatches, pingGroups, visiblePings } from "./pings.js";
 import { srpHeaderControls } from "./srp.js";
@@ -18,7 +18,6 @@ import { mentionsHeader, mentionCard, visibleMentions, mentionFilterMatches } fr
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
 import { t } from "./i18n.js";
-import { convBadge, updateBadge } from "./convs.js";
 const panes = new Map();
 // Vistas que reúnen mensajes de varias conversaciones (pings, menciones): sin compositor ni historial hacia arriba.
 const isFeed = (c) => c.type === "pings" || c.type === "mentions";
@@ -184,7 +183,7 @@ export function convMenu(c) {
       { label: isFavorite(room) ? t("Quitar de favoritas") : t("Añadir a favoritas"), icon: isFavorite(room) ? "star-off" : "star", action: () => toggleFavorite(c.accountId, c.conv) },
       { label: t("Entrar automáticamente"), icon: "zap", checked: !!room?.autojoin, action: () => toggleAutojoin(c.accountId, c.conv) },
       "-",
-      ...notifyItems(c.key, c.type),
+      ...notifyItems(c.key, c.type, room),
       "-",
       { label: t("Cambiar el tema…"), icon: "pencil", disabled: !canEditTopic(rs), hint: canEditTopic(rs) ? null : topicLockedReason(rs), action: () => openTopicEditor(c, pane(c)) },
       ...(rs.subject ? [{ label: t("Copiar el tema"), icon: "copy", action: () => navigator.clipboard.writeText(rs.subject) }] : []),
@@ -216,11 +215,13 @@ async function rejoin(c) {
 
 // Nivel de aviso de una sala o un chat (clave de la conversación): «Como el ajuste general», «Todo», «Solo menciones y
 // palabras clave» o «Nada». Lo usan el menú ⋮, la campana de la cabecera y el clic derecho de la barra lateral.
-export function notifyItems(key, type) {
+export function notifyItems(key, type, room = null) {
   const n = S.settings.notifications;
   // En los chats, el ajuste general es «Mensajes privados» (Preferencias → Notificaciones): si está apagado, no avisan.
   const general = type === "groupchat" ? (n.allRoomMessages ? t("todo") : t("solo menciones")) : n.privateMessages ? t("todo") : t("sin avisos");
-  const cur = S.settings.notifications.roomModes[key] || "default";
+  // Las salas pueden traer su nivel en el marcador (room.notify); lo elegido aquí (roomModes) manda sobre él.
+  const bookmark = room?.notify && room.notify !== "default" ? room.notify : null;
+  const cur = S.settings.notifications.roomModes[key] || bookmark || "default";
   return [
     { header: t("Avisos") },
     ...[
@@ -228,13 +229,14 @@ export function notifyItems(key, type) {
       ["all", t("Todo")],
       ["mentions", t("Solo menciones y palabras clave")],
       ["none", t("Nada")],
-    ].map(([v, l]) => ({ label: l, checked: cur === v, action: () => setConvNotify(key, v) })),
+    ].map(([v, l]) => ({ label: l, checked: cur === v, action: () => setConvNotify(key, v, { bookmark }) })),
   ];
 }
 
-export function setConvNotify(key, v) {
+export function setConvNotify(key, v, { bookmark = null } = {}) {
   updateSettings((s) => {
-    if (v === "default") delete s.notifications.roomModes[key];
+    // «Como el ajuste general» con un marcador que dice otra cosa se guarda tal cual, para que mande sobre él.
+    if (v === "default" && !bookmark) delete s.notifications.roomModes[key];
     else s.notifications.roomModes[key] = v;
   });
   // updateSettings ya repinta pestañas y barra lateral (evento «settings»); falta el número de la barra de tareas.
@@ -535,7 +537,7 @@ function renderHeader(c, p) {
         topicBtn,
         iconButton("star", isFavorite(room) ? t("Favorita (clic para quitarla de la lista)") : t("Añadir a favoritas"), () => toggleFavorite(c.accountId, c.conv), isFavorite(room) ? "on star" : ""),
         iconButton("zap", room?.autojoin ? t("Se abre al iniciar (clic para desactivar)") : t("Abrir automáticamente al iniciar"), () => toggleAutojoin(c.accountId, c.conv), room?.autojoin ? "on zap" : ""),
-        iconButton(bellIcon(c), t("Avisos de esta sala"), (e) => menuFor(e.currentTarget, notifyItems(c.key, c.type)), notifyMode(c) === "none" ? "on muted-bell" : ""),
+        iconButton(bellIcon(c), t("Avisos de esta sala"), (e) => menuFor(e.currentTarget, notifyItems(c.key, c.type, room)), notifyMode(c) === "none" ? "on muted-bell" : ""),
         iconButton("search", t("Buscar en el historial"), () => openSearch({ accountId: c.accountId, conv: c.conv })),
         iconButton("panel-right", t("Mostrar/ocultar participantes"), () => updateSettings((s) => (s.layout.showOccupants = !s.layout.showOccupants))),
         iconButton("ellipsis-vertical", t("Más opciones"), (e) => menuFor(e.currentTarget, convMenu(c))),
