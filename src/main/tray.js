@@ -27,9 +27,23 @@ export function trayLook({ unread: n = 0, pings = 0, dnd: d = { active: false, l
   return { kind: pings ? "alert" : "normal", badge: n > 0, muted, tooltip: muted ? `${base} · ${d.label || t("No molestar")}` : base };
 }
 
+// El icono de la bandeja va en tres escalas: 16 px (100 %), 24 px (150 %) y 32 px (200 %; GNOME también pide 32).
+// Cada una se dibuja a su tamaño (el dibujo es vectorial), que queda más nítido que reducir uno grande; con una sola
+// de 16 px, Windows al 125–150 % la agrandaba y se veía borrosa.
+export const TRAY_SCALES = [
+  [1, 16],
+  [1.5, 24],
+  [2, 32],
+];
+function scaledIcon(draw) {
+  const img = nativeImage.createEmpty();
+  for (const [scaleFactor, px] of TRAY_SCALES) img.addRepresentation({ scaleFactor, width: px, height: px, buffer: draw(px) });
+  return img;
+}
+
 function trayImage() {
   const { badge, muted } = trayLook({ unread, dnd });
-  return cachedIcon(`tray:${badge}:${muted}`, () => nativeImage.createFromBuffer(renderIcon(64, { badge, muted })).resize({ width: 16, height: 16, quality: "best" }));
+  return cachedIcon(`tray:${badge}:${muted}`, () => scaledIcon((px) => renderIcon(px, { badge, muted })));
 }
 
 export function buildTrayMenu() {
@@ -130,7 +144,7 @@ let blinkTimer = null;
 let blinkOn = false;
 const alertImage = () => {
   const muted = !!dnd.active;
-  return cachedIcon(`alert:${muted}`, () => nativeImage.createFromBuffer(renderAlertIcon(64, undefined, undefined, { muted })).resize({ width: 16, height: 16, quality: "best" }));
+  return cachedIcon(`alert:${muted}`, () => scaledIcon((px) => renderAlertIcon(px, undefined, undefined, { muted })));
 };
 
 export function refreshTray() {
