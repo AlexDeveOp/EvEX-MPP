@@ -8,6 +8,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Fleet calendar: add fleets yourself and suggested fleets.**
+  - *＋ Add fleet* in the calendar header: EVE date and time (with your local time next to it), title, group and note. Every fleet you added, or that came from a message, has *Edit* (and *Delete* inside).
+  - Right-click a room message or a ping card → *Add to calendar*, filled in with the time found in the text, the first line as the title and, for a ping, its target group. A ping that is already in the calendar says *Edit in the calendar* instead.
+  - **Suggested fleets:** when a room message talks about a fleet (fleet, op, CTA, formup, roam, timer…) and gives a time in the next two weeks, such as "big op tomorrow at 21:00", it appears in the calendar as a suggestion (dashed purple) with *Add* and *Dismiss*. Suggestions are never added on their own, a dismissed one does not come back, and adding that message by hand accepts the suggestion instead of creating a second fleet. They also come from the saved history of active rooms when the app starts.
 - **Mini window for gaming** (*Preferences → Fleet pings → Mini window for gaming*, the tray menu or the button in the pings view). A small always-on-top window, also over EVE in borderless mode:
   - Shows the latest ping (title and target group only, never the whole text), the countdown to the next formup and the unread pings, mentions and messages. Clicking it opens fleet pings (or mentions, or the app).
   - It never takes focus or flashes the taskbar (both can throw a full-screen game out of focus).
