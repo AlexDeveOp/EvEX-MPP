@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
-import { parsePing, pingMatches, pingGroups } from "../../src/renderer/js/pings.js";
+import { parsePing, pingMatches, pingGroups, dotlanSystem } from "../../src/renderer/js/pings.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
 S.settings = structuredClone(TEST_SETTINGS);
@@ -142,4 +142,18 @@ test("sidebarSirenTs: la sirena de la barra lateral late mientras lata la del pi
   } finally {
     S.settings = prev;
   }
+});
+
+test("dotlanSystem: el enlace a Dotlan solo en campos de lugar y nunca con una hora o una fecha", () => {
+  assert.equal(dotlanSystem("Formup Location", "C-J6MT"), "C-J6MT");
+  assert.equal(dotlanSystem("Location", "1DQ1-A (keepstar)"), "1DQ1-A");
+  assert.equal(dotlanSystem("System", "Jita"), "Jita");
+  assert.equal(dotlanSystem("Staging", "Amarr"), "Amarr");
+  assert.equal(dotlanSystem("Formup", "Siseide"), "Siseide", "«Formup» a secas es un lugar");
+  assert.equal(dotlanSystem("Formup Time", "2026-11-05 19:00"), "", "el caso de la demo");
+  assert.equal(dotlanSystem("Formup Time", "19:00"), "");
+  assert.equal(dotlanSystem("Formup", "19:00 EVE"), "", "un valor que es una hora no es un sistema");
+  assert.equal(dotlanSystem("Formup", "in 20 min"), "");
+  assert.equal(dotlanSystem("Doctrine", "Ferox"), "", "no es un campo de lugar");
+  assert.equal(dotlanSystem("Location", "1234"), "", "sin letras no es un sistema");
 });

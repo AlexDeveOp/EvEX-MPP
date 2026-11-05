@@ -1029,6 +1029,56 @@
 .type-pings .conv-header .input {
   width: 180px;
 }
+/* Cabecera de «Pings de flota» en dos filas: título, selector de vista e iconos arriba; filtros y acciones del
+   calendario abajo, alineados con el título (38 px del icono + 12 px de separación). */
+.conv-header.pings-header {
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 6px;
+  container-type: inline-size;
+}
+.pings-header .conv-title {
+  flex: 1 1 160px;
+}
+.pings-header .pings-icons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.pings-header .pings-tools {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-left: 50px;
+  min-width: 0;
+}
+.pings-header .pings-tools .input {
+  width: auto;
+  flex: 0 1 170px;
+  min-width: 110px;
+}
+/* Cabecera estrecha (p. ej. ventana de 960 px con la barra lateral): los botones del calendario, solo con su icono
+   (el texto queda en la etiqueta emergente). */
+@container (max-width: 860px) {
+  .pings-header .fleet-actions .btn {
+    font-size: 0;
+    gap: 0;
+    padding: 5px 7px;
+  }
+  .pings-header .fleet-actions .btn .icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+.pings-header .pings-tools-gap {
+  flex: 1 1 0;
+}
+.pings-header .pings-tools:not(:has(> :not(.pings-tools-gap, .fleet-actions:empty))) {
+  display: none;
+}
 
 /* ---------- hora EVE ---------- */
 

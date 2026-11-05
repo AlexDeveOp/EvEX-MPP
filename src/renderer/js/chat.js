@@ -494,7 +494,39 @@ function renderHeader(c, p) {
     return;
   }
   if (c.type === "pings") {
+    // Dos filas para que quepa a 960 px: arriba el título, el selector de vista y los iconos; abajo (alineado con el
+    // título) los filtros de las tarjetas y las acciones del calendario (.fleet-actions: añadir flota, exportar…).
+    const list = p.filter.view === "list";
     const groups = pingGroups(c.messages);
+    p.header.classList.add("pings-header");
+    const tools = h("div", { class: "pings-tools" });
+    if (list) {
+      tools.append(
+        h("input", {
+          class: "input small",
+          placeholder: t("Filtrar pings…"),
+          value: p.filter.query,
+          oninput: (e) => {
+            p.filter.query = e.target.value;
+            renderAllMessages(c, p);
+          },
+        }),
+        h(
+          "select",
+          {
+            class: "input small",
+            onchange: (e) => {
+              p.filter.group = e.target.value;
+              renderAllMessages(c, p);
+            },
+          },
+          h("option", { value: "" }, t("Todos los grupos")),
+          groups.map((g) => h("option", { value: g, selected: g === p.filter.group }, g)),
+        ),
+        ...srpHeaderControls(c.messages, p.filter, () => (renderHeader(c, p), renderAllMessages(c, p))),
+      );
+    }
+    tools.append(h("span", { class: "pings-tools-gap" }), fleetHeaderActions());
     p.header.append(
       h("div", { class: "conv-avatar ping" }, icon("siren")),
       h("div", { class: "conv-title" }, h("h1", {}, t("Pings de flota")), h("div", { class: "conv-sub" }, S.settings.pingSenders.length ? t("{length} broadcasts · remitentes: {join}", { length: c.messages.length, join: S.settings.pingSenders.join(", ") }) : t("Sin remitentes configurados: añádelos en Preferencias → Pings de flota"))),
@@ -503,46 +535,18 @@ function renderHeader(c, p) {
         renderHeader(c, p);
         renderAllMessages(c, p);
       }),
-      fleetHeaderActions(),
-    );
-    // Los filtros de las tarjetas solo valen en la lista.
-    if (p.filter.view !== "list") {
-      p.header.append(
-        iconButton("picture-in-picture-2", t("Mini ventana para jugar (abrir o cerrar)"), () => toggleMini()),
-        iconButton("settings", t("Configurar los pings de flota"), () => openSettings("pings")),
-      );
-      return;
-    }
-    p.header.append(
-      h("input", {
-        class: "input small",
-        placeholder: t("Filtrar pings…"),
-        value: p.filter.query,
-        oninput: (e) => {
-          p.filter.query = e.target.value;
-          renderAllMessages(c, p);
-        },
-      }),
       h(
-        "select",
-        {
-          class: "input small",
-          onchange: (e) => {
-            p.filter.group = e.target.value;
-            renderAllMessages(c, p);
-          },
-        },
-        h("option", { value: "" }, t("Todos los grupos")),
-        groups.map((g) => h("option", { value: g, selected: g === p.filter.group }, g)),
+        "div",
+        { class: "pings-icons" },
+        // Mini ventana para jugar (siempre encima): se abre o se cierra.
+        iconButton("picture-in-picture-2", t("Mini ventana para jugar (abrir o cerrar)"), () => toggleMini()),
+        // Busca pings que llegaron con la app cerrada (registros de Pidgin y archivo del servidor), no solo redibuja.
+        list ? iconButton("refresh-cw", t("Buscar pings nuevos (en Pidgin y en el servidor)"), (e) => searchMissedPings(e.currentTarget)) : null,
+        // Solo se ve mientras se lee un ping en voz alta (clase tts-speaking en body).
+        iconButton("volume-x", t("Dejar de leer el ping"), stopSpeaking, "tts-stop"),
+        iconButton("settings", t("Configurar los pings de flota"), () => openSettings("pings")),
       ),
-      ...srpHeaderControls(c.messages, p.filter, () => (renderHeader(c, p), renderAllMessages(c, p))),
-      // Mini ventana para jugar (siempre encima): se abre o se cierra.
-      iconButton("picture-in-picture-2", t("Mini ventana para jugar (abrir o cerrar)"), () => toggleMini()),
-      // Busca pings que llegaron con la app cerrada (registros de Pidgin y archivo del servidor), no solo redibuja.
-      iconButton("refresh-cw", t("Buscar pings nuevos (en Pidgin y en el servidor)"), (e) => searchMissedPings(e.currentTarget)),
-      // Solo se ve mientras se lee un ping en voz alta (clase tts-speaking en body).
-      iconButton("volume-x", t("Dejar de leer el ping"), stopSpeaking, "tts-stop"),
-      iconButton("settings", t("Configurar los pings de flota"), () => openSettings("pings")),
+      tools,
     );
     return;
   }
