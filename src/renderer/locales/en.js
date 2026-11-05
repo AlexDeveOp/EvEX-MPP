@@ -1405,7 +1405,6 @@ export default {
   "nota: {note}": "note: {note}",
   "{n} pings": "{n} pings",
   "Enlace copiado. Ábrelo tú en el navegador si quieres: EvEX-MPP no lo abre.": "Link copied. Open it in your browser if you want: EvEX-MPP doesn't open it.",
-  "EVE · {time} local": "EVE · {time} local",
   "¿Es una flota?": "Is it a fleet?",
   "a mano": "by hand",
   "Copiar el enlace: {link}": "Copy the link: {link}",
