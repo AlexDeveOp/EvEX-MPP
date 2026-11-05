@@ -84,32 +84,6 @@ function markFired(id) {
   } catch {}
 }
 
-const cache = new Map(); // clave del ping → hora del formup (o null)
-function formupOf(m) {
-  if (cache.size > 2000) cache.clear();
-  if (!cache.has(m.key)) cache.set(m.key, parseFormup(parsePing(m.body), m.ts));
-  return cache.get(m.key);
-}
-
-// Próximo formup entre los pings de las últimas 24 h, para la mini ventana: el siguiente que aún no ha empezado; si no
-// hay ninguno, el que empezó hace menos (hasta 15 min después cuenta como «¡Formup ahora!»). Un formup que ya empezó
-// no tapa al que empieza dentro de 5 min. `until` dice cuándo cambia la elección (empieza el elegido o deja de valer).
-export const FORMUP_NOW_MS = 15 * 60e3;
-export function nextFormup(messages, now = Date.now()) {
-  let future = null;
-  let started = null;
-  for (const m of messages) {
-    if (now - m.ts > 86400e3) continue;
-    const at = formupOf(m);
-    if (!at || at < now - FORMUP_NOW_MS) continue;
-    if (at > now) {
-      if (!future || at < future.at) future = { at, m };
-    } else if (!started || at > started.at) started = { at, m };
-  }
-  const best = future || started;
-  return best && { ...best, until: best.at > now ? best.at : best.at + FORMUP_NOW_MS };
-}
-
 // Un aviso se identifica por la hora del formup y el título, no por la clave del ping: dos copias del mismo broadcast
 // (otra conexión, el archivo del servidor…) avisan una sola vez. Es el mismo id que antes del calendario.
 function alertBase(at, title) {
@@ -152,16 +126,21 @@ export function reminderSpeech(minutes, title) {
   return title ? `${what}. ${title}` : what;
 }
 
-// El aviso de una flota de ping lleva los campos de su ping (el más reciente de la op); el de una flota a mano, su
-// título y su nota.
-function alertContent(fleet) {
+// Contenido del aviso: el título y la nota de la flota (con los cambios que haya hecho el usuario) y, si viene de un
+// ping, los campos del ping más reciente de la op.
+export function alertContent(fleet) {
   const keys = fleet.pingKeys || [];
   const msgs = pingsConv().messages;
+  let fields = [];
   for (let i = keys.length - 1; i >= 0; i--) {
     const m = msgs.find((x) => x.key === keys[i]);
-    if (m) return parsePing(m.body);
+    if (m) {
+      fields = parsePing(m.body).fields || [];
+      break;
+    }
   }
-  return { title: fleet.title || "", fields: fleet.note ? [{ key: t("Nota"), value: fleet.note }] : [] };
+  if (fleet.note) fields = [{ key: t("Nota"), value: fleet.note }, ...fields];
+  return { title: fleet.title || "", fields };
 }
 
 function notifyFormup({ fleet, at, minutes }, cfg) {

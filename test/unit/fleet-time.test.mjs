@@ -52,9 +52,31 @@ test("la hora del pie (envío del broadcast) no cuenta, y una fecha explícita m
   assert.equal(parseFleetTime("undock in 20 min", ts), ts + 20 * 60e3);
 });
 
-test("un campo de hora: la hora del campo y, si no lo dice, el día del resto del ping", () => {
+test("un campo de hora: la hora y el día salen del propio campo", () => {
   const ts = utc(3, 21, 33);
-  assert.equal(parseFieldTime("17:15", ts, "Tomorrow we form for the final timer"), utc(4, 17, 15));
-  assert.equal(parseFieldTime("Jita", ts, "fleet at 19:00"), null, "un campo sin hora no coge la del resto del ping");
-  assert.equal(parseFieldTime("friday 19:00", ts, "tomorrow"), utc(6, 19, 0), "el día del campo manda");
+  assert.equal(parseFieldTime("tomorrow 17:15", ts), utc(4, 17, 15));
+  assert.equal(parseFieldTime("Jita", ts), null, "un campo sin hora no es una hora");
+  assert.equal(parseFieldTime("friday 19:00", ts), utc(6, 19, 0));
+  assert.equal(parseFieldTime("downtime", utc(3, 8, 0)), utc(3, 11, 0), "en un campo de hora, «downtime» vale solo");
+});
+
+// Regresiones de la revisión del #66: el día o la fecha de otra línea no mueven el formup.
+test("una fecha en otra línea o en una dirección no mueve el formup", () => {
+  const ts = utc(3, 12, 0);
+  const lines = (...l) => l.join(NL);
+  assert.equal(parseFormup(parsePing(lines("Structure timer", "Formup Time: 19:00", "Timer exits: 2026.11.08 23:00")), ts), utc(3, 19, 0));
+  assert.equal(parseFormup(parsePing(lines("Big op", "Formup Time: 19:00", "Info: https://news.example.com/2026/11/08/timers")), ts), utc(3, 19, 0));
+  assert.equal(parseFleetTime("fleet at 19:00, see https://forum.example.com/2026/11/08/op", ts), utc(3, 19, 0));
+});
+
+test("«downtime» suelto no es una flota", () => {
+  assert.equal(parseFleetTime("Server downtime is extended today, no ops", utc(3, 8, 0)), null);
+  assert.equal(parseFleetTime("we form at downtime", utc(3, 8, 0)), utc(3, 11, 0));
+});
+
+test("un día de la semana en otra línea no mueve el formup", () => {
+  const ts = utc(3, 12, 0); // martes
+  assert.equal(parseFormup(parsePing(["Capital fleet", "Formup Time: 19:00", "Next op: Saturday"].join(NL)), ts), utc(3, 19, 0));
+  assert.equal(parseFleetTime(["fleet at 19:00", "Next op: Saturday"].join(NL), ts), utc(3, 19, 0));
+  assert.equal(parseFleetTime("Saturday we form at 19:00", ts), utc(7, 19, 0), "pegado a la hora, sí cuenta");
 });

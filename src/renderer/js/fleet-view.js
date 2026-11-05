@@ -41,11 +41,38 @@ export function fleetHeaderActions() {
 }
 
 // Selector Lista | Próximas (n) | Mes.
-export function fleetViewSwitch(view, onChange, now = Date.now()) {
+const upcomingLabel = (now) => {
   const n = upcoming({ now }).length;
+  return n ? t("Próximas · {n}", { n }) : t("Próximas");
+};
+export function fleetViewSwitch(view, onChange, now = Date.now()) {
   const btn = (v, label) =>
-    h("button", { class: `seg ${view === v ? "on" : ""}`, type: "button", "aria-pressed": String(view === v), onclick: () => view !== v && onChange(v) }, label);
-  return h("div", { class: "seg-group fleet-view-switch", role: "group", "aria-label": t("Vista") }, btn("list", t("Lista")), btn("upcoming", n ? t("Próximas · {n}", { n }) : t("Próximas")), btn("month", t("Mes")));
+    h("button", { class: `seg seg-${v} ${view === v ? "on" : ""}`, type: "button", "aria-pressed": String(view === v), onclick: () => view !== v && onChange(v) }, label);
+  return h("div", { class: "seg-group fleet-view-switch", role: "group", "aria-label": t("Vista") }, btn("list", t("Lista")), btn("upcoming", upcomingLabel(now)), btn("month", t("Mes")));
+}
+
+// Solo el número de «Próximas · n» (sin rehacer la cabecera: el filtro o el desplegable de grupos perderían el foco).
+export function updateFleetCount(root, now = Date.now()) {
+  const b = root?.querySelector(".fleet-view-switch .seg-upcoming");
+  const label = upcomingLabel(now);
+  if (b && b.textContent !== label) b.textContent = label;
+}
+
+// Tic de la vista abierta: cuentas atrás y «Hoy/Mañana» al día. Devuelve true si alguna flota ya ha pasado (hay que
+// repintar la agenda).
+export function tickFleetView(root, now = Date.now()) {
+  let expired = false;
+  for (const chip of root.querySelectorAll(".fleet-cd[data-at]")) {
+    const text = fleetCountdown(Number(chip.dataset.at), now);
+    if (!text) expired = true;
+    const label = chip.querySelector(".fleet-cd-text");
+    if (label && label.textContent !== text) label.textContent = text;
+  }
+  for (const d of root.querySelectorAll(".fleet-day[data-day]")) {
+    const text = dayLabel(Number(d.dataset.day), now);
+    if (d.textContent !== text) d.textContent = text;
+  }
+  return expired;
 }
 
 // ---------- textos de tiempo ----------
@@ -89,7 +116,7 @@ function fleetRow(f, now, { onShowPing, refresh }) {
   const local = S.settings.showLocalTime !== false ? t("EVE · {time} local", { time: fmtTime(f.at) }) : "EVE";
   const chips = h("div", { class: "fleet-chips" });
   const cd = fleetCountdown(f.at, now);
-  if (cd) chips.append(h("span", { class: "chip fleet-cd" }, icon("clock"), cd));
+  if (cd) chips.append(h("span", { class: "chip fleet-cd", dataset: { at: String(f.at) } }, icon("clock"), h("span", { class: "fleet-cd-text" }, cd)));
   if (f.status === "pending") chips.append(h("span", { class: "chip fleet-pending" }, t("¿Es una flota?")));
   if (f.group) chips.append(h("span", { class: "chip fleet-group" }, f.group));
   if (f.source === "manual") chips.append(h("span", { class: "chip fleet-manual" }, t("a mano")));
@@ -133,7 +160,7 @@ function renderUpcoming(root, now, opts) {
     const d = dayStart(f.at);
     if (d !== day) {
       day = d;
-      root.append(h("div", { class: "fleet-day" }, dayLabel(d, now)));
+      root.append(h("div", { class: "fleet-day", dataset: { day: String(d) } }, dayLabel(d, now)));
     }
     root.append(fleetRow(f, now, opts));
   }

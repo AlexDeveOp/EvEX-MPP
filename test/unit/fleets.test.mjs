@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
 import { pingsConv } from "../../src/renderer/js/convs.js";
 import * as F from "../../src/renderer/js/fleets.js";
-import { fleetAlerts, countdownSettings } from "../../src/renderer/js/formup.js";
+import { fleetAlerts, countdownSettings, alertContent } from "../../src/renderer/js/formup.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
 globalThis.window.evex = { call: async () => {} };
@@ -142,4 +142,13 @@ test("los avisos de formup valen para las flotas a mano, no para las sugeridas s
   assert.deepEqual(fleetAlerts(F.allFleets(), cfg, now, {}).map((a) => [a.fleet.id, a.minutes]), [[m.id, 10]]);
   F.acceptFleet(s.id);
   assert.deepEqual(fleetAlerts(F.allFleets(), cfg, utc(7, 18, 30) + 5000, {}).map((a) => [a.fleet.id, a.minutes]).sort(), [[m.id, 0], [s.id, 10]].sort());
+});
+
+test("el aviso usa el título y la nota de la flota (con los cambios del usuario) y los campos del ping", () => {
+  pingsConv().messages.push(ping("a", utc(3, 12, 0), "Capital fleet", ["Formup Time: 19:00", "Doctrine: Ferox"]));
+  F.updateFleet("p-a", { title: "Caps al timer", note: "llevar cyno" });
+  const c = alertContent(F.getFleet("p-a"));
+  assert.equal(c.title, "Caps al timer");
+  assert.deepEqual(c.fields.slice(0, 1), [{ key: "Nota", value: "llevar cyno" }]);
+  assert.ok(c.fields.some((f) => f.key === "Doctrine"));
 });
