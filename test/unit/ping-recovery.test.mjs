@@ -64,3 +64,15 @@ test("storeRecovered no duplica un ping que ya llegó a la app, aunque Pidgin lo
   // El mismo texto horas más tarde es otro ping (p. ej. se repite el aviso).
   assert.equal(storeRecovered(logs, "acc", "pingbot@ejemplo.com", [{ ts: ts + 6 * 3600e3, body: PING }]), 1);
 });
+
+test("storeRecovered no recupera la copia de Pidgin de un ping que solo cambia en la hora del pie", (t) => {
+  // El bot manda una copia a cada conexión: la de EvEX-MPP dice «00:05:02» y la que guarda Pidgin «00:05:03».
+  const logs = new Logs(tempDir(t));
+  const ts = Date.UTC(2026, 10, 4, 23, 5, 2, 731);
+  const body = (s) => `Fleet up\nDoctrine: Ferox\n~~~ This was a coord broadcast from bob to all at 2026-11-05 00:05:0${s}.548411 EVE ~~~`;
+  logs.append("acc", "pingbot@ejemplo.com", { ts, nick: "pingbot", body: body(2) });
+  assert.equal(storeRecovered(logs, "acc", "pingbot@ejemplo.com", [{ ts: ts - 731, body: body(3) }]), 0);
+  assert.equal(logs.tail("acc", "pingbot@ejemplo.com", 10).length, 1);
+  // Otro texto en el mismo momento sí es un ping distinto.
+  assert.equal(storeRecovered(logs, "acc", "pingbot@ejemplo.com", [{ ts, body: body(3).replace("Ferox", "Muninn") }]), 1);
+});
