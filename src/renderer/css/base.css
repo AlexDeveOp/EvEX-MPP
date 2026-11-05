@@ -1022,7 +1022,10 @@ body.tts-speaking .icon-btn.tts-stop {
 /* Indicador de la barra de título: solo se ve mientras «No molestar» está activo; un clic lo apaga. */
 .tb-dnd {
   display: flex;
+  flex: none;
   align-items: center;
+  /* En una línea aunque la ventana sea estrecha (en inglés, «Do not disturb» se partía en dos). */
+  white-space: nowrap;
   gap: 6px;
   padding: 0 10px;
   height: 26px;
@@ -1045,6 +1048,16 @@ body.tts-speaking .icon-btn.tts-stop {
 }
 .tb-dnd:hover {
   background: color-mix(in srgb, var(--danger) 26%, transparent);
+}
+/* Con la ventana estrecha queda solo la campana (el texto está en el título): si no, empuja los botones de la ventana
+   fuera de la barra. */
+@media (max-width: 1000px) {
+  .tb-dnd {
+    padding: 0 7px;
+  }
+  .tb-dnd > span:not(.icon) {
+    display: none;
+  }
 }
 /* Campana tachada discreta en las salas y chats con los avisos en «Nada». */
 .sb-muted {
