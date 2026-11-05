@@ -12,6 +12,7 @@ import { mediaDir } from "./paths.js";
 import { sniffImage, isAnimated, reencodeImage } from "./image-reencode.js";
 import { parseFcList } from "./platform.js";
 import { t, tk, currentLang } from "./i18n.js";
+import { checkIcs, safeIcsName } from "./ics-save.js";
 
 // Los nombres se traducen al abrir el diálogo (el idioma puede cambiar en marcha).
 const fileFilters = (kind) => (FILTERS[kind] || []).map((f) => ({ ...f, name: t(f.name) }));
@@ -160,6 +161,14 @@ export function registerMediaIpc(handle, { getWin, getConn, fetchImpl }) {
     if (r.canceled || !r.filePath) return false;
     fs.writeFileSync(r.filePath, JSON.stringify(data, null, 2));
     return true;
+  });
+  // Exportar flotas a un calendario: siempre a un fichero local que elige el usuario, nunca a un servicio.
+  handle("fleets:saveIcs", async (text, suggestedName) => {
+    const ics = checkIcs(text);
+    const r = await dialog.showSaveDialog(getWin(), { defaultPath: safeIcsName(suggestedName), filters: [{ name: t("Calendario (iCalendar)"), extensions: ["ics"] }] });
+    if (r.canceled || !r.filePath) return null;
+    await fs.promises.writeFile(r.filePath, ics, "utf8");
+    return path.basename(r.filePath);
   });
   handle("theme:import", async () => {
     const r = await dialog.showOpenDialog(getWin(), { properties: ["openFile"], filters: [{ name: t("Tema EvEX"), extensions: ["json"] }] });

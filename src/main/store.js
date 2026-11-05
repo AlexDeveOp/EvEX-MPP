@@ -94,6 +94,8 @@ export const DEFAULT_SETTINGS = {
   pingHighlight: "60",
   // SRP: marcar pings para pedir el reembolso de naves (renderer/js/srp.js). Las marcas, por clave del mensaje.
   srp: { enabled: false, deadlineDays: 0, marks: {} },
+  // Exportar flotas a .ics (renderer/js/ics.js): por defecto lo mínimo (opsec); alarm en minutos, 0 = sin aviso.
+  fleetIcs: { details: false, includeLink: false, alarm: 0 },
   // Mini ventana para jugar (src/main/mini-window.js). La posición se guarda aparte, por monitor.
   mini: { enabled: false, opacity: 0.85, clickThrough: false },
   behavior: {
