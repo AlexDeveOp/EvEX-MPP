@@ -16,6 +16,7 @@ import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
 import { toggleMini } from "./mini-feed.js";
 import { mentionsHeader, mentionCard, visibleMentions, mentionFilterMatches } from "./mentions.js";
+import { calendarMenuItem, prefillFromMessage, prefillFromPing } from "./fleet-manual.js";
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
 import { t } from "./i18n.js";
@@ -344,6 +345,15 @@ function pane(c) {
   });
   list.addEventListener("click", (e) => onListClick(c, e));
   list.addEventListener("contextmenu", (e) => {
+    // Pings: «Añadir al calendario» con la hora del formup, el título y el grupo del ping.
+    const card = c.type === "pings" && e.target.closest(".ping-card");
+    if (card) {
+      if (window.getSelection().toString() || e.target.closest("a")) return;
+      const pm = c.messages.find((x) => x.key === card.dataset.key);
+      if (!pm) return;
+      e.preventDefault();
+      return showMenu(e.clientX, e.clientY, [calendarMenuItem(() => prefillFromPing(pm), { groups: pingGroups(c.messages) }), { label: t("Copiar el ping completo"), icon: "copy", action: () => navigator.clipboard.writeText(pm.body) }]);
+    }
     const el = e.target.closest(".msg");
     if (!el || window.getSelection().toString() || e.target.closest("a")) return;
     e.preventDefault();
@@ -917,6 +927,7 @@ function messageMenu(c, m) {
     c.type === "groupchat" && !m.out ? { label: t("Mencionar a {nick}", { nick: m.nick }), icon: "at-sign", action: () => insertMention(c, m.nick) } : null,
     c.type === "groupchat" && !m.out ? { label: t("Mensaje privado"), icon: "message-square", action: () => openConv(c.accountId, `${c.conv}/${m.nick}`, "chat") } : null,
     m.out && m.id ? { label: t("Corregir mensaje"), icon: "pencil", action: () => startEdit(c, m) } : null,
+    c.type === "groupchat" && !m.sys ? calendarMenuItem(() => prefillFromMessage(m, convTitle(c))) : null,
     "-",
     { label: t("Local: {dateTime}", { dateTime: fmtDateTime(m.ts) }), icon: "clock", disabled: true },
     { label: t("EVE: {eve} (UTC)", { eve: fmtEve(m.ts, true) }), icon: "globe", disabled: true },
