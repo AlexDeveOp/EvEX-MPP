@@ -3,6 +3,7 @@
 // entero; el título va tal cual llega (con sus caracteres invisibles, sin tocarlos).
 import { S, api, on, onMain, updateSettings } from "./state.js";
 import { pingsConv, totalUnread } from "./convs.js";
+import { mentionsConv } from "./mentions.js";
 import { parsePing } from "./pings.js";
 import { nextFormup } from "./formup.js";
 import { fmtEve, fmtEveDateTime, fmtTime } from "./format.js";
@@ -27,8 +28,7 @@ export function miniState(now = Date.now()) {
     formup: f ? { at: f.at, title: String(parsePing(f.m.body).title || "").slice(0, TITLE_MAX), eve: fmtEve(f.at), eveDateTime: fmtEveDateTime(f.at), local: S.settings.showLocalTime !== false ? fmtTime(f.at) : null } : null,
     unread: Math.max(0, totalUnread() - pc.unread),
     pings: pc.unread,
-    // TODO: menciones pendientes cuando entre la bandeja de menciones (PR #54).
-    mentions: null,
+    mentions: mentionsConv().pending || 0,
     clickThrough: !!S.settings.mini?.clickThrough,
     colors: { surface: c.surface, text: c.text, text2: c.text2, border: c.border, warn: c.warn, accent: c.accent, danger: c.danger },
   };

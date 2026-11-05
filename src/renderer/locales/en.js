@@ -1296,7 +1296,6 @@ export default {
   "Mini ventana para jugar": "Mini window for gaming",
   "Mini ventana para jugar (abrir o cerrar)": "Mini window for gaming (open or close)",
   "Pings sin ver": "Unseen pings",
-  "Menciones": "Mentions",
   "Mensajes sin leer": "Unread messages",
   "Los clics pasan al juego. Cámbialo desde la bandeja o en Preferencias → Pings de flota.": "Clicks go through to the game. Change it from the tray or in Preferences → Fleet pings.",
   "Abrir los pings de flota": "Open fleet pings",

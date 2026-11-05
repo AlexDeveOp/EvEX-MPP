@@ -48,7 +48,7 @@ function paint() {
   const bar = el("div", "bar");
   bar.append(el("span", "name", "EvEX-MPP"));
   bar.append(count("pings", s.pings || 0, t("Pings sin ver"), { accountId: null, conv: "*", convType: "pings" }));
-  if (s.mentions != null) bar.append(count("mentions", s.mentions, t("Menciones"), { show: true }));
+  if (s.mentions != null) bar.append(count("mentions", s.mentions, t("Menciones"), { convType: "mentions" }));
   bar.append(count("unread", s.unread || 0, t("Mensajes sin leer"), { show: true }));
 
   const body = el("div", "body");

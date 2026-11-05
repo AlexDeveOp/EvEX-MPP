@@ -127,8 +127,8 @@ export function miniIpc(handle) {
   handle("mini:get", () => lastState);
   handle("mini:click", (target) => {
     if (current.clickThrough) return;
-    // { show: true }: solo traer la app (no leídos); si no, abrir la vista de pings.
+    // { show: true }: solo traer la app (no leídos); menciones o, por defecto, la vista de pings.
     if (target?.show) return options.onShow();
-    options.onClick({ accountId: null, conv: "*", convType: "pings" });
+    options.onClick({ accountId: null, conv: "*", convType: target?.convType === "mentions" ? "mentions" : "pings" });
   });
 }
