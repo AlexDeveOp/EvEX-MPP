@@ -94,6 +94,8 @@ export const DEFAULT_SETTINGS = {
   pingHighlight: "60",
   // SRP: marcar pings para pedir el reembolso de naves (renderer/js/srp.js). Las marcas, por clave del mensaje.
   srp: { enabled: false, deadlineDays: 0, marks: {} },
+  // Mini ventana para jugar (src/main/mini-window.js). La posición se guarda aparte, por monitor.
+  mini: { enabled: false, opacity: 0.85, clickThrough: false },
   behavior: {
     enterToSend: true,
     sendTyping: true,

@@ -1,0 +1,140 @@
+/* Mini ventana para jugar (src/main/mini-window.js). La opacidad la pone el proceso principal (setOpacity). */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface, #11151c);
+  color: var(--text, #e6edf3);
+  font-family: "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.mini {
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border, #263244);
+  border-left: 4px solid var(--warn, #e3b341);
+}
+/* La barra de arriba mueve la ventana; el resto se puede pulsar. */
+.bar {
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2, #8b98a9);
+  border-bottom: 1px solid var(--border, #263244);
+}
+.bar .name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.count {
+  -webkit-app-region: no-drag;
+  min-width: 1.5em;
+  padding: 0 6px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 17px;
+  background: color-mix(in srgb, var(--text2, #8b98a9) 25%, transparent);
+  color: var(--text, #e6edf3);
+  cursor: pointer;
+}
+.count.pings {
+  background: var(--warn, #e3b341);
+  color: #111;
+}
+.count.mentions {
+  background: var(--accent, #3b9bff);
+  color: #fff;
+}
+.count.zero {
+  opacity: 0.45;
+}
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px 8px;
+  cursor: pointer;
+}
+.title {
+  font-weight: 650;
+  font-size: 13.5px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--text2, #8b98a9);
+}
+.group {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warn, #e3b341) 22%, transparent);
+  color: var(--text, #e6edf3);
+}
+.formup {
+  margin-top: auto;
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+.formup .cd {
+  font-weight: 700;
+  color: var(--warn, #e3b341);
+}
+.formup[data-state="now"] .cd {
+  color: var(--danger, #f85149);
+}
+.formup .when {
+  font-size: 11.5px;
+  color: var(--text2, #8b98a9);
+}
+.muted {
+  color: var(--text2, #8b98a9);
+}
+/* Con «dejar pasar los clics» no se puede pulsar: se nota en el borde. */
+.mini.through {
+  border-style: dashed;
+}
+.mini.through .body,
+.mini.through .count {
+  cursor: default;
+}
+/* Asa para cambiar el tamaño. */
+.grip {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 0 55%, var(--text2, #8b98a9) 55% 62%, transparent 62% 72%, var(--text2, #8b98a9) 72% 79%, transparent 79%);
+  opacity: 0.6;
+}
+body.through .grip {
+  display: none;
+}
+/* Lo oculto se oculta aunque la clase diga flex. */
+[hidden] {
+  display: none !important;
+}

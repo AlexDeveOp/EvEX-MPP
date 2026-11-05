@@ -14,6 +14,7 @@ import { openBackgroundEditor, openSettings } from "./settings.js";
 import { stopSpeaking } from "./tts.js";
 import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
+import { toggleMini } from "./mini-feed.js";
 import { mentionsHeader, mentionCard, visibleMentions, mentionFilterMatches } from "./mentions.js";
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
@@ -489,6 +490,8 @@ function renderHeader(c, p) {
         groups.map((g) => h("option", { value: g, selected: g === p.filter.group }, g)),
       ),
       ...srpHeaderControls(c.messages, p.filter, () => (renderHeader(c, p), renderAllMessages(c, p))),
+      // Mini ventana para jugar (siempre encima): se abre o se cierra.
+      iconButton("picture-in-picture-2", t("Mini ventana para jugar (abrir o cerrar)"), () => toggleMini()),
       // Busca pings que llegaron con la app cerrada (registros de Pidgin y archivo del servidor), no solo redibuja.
       iconButton("refresh-cw", t("Buscar pings nuevos (en Pidgin y en el servidor)"), (e) => searchMissedPings(e.currentTarget)),
       // Solo se ve mientras se lee un ping en voz alta (clase tts-speaking en body).

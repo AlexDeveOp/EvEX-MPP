@@ -10,6 +10,7 @@ import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
+import { configureMini, applyMini, miniIpc, isMiniOpen, miniOnTop } from "./mini-window.js";
 import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
@@ -211,6 +212,14 @@ function createWindow() {
   for (const evt of ["maximize", "unmaximize"]) win.on(evt, () => send("window-maximized", win.isMaximized()));
   // Si arranca maximizada, el aviso llega antes que la página: se repite al cargarla.
   win.webContents.on("did-finish-load", () => send("window-maximized", win.isMaximized()));
+  // Sin «cerrar a la bandeja», la ventana se destruye y la app sigue en la bandeja (y con la mini ventana): se olvida,
+  // para que «Mostrar EvEX-MPP» o la mini la vuelvan a crear en vez de fallar con una ventana destruida.
+  const self = win;
+  win.on("closed", () => {
+    if (win !== self) return;
+    win = null;
+    rendererReady = false;
+  });
   win.on("close", (e) => {
     if (!quitting && store.get().settings.behavior.closeToTray) {
       e.preventDefault();
@@ -284,7 +293,7 @@ function hideToTray() {
 }
 
 function showWindow() {
-  if (!win) return createWindow();
+  if (!win || win.isDestroyed()) return createWindow();
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -561,7 +570,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
+      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, miniOnTop: miniOnTop(), hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
     };
   });
 
@@ -572,6 +581,8 @@ function registerIpc() {
     updateFound = null;
     if (pendingRecovered) send("pings-recovered", { count: pendingRecovered });
     pendingRecovered = 0;
+    if (pendingNav) send("nav", pendingNav);
+    pendingNav = null;
     // Pings que recibió Pidgin con la app cerrada; después se revisa cada 2 minutos (por si Pidgin, con más
     // prioridad, se los queda mientras la app está abierta).
     syncPings({ server: false }).catch(() => {});
@@ -596,7 +607,7 @@ function registerIpc() {
     setLanguage(s.language);
     applySystemSettings(s);
     // El menú de la bandeja se construye con textos traducidos: rehacerlo si cambia el idioma.
-    if (getTray() && currentLang() !== before) getTray().setContextMenu(buildTrayMenu());
+    if (currentLang() !== before) refreshTrayMenu();
     return s;
   });
 
@@ -783,9 +794,29 @@ function testTimes() {
   };
 }
 
+// El menú de la bandeja lleva textos traducidos y la casilla de la mini ventana: se rehace cuando cambian.
+function refreshTrayMenu() {
+  getTray()?.setContextMenu(buildTrayMenu());
+}
+
+// Casilla de la bandeja: la mini ventana se abre o se cierra aquí mismo, aunque la ventana principal no esté lista
+// (arranque oculto) o ya no exista. Se guarda el ajuste y se avisa a la ventana principal, si la hay.
+function toggleMiniWindow() {
+  const s = store.get().settings;
+  s.mini = { ...s.mini, enabled: !isMiniOpen() };
+  store.save();
+  applyMini(s);
+  refreshTrayMenu();
+  send("mini-changed", s.mini);
+}
+
+// Si la ventana se acaba de crear (estaba cerrada), la página aún no escucha: el destino se manda al estar lista.
+let pendingNav = null;
 function openFromNotification(data) {
   showWindow();
-  send("nav", { accountId: data.accountId, conv: data.conv, convType: data.convType });
+  const nav = { accountId: data.accountId, conv: data.conv, convType: data.convType };
+  if (rendererReady) send("nav", nav);
+  else pendingNav = nav;
 }
 
 // Linux no tiene «iniciar con el sistema» en Electron: se crea o se quita el .desktop de ~/.config/autostart.
@@ -802,6 +833,9 @@ function setLinuxAutostart(enabled) {
 function applySystemSettings(s) {
   scheduleUpdateChecks(!!s.behavior.checkUpdates);
   configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, display: s.notifications.popupDisplay, displayHint: s.notifications.popupDisplayHint, getWin: () => win, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
+  // Mini ventana para jugar: al abrirla o cerrarla, la casilla de la bandeja cambia.
+  configureMini({ preload: path.join(ROOT, "src", "preload-mini.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: refreshTrayMenu });
+  applyMini(s);
   refreshTray();
   try {
     // El portable se descomprime en una carpeta temporal: hay que registrar el .exe original.
@@ -857,6 +891,7 @@ app.whenReady().then(async () => {
   registerProtocols();
   registerIpc();
   popupIpc(handle);
+  miniIpc(handle);
   applySystemSettings(store.get().settings);
   app.on("login", onLogin);
   await applyGlobalProxy().catch(() => {});
@@ -877,6 +912,8 @@ app.whenReady().then(async () => {
     accounts,
     showWindow,
     send,
+    miniOpen: isMiniOpen,
+    toggleMini: toggleMiniWindow,
     quit: () => {
       quitting = true;
       app.quit();

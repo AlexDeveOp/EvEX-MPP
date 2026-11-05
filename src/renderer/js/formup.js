@@ -8,6 +8,7 @@ import { playRuleSound } from "./sounds.js";
 import { speak, speechAvailable, voiceSettings } from "./tts.js";
 import { themeColors } from "./themes.js";
 import { fmtTime, fmtEve, fmtEveDateTime } from "./format.js";
+import { countdownText as baseCountdown } from "./countdown.js";
 
 import { t } from "./i18n.js";
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
@@ -76,19 +77,9 @@ export function parseFormup(p, ts) {
   return relative(text, ts) ?? absolute(text, ts, CONTEXT_RE);
 }
 
-// Texto del chip: «Formup en 12:34», «Formup en 1:05:00», «¡Formup ahora!», «Formup hace 12 min».
+// Texto del chip (countdown.js), con la fecha y la hora EVE según los ajustes.
 export function countdownText(at, now = Date.now()) {
-  const diff = at - now;
-  const pad = (n) => String(n).padStart(2, "0");
-  if (diff > 0) {
-    const s = Math.ceil(diff / 1000);
-    const h = Math.floor(s / 3600);
-    const clock = h ? `${h}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}` : `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
-    return { state: h >= 24 ? "later" : "soon", text: h >= 24 ? t("Formup el {date} EVE", { date: fmtEveDateTime(at) }) : t("Formup en {time}", { time: clock }) };
-  }
-  if (diff > -15 * 60e3) return { state: "now", text: t("¡Formup ahora!") };
-  if (diff > -2 * 3600e3) return { state: "past", text: t("Formup hace {n} min", { n: Math.floor(-diff / 60e3) }) };
-  return { state: "old", text: t("Formup a las {time} EVE", { time: fmtEve(at) }) };
+  return baseCountdown(at, now, { eveDateTime: fmtEveDateTime, eve: fmtEve });
 }
 
 // Las tarjetas visibles se actualizan cada segundo mientras queda alguna cuenta atrás que no sea vieja.
@@ -137,6 +128,25 @@ function formupOf(m) {
   if (cache.size > 2000) cache.clear();
   if (!cache.has(m.key)) cache.set(m.key, parseFormup(parsePing(m.body), m.ts));
   return cache.get(m.key);
+}
+
+// Próximo formup entre los pings de las últimas 24 h, para la mini ventana: el siguiente que aún no ha empezado; si no
+// hay ninguno, el que empezó hace menos (hasta 15 min después cuenta como «¡Formup ahora!»). Un formup que ya empezó
+// no tapa al que empieza dentro de 5 min. `until` dice cuándo cambia la elección (empieza el elegido o deja de valer).
+export const FORMUP_NOW_MS = 15 * 60e3;
+export function nextFormup(messages, now = Date.now()) {
+  let future = null;
+  let started = null;
+  for (const m of messages) {
+    if (now - m.ts > 86400e3) continue;
+    const at = formupOf(m);
+    if (!at || at < now - FORMUP_NOW_MS) continue;
+    if (at > now) {
+      if (!future || at < future.at) future = { at, m };
+    } else if (!started || at > started.at) started = { at, m };
+  }
+  const best = future || started;
+  return best && { ...best, until: best.at > now ? best.at : best.at + FORMUP_NOW_MS };
 }
 
 // Un aviso se identifica por la hora del formup y el título del ping, no por la clave del ping: dos copias del mismo

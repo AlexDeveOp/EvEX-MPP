@@ -88,6 +88,13 @@ export function buildTrayMenu() {
       },
     },
     {
+      label: t("Mini ventana para jugar"),
+      type: "checkbox",
+      checked: !!options.miniOpen?.(),
+      click: () => options.toggleMini?.(),
+    },
+    { type: "separator" },
+    {
       label: t("Salir"),
       click: () => {
         options.quit();

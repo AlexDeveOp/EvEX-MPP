@@ -8,6 +8,12 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Mini window for gaming** (*Preferences → Fleet pings → Mini window for gaming*, the tray menu or the button in the pings view). A small always-on-top window, also over EVE in borderless mode:
+  - Shows the latest ping (title and target group only, never the whole text), the countdown to the next formup and the unread pings, mentions and messages. Clicking it opens fleet pings (or mentions, or the app).
+  - It never takes focus or flashes the taskbar (both can throw a full-screen game out of focus).
+  - Adjustable opacity (Windows; Linux desktops don't allow it) and an option to let clicks through to the game.
+  - Move it by its top bar and resize it from the corner grip. It remembers its size and place on each monitor, and comes back on screen if that monitor is unplugged.
+  - On Wayland the desktop decides where windows go, so it may not stay on top. Preferences says so.
 - **Mentions inbox:** a *Mentions* entry under *Fleet pings* in the sidebar gathers the room messages that mention you (your nickname, alias, username or room nickname, and the mention words in *Preferences → Notifications*) or match one of your keyword rules.
   - The entry only appears when there are mentions you haven't seen, and stays while its tab is open; after you see them and leave the inbox, it hides again. *Always show the mentions inbox* (*Preferences → Notifications*) keeps it visible, and Ctrl+K opens it at any time. Mentions are gathered either way.
   - Each entry shows the room, who wrote it, how long ago, local and EVE time, and the text with the mention highlighted. Click it (or press Enter) to open the room at that message, loading older history if needed; the message is highlighted for a moment.

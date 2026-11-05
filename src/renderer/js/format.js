@@ -153,10 +153,4 @@ export function fmtDateTime(ts) {
   return formatter({ dateStyle: "medium", timeStyle: "short", hour12: S.settings.timeFormat === "12" }).format(ts);
 }
 
-export function timeAgo(ts) {
-  const s = Math.round((Date.now() - ts) / 1000);
-  if (s < 60) return t("ahora");
-  if (s < 3600) return t("hace {n} min", { n: Math.floor(s / 60) });
-  if (s < 86400) return t("hace {n} h", { n: Math.floor(s / 3600) });
-  return t("hace {n} d", { n: Math.floor(s / 86400) });
-}
+export { timeAgo } from "./countdown.js";
