@@ -5,10 +5,11 @@ import { S, api, on, emit, onMain, updateSettings } from "./state.js";
 import { pingsConv, totalUnread } from "./convs.js";
 import { mentionsConv } from "./mentions.js";
 import { parsePing } from "./pings.js";
-import { nextFormup, countdownSettings } from "./formup.js";
-import { fmtEve, fmtEveDateTime, fmtTime } from "./format.js";
+import { countdownSettings } from "./formup.js";
+import { upcoming, onChange as onFleetsChange } from "./fleets.js";
+import { fmtEve } from "./format.js";
 import { themeColors } from "./themes.js";
-import { currentLang } from "./i18n.js";
+import { t, currentLang, locale } from "./i18n.js";
 
 const TITLE_MAX = 120;
 
@@ -18,19 +19,27 @@ function latest(messages) {
   return last;
 }
 
-// Próximo formup que enseña la mini (solo con la cuenta atrás activada, como en las tarjetas de los pings).
-const miniFormup = (messages, now) => (countdownSettings().enabled ? nextFormup(messages, now) : null);
+// Las próximas flotas del calendario (sin las sugeridas por decidir): hora EVE con el día si no es hoy, título y grupo.
+const MINI_FLEETS = 3;
+const nextFleets = (now) => upcoming({ now, limit: MINI_FLEETS, includePending: false });
+function whenLabel(at, now) {
+  const day = (ts) => Math.floor(ts / 86400e3);
+  const hm = fmtEve(at, false);
+  if (day(at) === day(now)) return hm;
+  if (day(at) === day(now) + 1) return `${t("mañ")} ${hm}`;
+  return `${new Intl.DateTimeFormat(locale(), { weekday: "short", timeZone: "UTC" }).format(at)} ${hm}`;
+}
 
 export function miniState(now = Date.now()) {
   const pc = pingsConv();
   const last = latest(pc.messages);
   const p = last ? parsePing(last.body) : null;
-  const f = miniFormup(pc.messages, now);
   const c = themeColors();
   return {
     ping: last ? { title: String(p.title || "").slice(0, TITLE_MAX), group: p.footer?.to || "", ts: last.ts } : null,
-    // Del formup solo la hora: la mini no enseña de qué ping es (ya lo dice el último ping).
-    formup: f ? { at: f.at, eve: fmtEve(f.at), eveDateTime: fmtEveDateTime(f.at), local: S.settings.showLocalTime !== false ? fmtTime(f.at) : null } : null,
+    // Próximas flotas: solo hora, título (tal cual) y grupo. La cuenta atrás, solo si está activada en Preferencias.
+    fleets: nextFleets(now).map((f) => ({ at: f.at, when: whenLabel(f.at, now), title: String(f.title || "").slice(0, 80), group: f.group || "", manual: f.source === "manual" })),
+    countdown: countdownSettings().enabled,
     unread: Math.max(0, totalUnread() - pc.unread),
     pings: pc.unread,
     mentions: mentionsConv().pending || 0,
@@ -58,9 +67,9 @@ function push() {
   if (!miniEnabled()) return void (lastJson = "");
   const now = Date.now();
   const state = miniState(now);
-  // Se vuelve a calcular justo cuando cambia el formup elegido (empieza, o pasan 15 min desde su hora).
-  const f = miniFormup(pingsConv().messages, now);
-  if (f) boundary = setTimeout(() => schedule(0), Math.max(0, f.until - now) + 500);
+  // Se vuelve a calcular justo cuando la primera flota empieza y cuando deja de contar (15 min después).
+  const first = state.fleets[0];
+  if (first) boundary = setTimeout(() => schedule(0), Math.max(0, (first.at > now ? first.at : first.at + 15 * 60e3) - now) + 500);
   const json = JSON.stringify(state);
   if (json === lastJson) return;
   lastJson = json;
@@ -80,6 +89,7 @@ export function initMiniFeed() {
     emit("settings", S.settings);
   });
   for (const evt of ["message", "history", "sidebar", "tabs"]) on(evt, () => schedule());
+  onFleetsChange(() => schedule());
   on("settings", () => {
     lastJson = "";
     clearTimeout(timer);

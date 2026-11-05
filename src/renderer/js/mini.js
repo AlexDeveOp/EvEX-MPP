@@ -2,7 +2,7 @@
 // Los elementos se crean una sola vez y después solo cambian sus textos: rehacerlos podía perder un clic si llegaban
 // datos (o el tic de cada segundo) entre pulsar y soltar.
 import { t, currentLang } from "./i18n.js";
-import { countdownText, timeAgo } from "./countdown.js";
+import { fleetCountdown, timeAgo } from "./countdown.js";
 
 const call = (ch, ...a) => window.evex.call(ch, ...a);
 const root = document.getElementById("mini");
@@ -36,20 +36,26 @@ const ui = {
   group: el("span", "group"),
   ago: el("span", "ago"),
   empty: el("div", "muted", t("Cargando…")),
-  formup: el("div", "formup"),
-  cd: el("span", "cd"),
-  when: el("span", "when"),
+  fleetsHead: el("div", "fleets-head", t("Próximas flotas")),
+  fleets: [0, 1, 2].map(() => {
+    const row = el("div", "fleet");
+    const when = el("span", "when");
+    const title = el("span", "ftitle");
+    const chip = el("span", "chip");
+    row.append(when, title, chip);
+    row.hidden = true;
+    return { row, when, title, chip };
+  }),
 };
 const bar = el("div", "bar");
 bar.append(el("span", "name", "EvEX-MPP"), ui.pings, ui.mentions, ui.unread);
 const meta = el("div", "meta");
 meta.append(ui.group, ui.ago);
-ui.formup.append(ui.cd, ui.when);
 const body = el("div", "body");
-body.append(ui.title, meta, ui.empty, ui.formup);
+body.append(ui.title, meta, ui.empty, ui.fleetsHead, ...ui.fleets.map((f) => f.row));
 body.addEventListener("click", () => open({ convType: "pings" }));
 root.append(bar, body);
-ui.formup.hidden = true;
+ui.fleetsHead.hidden = true;
 ui.title.hidden = meta.hidden = true;
 
 function setCount(c, n) {
@@ -64,15 +70,23 @@ function tick() {
   if (!state) return;
   const now = Date.now();
   if (state.ping) ui.ago.textContent = timeAgo(state.ping.ts, now);
-  const f = state.formup;
-  const c = f && countdownText(f.at, now, { eveDateTime: () => f.eveDateTime, eve: () => f.eve });
-  // Hasta 15 min después de la hora («¡Formup ahora!»); después se oculta sin esperar a los datos siguientes.
-  const show = !!c && now - f.at <= 15 * 60e3;
-  ui.formup.hidden = !show;
-  if (!show) return;
-  ui.formup.dataset.state = c.state;
-  ui.cd.textContent = c.text;
-  ui.when.textContent = f.local ? `${f.eve} EVE · ${f.local}` : `${f.eve} EVE`;
+  // La primera flota lleva la cuenta atrás (si está activada); las demás, su grupo. Una flota que empezó hace más de
+  // 15 min se oculta sin esperar a los datos siguientes.
+  const fleets = (state.fleets || []).filter((f) => now - f.at <= 15 * 60e3);
+  ui.fleetsHead.hidden = !fleets.length;
+  ui.fleets.forEach((r, i) => {
+    const f = fleets[i];
+    r.row.hidden = !f;
+    if (!f) return;
+    r.row.classList.toggle("manual", !!f.manual);
+    r.when.textContent = f.when;
+    r.title.textContent = f.title || t("(flota sin título)");
+    const cd = i === 0 && state.countdown ? fleetCountdown(f.at, now) : "";
+    r.chip.textContent = cd || f.group || (f.manual ? t("a mano") : "");
+    r.chip.className = `chip ${cd ? "cd" : f.group ? "group" : "plain"}`;
+    r.chip.hidden = !r.chip.textContent;
+    r.row.dataset.now = String(f.at <= now);
+  });
 }
 
 function update(s) {
@@ -84,6 +98,7 @@ function update(s) {
   document.body.classList.toggle("through", !!s.clickThrough);
   root.classList.toggle("through", !!s.clickThrough);
   root.classList.toggle("empty", !s.ping);
+  root.classList.toggle("has-fleets", !!s.fleets?.length);
   setCount(ui.pings, s.pings);
   setCount(ui.mentions, s.mentions);
   setCount(ui.unread, s.unread);
