@@ -67,13 +67,24 @@ function parsePingNow(body) {
 
 const FIELD_ICONS = { "fc name": "crown", fc: "crown", "formup location": "map-pin", formup: "map-pin", location: "map-pin", "pap type": "flag", comms: "radio", doctrine: "swords", ships: "rocket", target: "crosshair", time: "clock" };
 
+// Sistema para el enlace a Dotlan: solo en campos de LUGAR («Formup Location», «Location», «System», «Staging»,
+// «Formup» a secas…), nunca en uno de hora («Formup Time», «When»…) ni si el valor es una hora o una fecha.
+const PLACE_KEY = /location|system|staging|rally|^form\s*-?up(?:\s*(?:point|spot))?$/i;
+const TIME_LIKE_KEY = /time|when|date|\bat\b/i;
+const TIME_LIKE_VALUE = /\b\d{1,2}:\d{2}\b|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|\b(?:in|en)\s+\d+\s*(?:m|min|mins|minutes?|h|hrs?|hours?)\b/i;
+export function dotlanSystem(key, value) {
+  const k = String(key || "").replace(INVISIBLE, "").trim();
+  if (!PLACE_KEY.test(k) || TIME_LIKE_KEY.test(k)) return "";
+  const v = String(value || "").replace(INVISIBLE, "").trim();
+  if (TIME_LIKE_VALUE.test(v)) return "";
+  const sys = v.split(/[\s,(]/)[0];
+  return /^[A-Za-z0-9-]{3,12}$/.test(sys) && /[A-Za-z]/.test(sys) ? sys : "";
+}
+
 function fieldValue(key, value, rules) {
-  const k = key.toLowerCase();
-  if (/formup|location|system/.test(k)) {
-    const sys = value.replace(INVISIBLE, "").trim().split(/[\s,(]/)[0];
-    if (/^[A-Za-z0-9-]{3,12}$/.test(sys)) {
-      return h("span", { html: formatBody(value, { rules }).html + ` <a class="link dotlan" href="https://evemaps.dotlan.net/system/${encodeURIComponent(sys)}" title="${esc(t("Ver {system} en Dotlan", { system: sys }))}">🗺 Dotlan</a>` });
-    }
+  const sys = dotlanSystem(key, value);
+  if (sys) {
+    return h("span", { html: formatBody(value, { rules }).html + ` <a class="link dotlan" href="https://evemaps.dotlan.net/system/${encodeURIComponent(sys)}" title="${esc(t("Ver {system} en Dotlan", { system: sys }))}">🗺 Dotlan</a>` });
   }
   return h("span", { html: formatBody(value, { rules }).html });
 }

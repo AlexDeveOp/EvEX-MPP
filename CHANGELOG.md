@@ -50,6 +50,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - It doesn't change your XMPP status. Fleet pings and connection lost or restored alerts always get through; the voice of pings and of the formup reminder follows the same rule.
 
 ### Changed
+- **Fleet pings header in two rows**, so it fits narrow windows: title, view switch and icons on top; filter, groups, SRP and the calendar buttons below. In a narrow header the calendar buttons show only their icon (the text is in the tooltip).
 - **Pop-ups now appear on the main screen by default.** Before, they appeared on the screen where the mouse was, so with two monitors a ping could show up on the secondary one. New option *Pop-up screen* (*Preferences → Notifications*, next to the corner): *Main screen* (the default), *Where the mouse is* (the old behavior), *Screen with the EvEX-MPP window*, or a specific monitor by number and resolution. Picking one shows a test pop-up there.
   - The screen is chosen when the first pop-up of a stack opens and stays while any is open, so a ping that stays on screen does not jump to another monitor when you move the mouse.
   - If the chosen monitor is disconnected, pop-ups move to the main screen (no alert is lost) and go back to it when it is connected again, even if the system gives it a new id. Open pop-ups are moved when a monitor is added, removed or changes resolution.
@@ -62,6 +63,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **Connection log** (`connection.log` in the data folder, at most 1 MB with the previous one): connects, disconnects, errors and server notices (which until now only reached the developer console), and why each reconnection happened. No messages, contacts or passwords. See [PRIVACY.md](PRIVACY.md).
 
 ### Fixed
+- **Dotlan link in fleet pings** only for place fields (Formup Location, Location, System, Staging…). It no longer appears next to a time ("Formup Time: 2026-11-05 🗺 Dotlan") or a date.
 - **Sharper tray icon on scaled displays.** The tray icon used to be a single 16 px image, so Windows at 125–150 % scaling enlarged it and it looked blurry. It now comes in 16, 24 and 32 px, each drawn at its own size, for the normal icon, the fleet ping siren and the do-not-disturb badge.
 - A network change notice (for example from a virtual network adapter) no longer cuts a connection that is still logging in and making progress, which with a distant server takes a few seconds; it was retried from scratch. An attempt that has been stuck for more than 5 seconds is still retried at once.
 - A connection reset by the server during login, or after disconnecting while the server did not answer, no longer leaves an unhandled error in the main process.
