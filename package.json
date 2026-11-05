@@ -16,6 +16,7 @@
     "i18n": "node scripts/i18n-check.mjs",
     "check": "node scripts/check.mjs",
     "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\" \"test/unit/*.test.js\"",
+    "coverage": "node --import ./test/unit/setup.mjs --test --experimental-test-coverage --test-coverage-include=\"src/**\" \"test/unit/*.test.mjs\" \"test/unit/*.test.js\"",
     "lint": "eslint .",
     "assets:emoji": "node scripts/build-anim-emoji.mjs",
     "assets:flags": "node scripts/build-flag-emoji.mjs",
@@ -43,6 +44,9 @@
     "globals": "^17.14.0",
     "lucide-static": "^1.66.0",
     "sharp": "^0.35.5"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.4"
   },
   "productName": "EvEX-MPP",
   "desktopName": "evex-mpp.desktop",

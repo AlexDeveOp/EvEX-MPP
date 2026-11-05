@@ -26,6 +26,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - A network change notice (for example from a virtual network adapter) no longer cuts a connection that is still logging in, which with a distant server takes a few seconds; it was retried from scratch.
 - Disconnecting while the server did not answer could leave an unhandled error in the main process when the socket was reset afterwards.
 
+### Security
+- Updated the development dependency minimatch to 11.0.4 (GHSA-g3hv-75wg-m249, denial of service in glob patterns). It is only used by the build tools, not shipped in the app.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added
