@@ -111,6 +111,7 @@ export const notificationTabs = {
         t("Cuándo avisar"),
         toggle(n.privateMessages, (v) => set((x) => (x.privateMessages = v)), t("Mensajes privados")),
         toggle(n.mentions, (v) => set((x) => (x.mentions = v)), t("Cuando te mencionan en una sala")),
+        toggle(!!n.alwaysShowMentions, (v) => set((x) => (x.alwaysShowMentions = v)), t("Mostrar siempre la bandeja de menciones"), t("Si no, «Menciones» solo aparece en la barra lateral cuando hay menciones sin ver. También se abre con Ctrl+K.")),
         toggle(n.allRoomMessages, (v) => set((x) => (x.allRoomMessages = v)), t("Todos los mensajes de todas las salas"), t("Se puede ajustar por sala con clic derecho")),
         toggle(n.pings, (v) => set((x) => (x.pings = v)), t("Pings de flota (remitentes configurados en «Pings de flota»)")),
         field(t("Palabras clave que cuentan como mención"), kw),

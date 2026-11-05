@@ -1303,4 +1303,7 @@ export default {
   "Pantalla {n}": "Screen {n}",
   "principal": "main",
   "Las burbujas saldrán en esta pantalla.": "Pop-ups will appear on this screen.",
+  // Bandeja de menciones oculta por defecto
+  "Mostrar siempre la bandeja de menciones": "Always show the mentions inbox",
+  "Si no, «Menciones» solo aparece en la barra lateral cuando hay menciones sin ver. También se abre con Ctrl+K.": "Otherwise “Mentions” only appears in the sidebar when there are unseen mentions. Ctrl+K also opens it.",
 };

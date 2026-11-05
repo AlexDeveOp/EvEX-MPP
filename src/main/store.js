@@ -47,6 +47,8 @@ export const DEFAULT_SETTINGS = {
     mentions: true,
     allRoomMessages: false,
     pings: true,
+    // La entrada «Menciones» de la barra lateral solo sale con menciones sin ver, salvo que se pida verla siempre.
+    alwaysShowMentions: false,
     keywords: [],
     // Reglas por palabra clave: palabras, dónde se aplican y su aviso, sonido y color (ver renderer/js/keywords.js).
     keywordRules: [],

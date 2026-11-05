@@ -218,6 +218,12 @@ async function scanHistory(c, now = Date.now()) {
   return added.length;
 }
 
+// ¿Se ve la entrada «Menciones» en la barra lateral? Oculta por defecto: sale con menciones sin ver, mientras su
+// pestaña esté abierta y siempre si se activa «Mostrar siempre la bandeja de menciones». La recogida sigue igual.
+export function showMentionsEntry({ always = S.settings?.notifications?.alwaysShowMentions, pending = mentionsConv().pending, open = S.tabs.includes(MENTIONS_KEY), active = S.active === MENTIONS_KEY } = {}) {
+  return !!(always || pending > 0 || open || active);
+}
+
 // ---------- filtro ----------
 
 export function mentionRooms(items) {
