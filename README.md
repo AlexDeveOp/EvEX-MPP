@@ -114,6 +114,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 **Messages**
 - Local time (grey) and **EVE/UTC time** (amber) on every message; either can be hidden. EVE clock in the title bar.
 - Local history with search, and mentions with custom keywords.
+- **Mentions inbox**: one view with the room messages that mention you or match your keywords, also from before you opened the app, with a filter by room and text. Click one to jump to that message in its room.
 - Correct your last message with ↑, quotes and `/me`.
 - Pidgin's XMPP commands, with suggestions as you type `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` and `/help`. Nickname (Tab) and `:emoji:` completion.
 - **Edit the room topic** from the header: an *edit* tag appears when the server lets you change it (moderators always, participants only when the room says it allows it; otherwise `/topic` still lets you try). It opens a box with the current topic to edit it or paste a new one, with ✓ and ✕. Room owners can open the room's settings from the ⋮ menu or with `/config`, including the lists of owners, admins, members and banned users. Right-click a participant to make them a moderator, member, admin or owner, as far as your own permissions allow.

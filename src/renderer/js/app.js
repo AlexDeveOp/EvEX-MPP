@@ -1,5 +1,6 @@
 // Arranque de la interfaz y traducción de eventos XMPP al estado local.
 import { S, api, onMain, emit, on, conn, account, contact, rosterOf, roomState, convKey, displayName, PINGS_KEY } from "./state.js";
+import { loadMentions } from "./mentions.js";
 import { h, icon, $, toast, modal, prompt, clear } from "./dom.js";
 import { applyAppearance } from "./themes.js";
 import { initChat, markReceipt, focusComposer } from "./chat.js";
@@ -43,6 +44,7 @@ async function boot() {
   });
   onMain("nav", ({ accountId, conv, convType }) => {
     if (convType === "pings") openConv(null, "*", "pings");
+    else if (convType === "mentions") openConv(null, "*", "mentions");
     else openConv(accountId, conv, convType);
   });
   onMain("switch-account", openSwitchAccount);
@@ -71,6 +73,8 @@ async function boot() {
   // Al volver la red, las cuentas desconectadas reintentan al momento (ver XmppAccount.nudge).
   window.addEventListener("online", () => api("network:online").catch(() => {}));
   pingsConv();
+  // La bandeja de menciones repasa el historial local poco después de abrir, para tener ya el contador.
+  setTimeout(() => loadMentions().catch(console.error), 2500);
   startFormupWatch();
   document.getElementById("app").classList.remove("booting");
   setTimeout(() => offerPidginRepair().catch(console.error), 1500);
@@ -105,6 +109,7 @@ async function restoreTabs() {
   const lastActive = localStorage.getItem("evex.activeTab");
   for (const tab of s.openTabs || []) {
     if (tab.type === "pings") await openConv(null, "*", "pings", { focus: false });
+    else if (tab.type === "mentions") await openConv(null, "*", "mentions", { focus: false });
     else if (account(tab.accountId)) {
       // Una sala sin ⚡ no se vuelve a abrir al iniciar, aunque su pestaña quedara abierta.
       if (tab.type === "groupchat" && !account(tab.accountId).rooms.some((r) => r.jid === tab.conv && r.autojoin)) continue;
@@ -517,14 +522,17 @@ function openSwitcher() {
   let items = [];
   let sel = 0;
   const all = () => {
-    const out = [{ label: t("Pings de flota"), sub: "broadcasts", icon: "siren", run: () => openConv(null, "*", "pings") }];
+    const out = [
+      { label: t("Pings de flota"), sub: "broadcasts", icon: "siren", run: () => openConv(null, "*", "pings") },
+      { label: t("Menciones"), sub: "@", icon: "at-sign", run: () => openConv(null, "*", "mentions") },
+    ];
     for (const acc of S.accounts) {
       for (const r of acc.rooms) out.push({ label: r.name, sub: r.jid, icon: "hash", run: () => openConv(acc.id, r.jid, "groupchat") });
       for (const c of rosterOf(acc.id).values()) if (c.inRoster) out.push({ label: c.name || c.jid.split("@")[0], sub: c.jid, icon: "user", run: () => openConv(acc.id, c.jid, "chat") });
     }
     for (const key of S.tabs) {
       const c = S.convs.get(key);
-      if (c && c.type !== "pings" && !out.some((o) => o.sub === c.conv)) out.push({ label: displayName(c.accountId, c.conv), sub: c.conv, icon: c.type === "groupchat" ? "hash" : "message-square", run: () => activate(key) });
+      if (c && c.type !== "pings" && c.type !== "mentions" && !out.some((o) => o.sub === c.conv)) out.push({ label: displayName(c.accountId, c.conv), sub: c.conv, icon: c.type === "groupchat" ? "hash" : "message-square", run: () => activate(key) });
     }
     return out;
   };

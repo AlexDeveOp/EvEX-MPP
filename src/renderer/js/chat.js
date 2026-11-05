@@ -14,10 +14,13 @@ import { openBackgroundEditor, openSettings } from "./settings.js";
 import { stopSpeaking } from "./tts.js";
 import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
+import { mentionsHeader, mentionCard, visibleMentions, mentionFilterMatches } from "./mentions.js";
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
 import { t } from "./i18n.js";
 const panes = new Map();
+// Vistas que reúnen mensajes de varias conversaciones (pings, menciones): sin compositor ni historial hacia arriba.
+const isFeed = (c) => c.type === "pings" || c.type === "mentions";
 
 export function initChat() {
   // Las pestañas se pintan como mucho una vez por fotograma (antes, una vez por cada mensaje no leído).
@@ -162,13 +165,14 @@ function renderTabs() {
 
 function tabIcon(c) {
   if (c.type === "pings") return icon("siren", "tab-icon ping");
+  if (c.type === "mentions") return icon("at-sign", "tab-icon mentions");
   if (c.type === "groupchat") return icon("hash", "tab-icon");
   const p = bestPresence(contact(c.accountId, c.conv.split("/")[0]));
   return h("span", { class: `presence-dot ${p.show}` });
 }
 
 export function convMenu(c) {
-  if (c.type === "pings") return [{ label: t("Cerrar"), icon: "x", action: () => closeConv(c.key) }];
+  if (isFeed(c)) return [{ label: t("Cerrar"), icon: "x", action: () => closeConv(c.key) }];
   const acc = account(c.accountId);
   const room = acc?.rooms.find((r) => r.jid === c.conv);
   const items = [];
@@ -293,6 +297,8 @@ function pane(c) {
   p = { root, list, scroller, jump, typing, header, bg, newCount: 0 };
   if (c.type === "pings") {
     p.filter = { query: "", group: "" };
+  } else if (c.type === "mentions") {
+    p.filter = { query: "", room: "" };
   } else {
     p.composer = buildComposer(c, p);
     root.append(p.composer.el);
@@ -306,7 +312,7 @@ function pane(c) {
     } else jump.classList.remove("hidden");
     // Mientras se lee arriba, la memoria no recorta los mensajes antiguos (convs.js).
     c.reading = !near;
-    if (scroller.scrollTop < 40 && !p.loadingMore && c.type !== "pings") {
+    if (scroller.scrollTop < 40 && !p.loadingMore && !isFeed(c)) {
       if (p.skipped) renderAllMessages(c, p, true);
       else if (!c.exhausted) {
         p.loadingMore = true;
@@ -338,7 +344,7 @@ function applyConvBackground(c, p) {
 
 // Una pestaña oculta no pinta mensajes: se marca y se repinta entera al abrirla.
 function skipHidden(c, p) {
-  if (c.key === S.active || c.type === "pings") return false;
+  if (c.key === S.active || isFeed(c)) return false;
   p.dirty = true;
   return true;
 }
@@ -359,14 +365,14 @@ function showActive() {
     p.dirty = false;
     applyConvBackground(c, p);
     renderAllMessages(c, p);
-  }
+  } else if (c.type === "mentions") renderAllMessages(c, p); // las tarjetas vistas dejan de marcarse como nuevas
   p.root.classList.add("active");
   renderHeader(c, p);
   if (c.firstUnreadKey) {
     insertUnreadMarker(c, p);
     c.firstUnreadKey = null;
   }
-  if (p.atBottom !== false && c.type !== "pings") scrollToBottom(p);
+  if (p.atBottom !== false && !isFeed(c)) scrollToBottom(p);
   p.composer?.focus();
   emit("occupants");
 }
@@ -374,6 +380,41 @@ function showActive() {
 export function focusComposer() {
   const c = S.active && S.convs.get(S.active);
   if (c) panes.get(c.key)?.composer?.focus();
+}
+
+// Bandeja de menciones: abre la sala y lleva al mensaje, cargando historial antiguo si hace falta.
+async function openMention(it) {
+  const c = await openConv(it.accountId, it.room, "groupchat");
+  if (!(await revealMessage(c, it.key))) toast(t("Ese mensaje ya no está en el historial guardado de la sala."));
+}
+
+// Desplaza la conversación hasta un mensaje y lo resalta un momento. Carga hasta unos miles de mensajes antiguos.
+export async function revealMessage(c, key) {
+  const has = () => c.messages.some((m) => m.key === key);
+  c.reading = true; // que la memoria no recorte los antiguos mientras se buscan
+  for (let i = 0; i < 25 && !has() && !c.exhausted; i++) {
+    if (!(await loadHistory(c, true))) break;
+  }
+  const p = panes.get(c.key);
+  if (!p || S.active !== c.key) return false;
+  const find = () => p.list.querySelector(`.msg[data-key="${CSS.escape(key)}"]`);
+  let el = find();
+  // Puede estar en memoria pero sin pintar (por encima de los últimos MAX_RENDERED).
+  if (!el && has()) {
+    renderAllMessages(c, p, 1);
+    el = find();
+  }
+  if (!el) {
+    c.reading = false;
+    return false;
+  }
+  p.atBottom = false;
+  requestAnimationFrame(() => {
+    el.scrollIntoView({ block: "center" });
+    el.classList.add("flash");
+    setTimeout(() => el.classList.remove("flash"), 2600);
+  });
+  return true;
 }
 
 function scrollToBottom(p, smooth) {
@@ -391,6 +432,15 @@ function renderHeader(c, p) {
   if (!c) return;
   clear(p.header);
   const acc = account(c.accountId);
+  if (c.type === "mentions") {
+    p.header.append(
+      ...mentionsHeader(c, p.filter, (withHeader) => {
+        if (withHeader) renderHeader(c, p);
+        renderAllMessages(c, p);
+      }),
+    );
+    return;
+  }
   if (c.type === "pings") {
     const groups = pingGroups(c.messages);
     p.header.append(
@@ -607,6 +657,19 @@ function renderAllMessages(c, p, prependedCount) {
   const oldHeight = p.scroller.scrollHeight;
   const oldTop = p.scroller.scrollTop;
   clear(p.list);
+  if (c.type === "mentions") {
+    const shown = visibleMentions(c.messages, p.filter);
+    if (!shown.length) {
+      const text = !c.loaded ? t("Buscando en el historial…") : p.filter.query || p.filter.room ? t("Ninguna mención coincide con el filtro.") : t("Aún no te ha mencionado nadie. Aquí aparecerán los mensajes de las salas que te nombran o coinciden con tus palabras clave.");
+      p.list.append(h("div", { class: "empty-state" }, icon("at-sign"), h("p", {}, text)));
+    }
+    const frag = document.createDocumentFragment();
+    for (const it of shown) frag.append(mentionCard(it, openMention));
+    p.list.append(frag);
+    p.lastRendered = null;
+    p.scroller.scrollTop = 0;
+    return;
+  }
   if (c.type === "pings") {
     const shown = visiblePings(c.messages, p.filter);
     if (!shown.length) p.list.append(h("div", { class: "empty-state" }, icon("radio"), h("p", {}, !c.loaded ? t("Cargando…") : p.filter.srpOnly ? t("No hay pings marcados para SRP. Márcalos con la bandera de cada ping.") : t("No hay pings que mostrar."))));
@@ -641,6 +704,14 @@ function renderAllMessages(c, p, prependedCount) {
 function appendMessage(c, m) {
   const p = panes.get(c.key);
   if (!p) return;
+  if (c.type === "mentions") {
+    if (!p.dirty && mentionFilterMatches(m, p.filter)) {
+      p.list.querySelector(".empty-state")?.remove();
+      p.list.prepend(mentionCard(m, openMention));
+    }
+    renderHeader(c, p);
+    return;
+  }
   if (c.type === "pings") {
     // Con la lista pendiente de repintar (p. ej. tras cambiar un ajuste con otra pestaña delante), el ping entra al
     // repintarla al abrirla; añadirlo ahora lo mezclaría con una lista desfasada.

@@ -1271,6 +1271,21 @@ export default {
   "Avatar…": "Avatar…",
   // Imágenes desde un enlace (alertas CodeQL #24 y #25)
   "Las imágenes animadas no se pueden añadir desde un enlace. Guárdala en tu PC y arrástrala desde el Explorador, o usa «Elegir archivo…».": "Animated images can't be added from a link. Save it to your PC and drag it from File Explorer, or use “Choose file…”.",
+  // Bandeja de menciones
+  "Menciones": "Mentions",
+  "Mensajes de las salas que te mencionan o coinciden con tus palabras clave": "Room messages that mention you or match your keywords",
+  "{n} mensajes que te mencionan o coinciden con tus palabras clave · {rooms} salas": "{n} messages that mention you or match your keywords · {rooms} rooms",
+  "Buscando en el historial…": "Searching the history…",
+  "Filtrar menciones…": "Filter mentions…",
+  "Todas las salas": "All rooms",
+  "Marcar todo como visto": "Mark all as seen",
+  "Marcar todo como visto ({n})": "Mark all as seen ({n})",
+  "Ninguna mención coincide con el filtro.": "No mentions match the filter.",
+  "Aún no te ha mencionado nadie. Aquí aparecerán los mensajes de las salas que te nombran o coinciden con tus palabras clave.": "Nobody has mentioned you yet. Room messages that name you or match your keywords will show up here.",
+  "Ir al mensaje en {room}": "Go to the message in {room}",
+  "Ir al mensaje": "Go to message",
+  "{time} local": "{time} local",
+  "Ese mensaje ya no está en el historial guardado de la sala.": "That message is no longer in the room's saved history.",
   // Aviso antes del formup: varios minutos, grupos y voz (src/renderer/js/formup.js)
   "1 hora": "1 hour",
   "{n} min": "{n} min",

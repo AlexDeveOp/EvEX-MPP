@@ -114,6 +114,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 **Mensajes**
 - Hora local (gris) y **hora EVE/UTC** (ámbar) en cada mensaje; cualquiera de las dos se puede ocultar. Reloj EVE en la barra de título.
 - Historial local con búsqueda y menciones con palabras clave.
+- **Bandeja de menciones**: una vista con los mensajes de las salas que te mencionan o coinciden con tus palabras clave, también los de antes de abrir la app, con filtro por sala y por texto. Con un clic vas a ese mensaje en su sala.
 - Corregir el último mensaje con ↑, citas y `/me`.
 - Los comandos de Pidgin para XMPP, con sugerencias al escribir `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` y `/help`. Autocompletado de apodos (Tab) y de `:emoji:`.
 - **Editar el tema de la sala** desde la cabecera: sale una etiqueta *editar* cuando el servidor te deja cambiarlo (los moderadores siempre; los participantes, solo si la sala dice que lo permite; si no, `/topic` permite intentarlo). Abre un cuadro con el tema actual para editarlo o pegar uno nuevo, con ✓ y ✕. Los propietarios abren la configuración de la sala desde el menú ⋮ o con `/config`, con las listas de propietarios, administradores, miembros y vetados. Con clic derecho en un participante se le hace moderador, miembro, administrador o propietario, hasta donde lleguen tus permisos.
