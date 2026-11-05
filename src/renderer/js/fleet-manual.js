@@ -43,9 +43,13 @@ export function nextHour(now = Date.now()) {
   return Math.ceil((now + 1) / 3600e3) * 3600e3;
 }
 
-// Comprueba el formulario. Devuelve el texto del error o "".
+// Quita solo espacios y tabuladores de los bordes: trim() también quitaría U+FEFF, y los caracteres invisibles (marcas de
+// agua de algunas alianzas) se guardan tal cual.
+export const trimSpaces = (s) => String(s ?? "").replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, "");
+
+// Comprueba el formulario. Devuelve el texto del error o "". Un título hecho solo de invisibles cuenta como vacío.
 export function validateFleet({ at, title }, now = Date.now()) {
-  if (!String(title || "").trim()) return t("Ponle un título a la flota.");
+  if (!trimSpaces(title).replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")) return t("Ponle un título a la flota.");
   if (!Number.isFinite(at)) return t("La fecha o la hora no son válidas.");
   if (at < now - 12 * 3600e3) return t("Esa hora ya ha pasado.");
   return "";
@@ -106,7 +110,7 @@ export function openAddFleet(prefill = {}, { groups = [], onSaved } = {}) {
 
   const save = (close) => {
     const at = fromEveParts(date.value, time.value);
-    const data = { at, title: title.value.trim(), group: group.value.trim(), note: note.value.trim() };
+    const data = { at, title: trimSpaces(title.value), group: trimSpaces(group.value), note: trimSpaces(note.value) };
     const err = validateFleet(data);
     error.textContent = err;
     if (err) return;
