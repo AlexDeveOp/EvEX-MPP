@@ -7,6 +7,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-05
+
 ### Added
 - **Microsoft Store version** (MSIX), signed by Microsoft, so Windows trusts it without the SmartScreen warning. The GitHub installer and portable stay as they are. In the Store version:
   - the Store keeps the app up to date, so it doesn't check GitHub for new versions;
@@ -355,7 +357,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.6.0...v0.7.0
