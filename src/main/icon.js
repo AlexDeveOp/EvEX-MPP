@@ -163,9 +163,10 @@ const chevron = (x, y, k) => [
   [x - k * 0.9, y + k * 0.7],
 ];
 
-// Medidas sobre una rejilla de 256. En grande, cuatro naves; en la bandeja (≤ 32 px), un haz más grueso, un anillo
-// más marcado y solo dos naves grandes, para que se reconozca a 16 px.
-const SMALL = 32;
+// Medidas sobre una rejilla de 256. En grande, el cyno con cuatro naves; en pequeño (≤ 48 px: bandeja, barra de
+// tareas, menú Inicio) solo el cyno, más grueso y con el anillo más marcado: las naves se quedaban en dos o tres
+// píxeles y ensuciaban el dibujo.
+const SMALL = 48;
 const FULL_LAYOUT = {
   top: 26 + 11,
   base: 190,
@@ -185,20 +186,17 @@ const FULL_LAYOUT = {
   ],
 };
 const TRAY_LAYOUT = {
-  top: 22 + 13,
-  base: 196,
-  half: 14,
-  glow: 12,
-  ringX: 86,
-  ringY: 26,
-  ringW: 18,
-  coreX: 40,
-  coreY: 12,
+  top: 28 + 22,
+  base: 190,
+  half: 22,
+  glow: 14,
+  ringX: 96,
+  ringY: 30,
+  ringW: 22,
+  coreX: 46,
+  coreY: 14,
   coreBlur: 6,
-  ships: [
-    [50, 146, 34],
-    [206, 146, 34],
-  ],
+  ships: [],
 };
 
 // badge: punto rojo de mensajes sin leer (arriba a la derecha); muted: insignia de «No molestar» (abajo a la derecha).

@@ -57,10 +57,13 @@ test("el icono de la app es un cyno con la flota: haz claro en el centro, naves 
   assert.deepEqual(px(182, 96), [255, 255, 255, 255], "nave pequeña de la derecha");
   const space = px(30, 40);
   assert.ok(space[0] < 40 && space[1] < 60 && space[2] < 90 && space[3] === 255, `fondo oscuro (${space})`);
-  // En la bandeja (≤ 32 px) se dibuja la versión simplificada: solo dos naves grandes, más abajo.
+  // En pequeño (≤ 48 px) solo el cyno, más grueso: sin naves a los lados.
   const tray = decodePng(renderIcon(32));
-  assert.deepEqual(tray.px(6, 17), [255, 255, 255, 255], "nave de la izquierda a 32 px");
-  assert.notDeepEqual(tray.px(9, 12), [255, 255, 255, 255], "sin las naves pequeñas de arriba");
+  const core = tray.px(16, 14);
+  assert.ok(core[0] > 180 && core[1] > 220 && core[2] > 240, `haz grueso y claro en el centro (${core})`);
+  assert.notDeepEqual(tray.px(6, 18), [255, 255, 255, 255], "sin la nave de la izquierda");
+  assert.notDeepEqual(tray.px(9, 12), [255, 255, 255, 255], "sin la nave pequeña de arriba");
+  assert.deepEqual(decodePng(renderIcon(64)).px(13, 37), [255, 255, 255, 255], "a 64 px ya salen las naves");
 });
 
 test("la insignia de mensajes sin leer añade un punto rojo arriba a la derecha", () => {
