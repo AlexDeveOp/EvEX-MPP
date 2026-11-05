@@ -53,7 +53,7 @@ test("miniState: último ping (solo título y grupo), próximo formup y contador
   assert.deepEqual(s.ping, { title: `Roam${ZW} now`, group: "all", ts: now - 60e3 }, "el título va tal cual, con sus invisibles");
   assert.equal(JSON.stringify(s).includes("secret-channel"), false, "nunca el texto entero del ping");
   assert.equal(s.formup.at, Date.UTC(2026, 10, 6, 19, 0));
-  assert.equal(s.formup.title, "Dread fleet");
+  assert.equal("title" in s.formup, false, "del formup solo la hora");
   assert.equal(s.pings, 2);
   assert.equal(typeof s.unread, "number");
   assert.equal(s.mentions, 0);
@@ -73,4 +73,60 @@ test("countdown.js: textos sin la ventana principal", () => {
   assert.equal(countdownText(at, at - 30 * 3600e3, { eveDateTime: () => "07/11 19:00" }).text, "Formup el 07/11 19:00 EVE");
   assert.equal(timeAgo(at - 5 * 60e3, at), "hace 5 min");
   assert.equal(timeAgo(at - 10e3, at), "ahora");
+});
+
+// ---------- ventana (mini-window.js) con el stub de electron ----------
+
+import { BrowserWindow, screen, app } from "electron";
+import { applyMini, isMiniOpen, miniIpc, configureMini } from "../../src/main/mini-window.js";
+import { tempDir } from "./helpers.mjs";
+
+function stubScreen(t) {
+  const saved = { ...screen };
+  const d = { id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1040 } };
+  Object.assign(screen, { getAllDisplays: () => [d], getPrimaryDisplay: () => d, getDisplayMatching: () => d, on: () => {} });
+  const proto = BrowserWindow.prototype;
+  const extra = { setOpacity(o) { this.opacity = o; }, setIgnoreMouseEvents(v) { this.ignore = v; }, getBounds() { return this.bounds || this.options; } };
+  for (const [k, fn] of Object.entries(extra)) proto[k] = fn;
+  t.after(() => {
+    for (const k of Object.keys(extra)) delete proto[k];
+    for (const k of ["getAllDisplays", "getPrimaryDisplay", "getDisplayMatching", "on"]) delete screen[k];
+    Object.assign(screen, saved);
+    applyMini({ mini: { enabled: false } });
+    delete app.testUserData;
+  });
+  app.testUserData = tempDir(t);
+}
+
+test("cerrar y abrir seguido: el «closed» tardío de la ventana vieja no deja huérfana a la nueva", (t) => {
+  stubScreen(t);
+  const changes = [];
+  configureMini({ preload: "", onClick: () => {}, onShow: () => {}, onChange: (v) => changes.push(v) });
+  const handlers = new Map();
+  miniIpc((ch, fn) => handlers.set(ch, fn));
+  applyMini({ mini: { enabled: true, opacity: 0.6 } });
+  const a = BrowserWindow.created.at(-1);
+  assert.equal(a.options.focusable, false, "nunca coge el foco");
+  assert.equal(isMiniOpen(), true);
+  // En Electron el «closed» llega después: la ventana vieja no avisa al destruirse.
+  a.destroy = function () { this.destroyed = true; };
+  applyMini({ mini: { enabled: false } });
+  applyMini({ mini: { enabled: true, opacity: 0.6 } });
+  const b = BrowserWindow.created.at(-1);
+  assert.notEqual(a, b);
+  a.handlers.closed();
+  a.handlers["ready-to-show"]();
+  assert.equal(isMiniOpen(), true, "la nueva sigue siendo la actual");
+  assert.equal(b.shown, undefined, "el ready-to-show de la vieja no enseña la nueva");
+  b.handlers["ready-to-show"]();
+  assert.equal(b.shown, true);
+  assert.equal(b.opacity, 0.6);
+  let sent = null;
+  b.webContents.send = (ch, s) => (sent = [ch, s]);
+  handlers.get("mini:update")({ pings: 1 });
+  assert.deepEqual(sent, ["mini-state", { pings: 1 }], "la nueva recibe los datos");
+  applyMini({ mini: { enabled: false } });
+  assert.equal(isMiniOpen(), false, "y se puede cerrar");
+  assert.equal(b.destroyed, true);
+  assert.deepEqual(changes, [true, false, true, false]);
 });

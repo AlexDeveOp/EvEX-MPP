@@ -47,9 +47,9 @@ test("createTray pone el icono reducido a 16 px, el nombre de la app y el menú"
   assert.deepEqual(tray.image.size, { width: 16, height: 16, quality: "best" });
   assert.deepEqual(
     tray.menu.items.filter((i) => i.label).map((i) => i.label),
-    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "Desconectar todo", "Salir"],
+    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "Desconectar todo", "Mini ventana para jugar", "Salir"],
   );
-  assert.equal(tray.menu.items.filter((i) => i.type === "separator").length, 2);
+  assert.equal(tray.menu.items.filter((i) => i.type === "separator").length, 3);
 });
 
 test("el menú de la bandeja muestra la ventana, cambia de cuenta, de estado, desconecta y sale", (t) => {
@@ -184,4 +184,19 @@ test("en Linux no se recrea una bandeja que ya se ha quitado", (t) => {
   assert.equal(Tray.created.length, count);
   // refreshTray con la bandeja quitada no falla.
   refreshTray();
+});
+
+test("la casilla «Mini ventana para jugar» enseña si está abierta y pide abrirla o cerrarla a la ventana principal", (t) => {
+  setup(t);
+  let open = false;
+  let toggles = 0;
+  createTray({ getWin: () => win, accounts, showWindow: () => {}, send: () => {}, quit: () => {}, miniOpen: () => open, toggleMini: () => toggles++ });
+  let mini = item(buildTrayMenu(), "Mini ventana para jugar");
+  assert.equal(mini.type, "checkbox");
+  assert.equal(mini.checked, false);
+  mini.click();
+  assert.equal(toggles, 1);
+  open = true;
+  mini = item(buildTrayMenu(), "Mini ventana para jugar");
+  assert.equal(mini.checked, true, "al rehacer el menú, marcada");
 });

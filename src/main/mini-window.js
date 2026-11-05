@@ -41,12 +41,12 @@ export function configureMini(o) {
 
 export const isMiniOpen = () => !!win && !win.isDestroyed();
 
-function applyLook() {
-  if (!isMiniOpen()) return;
-  win.setOpacity(clampOpacity(current.opacity));
+function applyLook(w = win) {
+  if (!w || w.isDestroyed()) return;
+  w.setOpacity(clampOpacity(current.opacity));
   // «Dejar pasar los clics»: el ratón llega a lo que haya debajo (EVE). forward: la página sigue viendo el ratón
   // encima, para mostrar que está en ese modo.
-  win.setIgnoreMouseEvents(!!current.clickThrough, current.clickThrough ? { forward: true } : undefined);
+  w.setIgnoreMouseEvents(!!current.clickThrough, current.clickThrough ? { forward: true } : undefined);
 }
 
 function open() {
@@ -55,7 +55,7 @@ function open() {
     screen.on("display-removed", () => refitMini());
   }
   const bounds = placeBounds(loadSaved(), screen.getAllDisplays(), screen.getPrimaryDisplay().id);
-  win = new BrowserWindow({
+  const w = new BrowserWindow({
     ...bounds,
     minWidth: MINI_MIN.width,
     minHeight: MINI_MIN.height,
@@ -76,20 +76,25 @@ function open() {
     title: "EvEX-MPP mini",
     webPreferences: { preload: options.preload, contextIsolation: true, sandbox: true, nodeIntegration: false, backgroundThrottling: false },
   });
+  win = w;
   // «screen-saver» queda por encima de juegos en ventana sin bordes y de la barra de tareas (igual que las burbujas).
-  win.setAlwaysOnTop(true, "screen-saver");
-  win.setVisibleOnAllWorkspaces?.(true);
-  win.on("moved", saveLater);
-  win.on("resized", saveLater);
-  win.on("closed", () => {
+  w.setAlwaysOnTop(true, "screen-saver");
+  w.setVisibleOnAllWorkspaces?.(true);
+  w.on("moved", saveLater);
+  w.on("resized", saveLater);
+  // Al cerrar y abrir seguido, el «closed» de la ventana vieja puede llegar después de crear la nueva: solo se
+  // olvida la ventana si sigue siendo la actual.
+  w.on("closed", () => {
+    if (win !== w) return;
     clearTimeout(saveTimer);
     win = null;
     options.onChange(false);
   });
-  win.loadURL("app://evex/mini.html");
-  win.once("ready-to-show", () => {
-    applyLook();
-    win.showInactive();
+  w.loadURL("app://evex/mini.html");
+  w.once("ready-to-show", () => {
+    if (w.isDestroyed()) return;
+    applyLook(w);
+    w.showInactive();
   });
   options.onChange(true);
 }
@@ -102,7 +107,11 @@ function saveLater() {
 function close() {
   if (!isMiniOpen()) return;
   saveBounds();
-  win.destroy();
+  clearTimeout(saveTimer);
+  const w = win;
+  win = null;
+  w.destroy();
+  options.onChange(false);
 }
 
 // Se llama al arrancar y cada vez que se guardan los ajustes.

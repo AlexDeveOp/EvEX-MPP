@@ -134,3 +134,7 @@ body {
 body.through .grip {
   display: none;
 }
+/* Lo oculto se oculta aunque la clase diga flex. */
+[hidden] {
+  display: none !important;
+}
