@@ -18,6 +18,15 @@ export function normBody(s) {
     .trim();
 }
 
+// Fechas y horas («2026-11-05 00:05:02.548411»): cada copia de un mismo ping lleva la suya en el pie.
+const STAMP = /\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(?:\.\d+)?/g;
+
+// Huella de un ping: el texto comparable sin fechas ni horas. Dos copias del mismo broadcast (la de EvEX-MPP y la que
+// guardó Pidgin) solo se diferencian en eso, a veces en un segundo.
+export function pingFingerprint(body) {
+  return normBody(body).replace(STAMP, "#");
+}
+
 // Direcciones completas de los remitentes de pings para una cuenta. «pingbot» (sin dominio) se busca en el servidor de
 // la cuenta; para los registros de Pidgin vale con cualquier dominio.
 export function senderTargets(pingSenders, accountJid) {
@@ -68,13 +77,14 @@ export function pidginPingEntries(logsDir, target, sinceMs = 0, selfNames = []) 
 }
 
 // Guarda las entradas que falten en la conversación del remitente y devuelve cuántas se añadieron. Una entrada ya está
-// si hay otra recibida con el mismo texto (normalizado) con menos de 2 minutos de diferencia, venga de donde venga.
+// si hay otra recibida con el mismo texto (normalizado y sin fechas ni horas) con menos de 2 minutos de diferencia,
+// venga de donde venga.
 export function storeRecovered(logs, accountId, conv, entries, nick) {
   if (!entries.length) return 0;
   const existing = logs.tail(accountId, conv, Infinity).filter((e) => !e.out);
   const byBody = new Map();
   const remember = (body, ts) => {
-    const k = normBody(body);
+    const k = pingFingerprint(body);
     if (!byBody.has(k)) byBody.set(k, []);
     byBody.get(k).push(ts);
   };
@@ -83,7 +93,7 @@ export function storeRecovered(logs, accountId, conv, entries, nick) {
   const fresh = [];
   for (const e of [...entries].sort((a, b) => a.ts - b.ts)) {
     if (!e.body || !Number.isFinite(e.ts)) continue;
-    if (byBody.get(normBody(e.body))?.some((ts) => Math.abs(ts - e.ts) <= NEAR_MS)) continue;
+    if (byBody.get(pingFingerprint(e.body))?.some((ts) => Math.abs(ts - e.ts) <= NEAR_MS)) continue;
     remember(e.body, e.ts);
     fresh.push({ ts: e.ts, nick: name, body: e.body, ...(e.jid ? { jid: e.jid } : {}) });
   }
