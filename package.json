@@ -1,6 +1,6 @@
 {
   "name": "evex-mpp",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Cliente XMPP de escritorio moderno y personalizable para comunidades de EVE Online",
   "main": "src/main/main.js",
   "scripts": {
