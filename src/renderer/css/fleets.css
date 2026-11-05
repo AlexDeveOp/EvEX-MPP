@@ -75,6 +75,12 @@
   font-weight: 700;
   color: var(--fleet-ping);
 }
+.fleet-eve {
+  white-space: nowrap;
+}
+.fleet-eve-tz {
+  font-size: 0.8em;
+}
 .fleet-row.src-manual .fleet-eve {
   color: var(--fleet-manual);
 }

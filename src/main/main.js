@@ -588,6 +588,7 @@ function registerIpc() {
       states: Object.fromEntries(cfg.accounts.map((a) => [a.id, accountSnapshot(a.id)])),
       avatars: listAvatars(),
       version: app.getVersion(),
+      repo: REPO,
       platform: process.platform,
       focused: !!win?.isFocused(),
       system: { platform: process.platform, store: STORE, secretStorage: await store.secretStorageSoon(), trayAvailable, miniOnTop: miniOnTop(), hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
