@@ -8,6 +8,16 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Fleet calendar** in *Fleet pings*: a *List | Upcoming | Month* switch in the header.
+  - *Upcoming* is an agenda by EVE day: EVE and local time, countdown, target group and *Show ping*, which jumps to the ping card. *Month* is a Monday-first grid with previous, next and today.
+  - Fleets come from the pings' formup time. Times are read better: "tomorrow at 17:15", "tonight", weekdays ("friday 19:00"), "at downtime" (11:00 EVE) and dates. A ping at 21:33 EVE saying "Tomorrow at 17:15" is now the next day at 17:15. A number without context is never taken as a time.
+  - Pings of the same op (within 15 min, with the same calendar link or a similar title, to the same group) are one fleet.
+  - A link to an alliance calendar or event in the ping is stored and can be copied, but the app never opens or fetches it.
+  - Suggested fleets (dashed purple) are accepted or dismissed; a dismissed suggestion doesn't come back.
+  - The formup reminders now cover every active calendar fleet, including ones added by hand, with the same alert ids as before.
+  - The mini window lists the next three fleets.
+  - Everything is stored locally (`settings.fleets`) and anything older than 90 days is pruned.
+  - Developer API in `src/renderer/js/fleets.js` and `fleet-time.js`, with hooks for header and per-fleet actions in `fleet-view.js`.
 - **Fleet calendar: add fleets yourself and suggested fleets.**
   - *＋ Add fleet* in the calendar header: EVE date and time (with your local time next to it), title, group and note. Every fleet you added, or that came from a message, has *Edit* (and *Delete* inside).
   - Right-click a room message or a ping card → *Add to calendar*, filled in with the time found in the text, the first line as the title and, for a ping, its target group. A ping that is already in the calendar says *Edit in the calendar* instead.
