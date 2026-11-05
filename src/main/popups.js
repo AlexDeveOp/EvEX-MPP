@@ -4,6 +4,8 @@ import { BrowserWindow, Notification, nativeImage, screen } from "electron";
 import path from "node:path";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, waylandSession } from "./overlay.js";
+import { pickDisplay, describeDisplays, isValidChoice } from "./popup-display.js";
+import { t } from "./i18n.js";
 
 const WIDTH = 380;
 const MARGIN = 12;
@@ -12,14 +14,57 @@ const MAX = 5;
 
 let nextId = 1;
 const popups = []; // el primero es el más cercano a la barra de tareas
-let options = { corner: "bottom-left", duration: 8, pingSticky: true, preload: "", onClick: () => {} };
+// display: en qué pantalla salen (ver popup-display.js); displayHint: la pista para reencontrar un monitor concreto.
+let options = { corner: "bottom-left", duration: 8, pingSticky: true, preload: "", onClick: () => {}, display: "primary", displayHint: null, getWin: () => null };
 
 export function configurePopups(o) {
   options = { ...options, ...o };
+  watchDisplays();
+}
+
+// ---------- pantalla ----------
+// La pantalla se elige al abrir la primera burbuja de la pila y se mantiene mientras haya alguna abierta: un ping fijo
+// no salta de monitor al mover el ratón. Si se desconecta, la pila pasa a la principal; si se había elegido un monitor
+// concreto y vuelve, la pila vuelve a él.
+let stack = null; // { id, fallback, choice }
+
+function screenContext() {
+  const win = options.getWin?.();
+  const visible = win && !win.isDestroyed?.() && win.isVisible?.() && !win.isMinimized?.();
+  return {
+    displays: screen.getAllDisplays(),
+    primary: screen.getPrimaryDisplay(),
+    cursor: screen.getCursorScreenPoint(),
+    windowBounds: visible ? win.getBounds() : null,
+    hint: options.displayHint,
+  };
+}
+
+function chooseStack(choice = options.display) {
+  const { display, fallback } = pickDisplay(choice, screenContext());
+  stack = display ? { id: display.id, fallback, choice } : null;
+  return stack;
 }
 
 function workArea() {
-  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+  if (!stack) chooseStack();
+  const displays = screen.getAllDisplays();
+  const d = displays.find((x) => x.id === stack?.id) || screen.getPrimaryDisplay();
+  return d.workArea;
+}
+
+// Monitores conectados, quitados o que cambian de resolución: las burbujas abiertas se recolocan.
+let watching = false;
+function watchDisplays() {
+  if (watching || typeof screen.on !== "function") return;
+  watching = true;
+  const changed = () => {
+    if (!popups.length || !stack) return;
+    const present = screen.getAllDisplays().some((d) => d.id === stack.id);
+    if (!present || (stack.fallback && String(stack.choice).startsWith("display:"))) chooseStack(stack.choice);
+    layout();
+  };
+  for (const ev of ["display-added", "display-removed", "display-metrics-changed"]) screen.on(ev, changed);
 }
 
 // Coloca las notificaciones en la esquina elegida, apiladas hacia arriba (o hacia abajo si es una esquina superior).
@@ -89,6 +134,8 @@ export function showPopup(data) {
 }
 
 function showCustomPopup(id, data) {
+  // La de prueba (popup:test) ya trae su pantalla elegida.
+  if (!popups.length && !stack?.pinned) chooseStack();
   const p = { id, data: { ...data, corner: options.corner }, height: 120, win: null, timer: null };
   const win = new BrowserWindow({
     width: WIDTH,
@@ -107,6 +154,8 @@ function showCustomPopup(id, data) {
     const i = popups.indexOf(p);
     if (i >= 0) popups.splice(i, 1);
     clearTimeout(p.timer);
+    // Sin burbujas abiertas, la próxima pila vuelve a elegir pantalla.
+    if (!popups.length) stack = null;
     layout();
   });
   win.loadURL(`app://evex/popup.html?id=${id}`);
@@ -159,6 +208,22 @@ export function popupIpc(handle) {
     closePopup(p.id);
   });
   handle("popup:close", (id) => closePopup(Number(id)));
+  // Para Preferencias: las pantallas conectadas y si las burbujas propias se usan (en Wayland no).
+  handle("popup:displays", () => ({
+    system: systemPopups(),
+    displays: describeDisplays(screen.getAllDisplays(), screen.getPrimaryDisplay().id, { screen: (n) => t("Pantalla {n}", { n }), primary: t("principal") }),
+  }));
+  // Burbuja de prueba en la pantalla que se acaba de elegir. El valor llega de la página: solo se aceptan los conocidos.
+  handle("popup:test", (choice, colors) => {
+    if (!isValidChoice(choice, screen.getAllDisplays())) throw new Error("popup:test: invalid display");
+    if (systemPopups()) return false;
+    // Sin ninguna pantalla (no debería pasar) no hay pila que fijar: la burbuja elegirá al abrirse.
+    const s = chooseStack(choice);
+    if (s) s.pinned = true;
+    layout();
+    showPopup({ kind: "msg", title: t("Pantalla de las burbujas"), text: t("Las burbujas saldrán en esta pantalla."), colors: colors && typeof colors === "object" ? colors : undefined });
+    return true;
+  });
   handle("popup:hover", (id, hovering) => {
     const p = popups.find((x) => x.id === Number(id));
     if (!p) return;

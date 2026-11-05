@@ -106,7 +106,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 - Todo lo de los pings tiene su propia página de ajustes, a la que también se llega con el botón ⚙ de la vista «Pings de flota».
 
 **Avisos**
-- **Burbuja propia** que sube desde la barra de tareas (por defecto abajo a la izquierda) y queda **siempre encima**, también sobre EVE en ventana sin bordes. Los pings se quedan hasta que los cierras.
+- **Burbuja propia** que sube desde la barra de tareas (por defecto abajo a la izquierda) y queda **siempre encima**, también sobre EVE en ventana sin bordes. Los pings se quedan hasta que los cierras. Con varios monitores eliges dónde salen: en la pantalla principal (por defecto), donde esté el ratón, en la de la ventana de EvEX-MPP o en un monitor concreto.
 - Opcionalmente, la notificación de Windows en lugar de la burbuja, o ambas.
 - **«!» ámbar parpadeando en la bandeja** mientras haya pings sin leer, y parpadeo de la barra de tareas.
 - **Sonido distinto para cada tipo de aviso**: privado, mención, sala, mensaje enviado, ping, conexión perdida y recuperada, contactos que se conectan o desconectan, solicitudes de contacto e invitaciones a salas. 13 sonidos incluidos o un archivo tuyo, cada uno con su volumen, elección de la salida de audio (p. ej. los auriculares), repetición opcional del ping hasta que mires la ventana e **Importar sonidos de Pidgin** (se copian de tu Pidgin instalado).

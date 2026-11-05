@@ -1311,4 +1311,15 @@ export default {
   "Abre EvEX-MPP para ver los pings (pulsa aquí)": "Open EvEX-MPP to see pings (click here)",
   "No disponible en Linux: el escritorio no deja cambiar la opacidad de la ventana.": "Not available on Linux: the desktop doesn't let apps change a window's opacity.",
   "La mini ventana no se puede pulsar ni mover: los clics llegan a lo que haya debajo. Desactívalo aquí para volver a moverla.": "The mini window can't be clicked or moved: clicks reach whatever is underneath. Turn this off here to move it again.",
+  // Pantalla de las burbujas (popup-display.js)
+  "Pantalla de las burbujas": "Pop-up screen",
+  "Pantalla principal": "Main screen",
+  "Donde esté el ratón": "Where the mouse is",
+  "Pantalla de la ventana de EvEX-MPP": "Screen with the EvEX-MPP window",
+  "Al elegir una, sale una burbuja de prueba en esa pantalla. Si el monitor elegido no está conectado, salen en la principal.": "When you pick one, a test pop-up appears on that screen. If the chosen monitor isn't connected, they appear on the main screen.",
+  "Monitor guardado (no conectado ahora)": "Saved monitor (not connected now)",
+  "Aquí los avisos son notificaciones del sistema (Wayland): salen donde decida el escritorio, así que no se puede elegir la pantalla.": "Here alerts are system notifications (Wayland): the desktop decides where they appear, so the screen can't be chosen.",
+  "Pantalla {n}": "Screen {n}",
+  "principal": "main",
+  "Las burbujas saldrán en esta pantalla.": "Pop-ups will appear on this screen.",
 };
