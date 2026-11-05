@@ -7,7 +7,7 @@ import { parseFormup, countdownText, countdownSettings, BEFORE_CHOICES, reminder
 import { parsePing } from "../pings.js";
 import { fmtTime, fmtEve } from "../format.js";
 import { t } from "../i18n.js";
-import { isWindows, onWindows } from "../system.js";
+import { isWindows, isLinux, onWindows } from "../system.js";
 import { VOICE_DEFAULTS, TEMPLATE_FIELDS, voiceSettings, listVoices, pingSpeech, speak, stopSpeaking, speechAvailable } from "../tts.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
 import { setMini } from "../mini-feed.js";
@@ -250,7 +250,8 @@ function miniGroup() {
     h("p", { class: "muted small" }, t("Una ventanita siempre encima, también sobre EVE en «Ventana sin bordes», con el último ping (solo el título y el grupo), la cuenta atrás del próximo formup y los no leídos. No coge el foco ni parpadea. Muévela desde su barra de arriba y cámbiale el tamaño con el asa de la esquina de abajo a la derecha: recuerda dónde estaba en cada monitor. Pulsarla abre los pings de flota.")),
     S.system.miniOnTop === false ? h("p", { class: "muted small" }, icon("triangle-alert"), t(" En Wayland el escritorio decide dónde van las ventanas: la mini ventana puede no quedarse encima del juego ni recordar su posición.")) : null,
     toggle(!!m().enabled, (v) => setMini({ enabled: v }), t("Mostrar la mini ventana"), t("También desde la bandeja o con el botón de la vista de pings")),
-    field(t("Opacidad"), opacity),
+    // Electron solo cambia la opacidad de una ventana en Windows y macOS.
+    isLinux() ? field(t("Opacidad"), h("span", { class: "muted small" }, t("No disponible en Linux: el escritorio no deja cambiar la opacidad de la ventana."))) : field(t("Opacidad"), opacity),
     toggle(!!m().clickThrough, (v) => setMini({ clickThrough: v }), t("Dejar pasar los clics al juego"), t("La mini ventana no se puede pulsar ni mover: los clics llegan a lo que haya debajo. Desactívalo aquí para volver a moverla.")),
   );
 }
