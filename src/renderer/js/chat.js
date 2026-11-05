@@ -16,7 +16,7 @@ import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
 import { toggleMini } from "./mini-feed.js";
 import { onChange as onFleetsChange } from "./fleets.js";
-import { fleetViewSwitch, fleetHeaderActions, renderFleetView } from "./fleet-view.js";
+import { fleetViewSwitch, fleetHeaderActions, renderFleetView, updateFleetCount, tickFleetView } from "./fleet-view.js";
 import { mentionsHeader, mentionCard, visibleMentions, mentionFilterMatches } from "./mentions.js";
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
@@ -26,17 +26,33 @@ const panes = new Map();
 const isFeed = (c) => c.type === "pings" || c.type === "mentions";
 
 export function initChat() {
-  // Calendario de flotas: al cambiar las flotas se repinta la vista de pings si enseña Próximas o Mes, y el contador
-  // del selector.
+  // Calendario de flotas: al cambiar las flotas se actualiza el número de «Próximas» (sin rehacer la cabecera: el
+  // filtro o el desplegable perderían el foco) y, si la vista enseña Próximas o Mes, se repinta sin saltar arriba.
+  // Un tic cada 30 s pone al día las cuentas atrás, «Hoy/Mañana» y el número.
+  const fleetPane = () => {
+    const c = S.convs.get(PINGS_KEY);
+    const p = c && panes.get(c.key);
+    return p ? { c, p } : null;
+  };
+  const repaintFleets = (c, p) => {
+    const top = p.scroller.scrollTop;
+    renderAllMessages(c, p);
+    p.scroller.scrollTop = top;
+  };
   onFleetsChange(
     debounce(() => {
-      const c = S.convs.get(PINGS_KEY);
-      const p = c && panes.get(c.key);
-      if (!p) return;
-      renderHeader(c, p);
-      if (p.filter.view !== "list") renderAllMessages(c, p);
+      const fp = fleetPane();
+      if (!fp) return;
+      updateFleetCount(fp.p.header);
+      if (fp.p.filter.view !== "list") repaintFleets(fp.c, fp.p);
     }, 150),
   );
+  setInterval(() => {
+    const fp = fleetPane();
+    if (!fp) return;
+    updateFleetCount(fp.p.header);
+    if (fp.p.filter.view !== "list" && tickFleetView(fp.p.list)) repaintFleets(fp.c, fp.p);
+  }, 30e3);
   // Las pestañas se pintan como mucho una vez por fotograma (antes, una vez por cada mensaje no leído).
   on("tabs", rafThrottle(renderTabs));
   on("active", showActive);
@@ -707,6 +723,29 @@ function insertOlder(c, p, m) {
 // Mensajes que se pintan como mucho (unos 30 nodos cada uno). Los anteriores siguen en memoria y aparecen al subir.
 const MAX_RENDERED = 1500;
 
+// Un ping nuevo: solo cambian el número de broadcasts, el de «Próximas» y, a veces, la lista de grupos. Rehacer la
+// cabecera entera quitaría el foco del filtro mientras escribes y cerraría el desplegable de grupos.
+function refreshPingsHeader(c, p) {
+  const select = p.header.querySelector("select");
+  const groups = pingGroups(c.messages);
+  const shown = select ? [...select.options].slice(1).map((o) => o.value) : null;
+  if (select && (shown.length !== groups.length || shown.some((g, i) => g !== groups[i]))) {
+    // Grupo nuevo: hay que rehacerla, pero el filtro conserva el foco y el cursor.
+    const a = document.activeElement;
+    const typing = a?.tagName === "INPUT" && p.header.contains(a) ? { start: a.selectionStart, end: a.selectionEnd } : null;
+    renderHeader(c, p);
+    const input = typing && p.header.querySelector("input");
+    if (input) {
+      input.focus();
+      input.setSelectionRange(typing.start, typing.end);
+    }
+    return;
+  }
+  const sub = p.header.querySelector(".conv-sub");
+  if (sub && S.settings.pingSenders.length) sub.textContent = t("{length} broadcasts · remitentes: {join}", { length: c.messages.length, join: S.settings.pingSenders.join(", ") });
+  updateFleetCount(p.header);
+}
+
 // «Ver ping» desde el calendario: vuelve a la lista sin filtros y salta a la tarjeta, que se ilumina un momento.
 function showPing(c, p, key) {
   p.filter = { ...p.filter, view: "list", query: "", group: "", srpOnly: false };
@@ -799,7 +838,7 @@ function appendMessage(c, m) {
       p.list.querySelector(".empty-state")?.remove();
       p.list.prepend(pingCard(m, { srp: p.filter.srpOnly }));
     }
-    renderHeader(c, p);
+    refreshPingsHeader(c, p);
     return;
   }
   if (m.sys && m.joinLeave && !S.settings.behavior.showJoinLeave) return;

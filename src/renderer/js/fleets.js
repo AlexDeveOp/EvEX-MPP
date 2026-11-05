@@ -138,10 +138,18 @@ export function fleetFromPing(m) {
 
 // Agrupa los pings con hora en operaciones. El id usa siempre el ping MÁS ANTIGUO de la op, para que no cambie al
 // llegar recordatorios (y no se pierdan los retoques guardados con ese id).
+// Lo que se lee de cada ping se guarda por mensaje: al llegar un ping nuevo solo se analiza ese.
+const parsed = new WeakMap();
+function candidateOf(m) {
+  if (!parsed.has(m)) parsed.set(m, fleetFromPing(m));
+  return parsed.get(m);
+}
+
 export function fleetsFromPings(messages) {
   const ops = [];
-  for (const m of [...messages].sort((a, b) => a.ts - b.ts)) {
-    const f = fleetFromPing(m);
+  const withTime = messages.filter((m) => candidateOf(m)).sort((a, b) => a.ts - b.ts);
+  for (const m of withTime) {
+    const f = candidateOf(m);
     if (!f) continue;
     // Misma op: hora parecida y mismo enlace, o título parecido y sin grupos distintos (un ping a «caps» y otro a «all»
     // a la misma hora pueden ser flotas diferentes).
