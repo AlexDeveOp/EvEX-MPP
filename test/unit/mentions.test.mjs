@@ -120,3 +120,21 @@ test("visibleMentions filtra por sala y texto, de la más reciente a la más ant
   );
   assert.equal(mentionRooms(c.messages).length, 2);
 });
+
+test("tus propios mensajes no entran aunque lleven tu nick o una palabra clave", () => {
+  const c = mentionsConv();
+  const n = c.messages.length;
+  // Reflejo de la sala (outgoing) y mensaje con tu nick de sala sin la marca (p. ej. de otra conexión).
+  assert.equal(addMention("a1", ROOM, msg({ key: "own1", nick: "BobFC", body: "Bob, titan y capitals", out: true })), null);
+  assert.equal(addMention("a1", ROOM, msg({ key: "own2", nick: "bobfc", body: "Bob, titan y capitals" })), null);
+  assert.equal(c.messages.length, n);
+});
+
+test("la entrada guarda el texto tal cual, con sus caracteres invisibles", () => {
+  const ZW = String.fromCharCode(0x200b, 0x2060);
+  const body = `Bob${ZW}, ti${ZW}tan en local`;
+  const it = addMention("a1", OTHER, msg({ key: "zw1", body }));
+  assert.ok(it);
+  assert.equal(it.body, body);
+  assert.equal(mentionsConv().messages.find((x) => x.key === "zw1").body, body);
+});
