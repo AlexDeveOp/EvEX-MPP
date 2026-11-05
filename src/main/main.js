@@ -800,7 +800,7 @@ function setLinuxAutostart(enabled) {
 
 function applySystemSettings(s) {
   scheduleUpdateChecks(!!s.behavior.checkUpdates);
-  configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
+  configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, display: s.notifications.popupDisplay, displayHint: s.notifications.popupDisplayHint, getWin: () => win, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
   refreshTray();
   try {
     // El portable se descomprime en una carpeta temporal: hay que registrar el .exe original.

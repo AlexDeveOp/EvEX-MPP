@@ -112,9 +112,24 @@ export class BrowserWindow {
     this.handlers.closed?.();
   }
 }
+// Pantallas: una de 1920×1080 salvo que un test ponga screen.testDisplays (la principal lleva primary: true) y
+// screen.testCursor. screen.emit(evento) dispara display-added/removed/metrics-changed.
+const ONE_DISPLAY = [{ id: 1, primary: true, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 }, size: { width: 1920, height: 1080 }, scaleFactor: 1 }];
 export const screen = {
-  getCursorScreenPoint: () => ({ x: 0, y: 0 }),
-  getDisplayNearestPoint: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1040 } }),
+  testDisplays: null,
+  testCursor: null,
+  listeners: {},
+  displays: () => screen.testDisplays || ONE_DISPLAY,
+  getAllDisplays: () => screen.displays(),
+  getPrimaryDisplay: () => screen.displays().find((d) => d.primary) || screen.displays()[0],
+  getCursorScreenPoint: () => screen.testCursor || { x: 0, y: 0 },
+  getDisplayNearestPoint: () => screen.getPrimaryDisplay(),
+  on(event, fn) {
+    (screen.listeners[event] ||= []).push(fn);
+  },
+  emit(event) {
+    for (const fn of screen.listeners[event] || []) fn();
+  },
 };
 // Sesiones: guardan el filtro de webRequest.onBeforeRequest para que los tests comprueben qué se deja pasar.
 const partitions = new Map();

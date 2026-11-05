@@ -1292,4 +1292,15 @@ export default {
   "Puedes elegir varios. Ninguno = solo a la hora del formup (si está activado abajo).": "You can pick several. None = only at formup time (if turned on below).",
   "Leer el aviso en voz alta": "Read the alert aloud",
   "Con la voz y la velocidad de «Leer los pings en voz alta», en inglés: «{example}»": "With the voice and speed of “Read pings aloud”, in English: “{example}”",
+  // Pantalla de las burbujas (popup-display.js)
+  "Pantalla de las burbujas": "Pop-up screen",
+  "Pantalla principal": "Main screen",
+  "Donde esté el ratón": "Where the mouse is",
+  "Pantalla de la ventana de EvEX-MPP": "Screen with the EvEX-MPP window",
+  "Al elegir una, sale una burbuja de prueba en esa pantalla. Si el monitor elegido no está conectado, salen en la principal.": "When you pick one, a test pop-up appears on that screen. If the chosen monitor isn't connected, they appear on the main screen.",
+  "Monitor guardado (no conectado ahora)": "Saved monitor (not connected now)",
+  "Aquí los avisos son notificaciones del sistema (Wayland): salen donde decida el escritorio, así que no se puede elegir la pantalla.": "Here alerts are system notifications (Wayland): the desktop decides where they appear, so the screen can't be chosen.",
+  "Pantalla {n}": "Screen {n}",
+  "principal": "main",
+  "Las burbujas saldrán en esta pantalla.": "Pop-ups will appear on this screen.",
 };
