@@ -1,7 +1,7 @@
 // Diferencias entre sistemas: rutas de Pidgin, fuentes de fontconfig, inicio automático en Linux y llavero.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { purpleDirFor, pidginSoundDirsFor, parseFcList, autostartFile, autostartExec, desktopEntry, linuxStorageKind, hasSecureStorage } from "../../src/main/platform.js";
+import { purpleDirFor, pidginSoundDirsFor, parseFcList, autostartFile, autostartExec, desktopEntry, linuxStorageKind, hasSecureStorage, storePackageFamily, storeUserDataDir } from "../../src/main/platform.js";
 
 test("la carpeta de Pidgin es %APPDATA%\\.purple en Windows y ~/.purple en Linux", () => {
   assert.equal(purpleDirFor({ platform: "win32", env: { APPDATA: "C:\\Users\\x\\AppData\\Roaming" } }), "C:\\Users\\x\\AppData\\Roaming\\.purple");
@@ -51,4 +51,19 @@ test("en Linux solo hay almacenamiento seguro si el cifrado usa la clave del lla
   assert.equal(hasSecureStorage("keyring"), true);
   assert.equal(hasSecureStorage("basic_text"), false);
   assert.equal(hasSecureStorage(undefined), false);
+});
+
+test("versión de la Store: la familia del paquete sale de la ruta de WindowsApps", () => {
+  const W = (...p) => p.join("\\");
+  const exe = W("C:", "Program Files", "WindowsApps", "AlexDeveOp.EvEX-MPP_0.9.0.0_x64__8wekyb3d8bbwe", "app", "EvEX-MPP.exe");
+  assert.equal(storePackageFamily(exe), "AlexDeveOp.EvEX-MPP_8wekyb3d8bbwe");
+  assert.equal(storePackageFamily(W("C:", "Users", "x", "AppData", "Local", "Programs", "EvEX-MPP", "EvEX-MPP.exe")), null);
+  assert.equal(storePackageFamily(""), null);
+  const local = W("C:", "Users", "x", "AppData", "Local");
+  assert.equal(
+    storeUserDataDir({ execPath: exe, localAppData: local, userData: W("C:", "Users", "x", "AppData", "Roaming", "EvEX-MPP") }),
+    W(local, "Packages", "AlexDeveOp.EvEX-MPP_8wekyb3d8bbwe", "LocalCache", "Roaming", "EvEX-MPP"),
+  );
+  // Un perfil propio fuera de %APPDATA% (EVEX_USERDATA) no se redirige: se abre tal cual.
+  assert.equal(storeUserDataDir({ execPath: exe, localAppData: local, userData: W("D:", "perfil") }), null);
 });

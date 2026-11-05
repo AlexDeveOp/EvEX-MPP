@@ -56,3 +56,23 @@ export function linuxStorageKind(prefix) {
 }
 
 export const hasSecureStorage = (kind) => kind === "os" || kind === "keyring";
+
+// Versión de la Microsoft Store (MSIX). Windows la instala en WindowsApps\<nombre completo del paquete>\app\, y ese
+// nombre es «Nombre_Versión_Arquitectura_Recurso_IdEditor». Lo que la app escribe en %APPDATA% acaba en
+// %LOCALAPPDATA%\Packages\<Nombre>_<IdEditor>\LocalCache\Roaming: el Explorador no ve esa redirección, así que «Abrir
+// carpeta de datos» tiene que abrir la carpeta real. Devuelve null fuera de un paquete.
+export function storePackageFamily(execPath) {
+  const parts = String(execPath || "").split(/[\\/]/);
+  const i = parts.findIndex((p) => p.toLowerCase() === "windowsapps");
+  const full = i >= 0 ? parts[i + 1] : "";
+  const m = /^([^_]+)_[^_]+_[^_]+_[^_]*_([a-z0-9]{13})$/i.exec(full || "");
+  return m ? `${m[1]}_${m[2]}` : null;
+}
+
+export function storeUserDataDir({ execPath, localAppData, userData }) {
+  const family = storePackageFamily(execPath);
+  if (!family || !localAppData || !userData) return null;
+  const roaming = /[\\/]AppData[\\/]Roaming[\\/](.+)$/i.exec(userData);
+  if (!roaming) return null;
+  return path.win32.join(localAppData, "Packages", family, "LocalCache", "Roaming", roaming[1]);
+}
