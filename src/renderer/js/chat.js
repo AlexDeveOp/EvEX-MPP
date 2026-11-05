@@ -1,5 +1,5 @@
 // Vista de conversación: pestañas, cabecera, lista de mensajes, compositor y comandos.
-import { S, api, on, emit, account, roomState, contact, bestPresence, avatarUrl, nickColor, initials, updateSettings, saveRooms, conn, SHOW_LABEL } from "./state.js";
+import { S, api, on, emit, account, roomState, contact, bestPresence, avatarUrl, nickColor, initials, updateSettings, saveRooms, conn, SHOW_LABEL, PINGS_KEY } from "./state.js";
 import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, debounce, rafThrottle } from "./dom.js";
 import { formatBody, previewHtml, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes } from "./format.js";
 import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
@@ -15,6 +15,8 @@ import { stopSpeaking } from "./tts.js";
 import { openSearch } from "./search.js";
 import { searchMissedPings } from "./ping-recovery.js";
 import { toggleMini } from "./mini-feed.js";
+import { onChange as onFleetsChange } from "./fleets.js";
+import { fleetViewSwitch, fleetHeaderActions, renderFleetView } from "./fleet-view.js";
 import { mentionsHeader, mentionCard, visibleMentions, mentionFilterMatches } from "./mentions.js";
 import { calendarMenuItem, prefillFromMessage, prefillFromPing } from "./fleet-manual.js";
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
@@ -25,6 +27,17 @@ const panes = new Map();
 const isFeed = (c) => c.type === "pings" || c.type === "mentions";
 
 export function initChat() {
+  // Calendario de flotas: al cambiar las flotas se repinta la vista de pings si enseña Próximas o Mes, y el contador
+  // del selector.
+  onFleetsChange(
+    debounce(() => {
+      const c = S.convs.get(PINGS_KEY);
+      const p = c && panes.get(c.key);
+      if (!p) return;
+      renderHeader(c, p);
+      if (p.filter.view !== "list") renderAllMessages(c, p);
+    }, 150),
+  );
   // Las pestañas se pintan como mucho una vez por fotograma (antes, una vez por cada mensaje no leído).
   on("tabs", rafThrottle(renderTabs));
   on("active", showActive);
@@ -319,7 +332,8 @@ function pane(c) {
   const root = h("section", { class: `conv-pane type-${c.type}`, dataset: { key: c.key } }, bg, header, h("div", { class: "conv-body" }, scroller, jump), typing);
   p = { root, list, scroller, jump, typing, header, bg, newCount: 0 };
   if (c.type === "pings") {
-    p.filter = { query: "", group: "" };
+    // view: «list» (las tarjetas de siempre), «upcoming» o «month» (calendario de flotas).
+    p.filter = { query: "", group: "", view: "list", monthOffset: 0 };
   } else if (c.type === "mentions") {
     p.filter = { query: "", room: "" };
   } else {
@@ -478,6 +492,22 @@ function renderHeader(c, p) {
     p.header.append(
       h("div", { class: "conv-avatar ping" }, icon("siren")),
       h("div", { class: "conv-title" }, h("h1", {}, t("Pings de flota")), h("div", { class: "conv-sub" }, S.settings.pingSenders.length ? t("{length} broadcasts · remitentes: {join}", { length: c.messages.length, join: S.settings.pingSenders.join(", ") }) : t("Sin remitentes configurados: añádelos en Preferencias → Pings de flota"))),
+      fleetViewSwitch(p.filter.view, (view) => {
+        p.filter.view = view;
+        renderHeader(c, p);
+        renderAllMessages(c, p);
+      }),
+      fleetHeaderActions(),
+    );
+    // Los filtros de las tarjetas solo valen en la lista.
+    if (p.filter.view !== "list") {
+      p.header.append(
+        iconButton("picture-in-picture-2", t("Mini ventana para jugar (abrir o cerrar)"), () => toggleMini()),
+        iconButton("settings", t("Configurar los pings de flota"), () => openSettings("pings")),
+      );
+      return;
+    }
+    p.header.append(
       h("input", {
         class: "input small",
         placeholder: t("Filtrar pings…"),
@@ -687,6 +717,18 @@ function insertOlder(c, p, m) {
 // Mensajes que se pintan como mucho (unos 30 nodos cada uno). Los anteriores siguen en memoria y aparecen al subir.
 const MAX_RENDERED = 1500;
 
+// «Ver ping» desde el calendario: vuelve a la lista sin filtros y salta a la tarjeta, que se ilumina un momento.
+function showPing(c, p, key) {
+  p.filter = { ...p.filter, view: "list", query: "", group: "", srpOnly: false };
+  renderHeader(c, p);
+  renderAllMessages(c, p);
+  const card = [...p.list.querySelectorAll(".ping-card")].find((el) => el.dataset.key === key);
+  if (!card) return toast(t("Ese ping ya no está en la lista (se enseñan los 400 más recientes)."), { kind: "info" });
+  card.scrollIntoView({ block: "center" });
+  card.classList.add("fleet-target");
+  setTimeout(() => card.classList.remove("fleet-target"), 2500);
+}
+
 function renderAllMessages(c, p, prependedCount) {
   ensureSorted(c.messages);
   const oldHeight = p.scroller.scrollHeight;
@@ -701,6 +743,18 @@ function renderAllMessages(c, p, prependedCount) {
     const frag = document.createDocumentFragment();
     for (const it of shown) frag.append(mentionCard(it, openMention));
     p.list.append(frag);
+    p.lastRendered = null;
+    p.scroller.scrollTop = 0;
+    return;
+  }
+  if (c.type === "pings" && p.filter.view !== "list") {
+    renderFleetView(p.list, p.filter.view, {
+      monthOffset: p.filter.monthOffset,
+      onShowPing: (key) => showPing(c, p, key),
+      setView: (view) => ((p.filter.view = view), renderHeader(c, p), renderAllMessages(c, p)),
+      setMonth: (offset) => ((p.filter.monthOffset = offset), renderAllMessages(c, p)),
+      refresh: () => (renderHeader(c, p), renderAllMessages(c, p)),
+    });
     p.lastRendered = null;
     p.scroller.scrollTop = 0;
     return;
@@ -750,7 +804,8 @@ function appendMessage(c, m) {
   if (c.type === "pings") {
     // Con la lista pendiente de repintar (p. ej. tras cambiar un ajuste con otra pestaña delante), el ping entra al
     // repintarla al abrirla; añadirlo ahora lo mezclaría con una lista desfasada.
-    if (!p.dirty && pingMatches(m, p.filter.query, p.filter.group, p.filter.srpOnly)) {
+    // En Próximas o Mes no hay tarjetas: el calendario se repinta solo al cambiar las flotas.
+    if (!p.dirty && p.filter.view === "list" && pingMatches(m, p.filter.query, p.filter.group, p.filter.srpOnly)) {
       p.list.querySelector(".empty-state")?.remove();
       p.list.prepend(pingCard(m, { srp: p.filter.srpOnly }));
     }
