@@ -20,6 +20,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Only for some target groups of the ping footer (e.g. `all, caps`), like the voice reading.
   - Optionally read aloud ("Formup in 15 minutes. <title>"), with the voice and speed of *Read pings aloud*.
   - Two copies of the same ping (another connection, the server archive) now give one reminder, not two.
+- **Connection log** (`connection.log` in the data folder, at most 1 MB with the previous one): connects, disconnects, errors and server notices (which until now only reached the developer console), and why each reconnection happened. No messages, contacts or passwords. See [PRIVACY.md](PRIVACY.md).
+
+### Fixed
+- A network change notice (for example from a virtual network adapter) no longer cuts a connection that is still logging in, which with a distant server takes a few seconds; it was retried from scratch.
+- Disconnecting while the server did not answer could leave an unhandled error in the main process when the socket was reset afterwards.
 
 ## [0.8.0] - 2026-11-05
 

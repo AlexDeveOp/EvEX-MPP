@@ -128,6 +128,41 @@ test("el aviso de red (nudge) reintenta ya, aunque la espera entre intentos haya
   await until(() => acc.state === "online", 4000);
 });
 
+test("un aviso de red no corta un intento que ya está negociando con el servidor, y queda en el registro", async (t) => {
+  const r = await relay(t);
+  r.mode = "mute"; // el TCP se abre pero el servidor tarda en contestar, como uno lejano en plena negociación
+  const lines = [];
+  const acc = new XmppAccount({ id: "rn", jid: "usuario@test.local", host: "127.0.0.1", port: r.port, security: "opportunistic" }, { avatarDir: tempDir(t), version: "1", log: (id, text) => lines.push(`${id} ${text}`) });
+  t.after(() => acc.disconnect(true).catch(() => {}));
+  acc.connect("test").catch(() => {});
+  await until(() => ["opening", "open"].includes(acc.xmpp?.status), 2000);
+  const sockets = r.pairs.size;
+  acc.nudge("prueba");
+  await sleep(300);
+  assert.equal(r.pairs.size, sockets, "no se abre otra conexión");
+  assert.ok([...r.pairs].every((p) => !p.cli.destroyed), "ni se corta la que estaba negociando");
+  assert.ok(lines.some((l) => l.startsWith("rn connect (")));
+  assert.ok(lines.some((l) => l.includes("prueba (opening)") || l.includes("prueba (open)")));
+  assert.ok(!lines.some((l) => l.includes("restart connection")));
+  // Cierre sin reset: un ECONNRESET a mitad de la negociación rechaza una promesa interna de xmpp.js que ya nadie
+  // espera (la de «online» de start()), y node:test lo contaría como fallo de esta prueba.
+  await acc.disconnect(true);
+  for (const p of r.pairs) p.cli.end();
+});
+
+test("desconectar con el servidor sin contestar y un reset después no deja una excepción sin capturar", async () => {
+  const socks = [];
+  const server = net.createServer((c) => (c.on("error", () => {}), socks.push(c)));
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const acc = new XmppAccount({ id: "rd", jid: "usuario@test.local", host: "127.0.0.1", port: server.address().port, security: "opportunistic" }, { avatarDir: ".", version: "1" });
+  acc.connect("test").catch(() => {});
+  await until(() => acc.xmpp?.status === "opening", 2000);
+  await acc.disconnect(true); // espera 3 s al servidor y deja de esperar
+  for (const s of socks) s.resetAndDestroy(); // antes: «Uncaught ECONNRESET» en el proceso principal
+  await sleep(500);
+  await new Promise((r) => server.close(r));
+});
+
 test("qué errores cuentan como de red", () => {
   assert.equal(isNetworkError(Object.assign(new Error("x"), { code: "ENOTFOUND" })), true);
   assert.equal(isNetworkError(Object.assign(new Error("x"), { name: "TimeoutError" })), true);

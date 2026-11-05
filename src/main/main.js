@@ -16,6 +16,11 @@ import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
 import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
 import { userData, mediaDir, avatarDir } from "./paths.js";
+import { createConnLog } from "./conn-log.js";
+
+// Un solo registro de conexión para todas las cuentas (userData/connection.log); se crea al usarlo, con userData ya fijado.
+let connLogFn = null;
+const connLog = () => (connLogFn ||= createConnLog(path.join(userData(), "connection.log")));
 import { autostartFile, autostartExec, desktopEntry } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
@@ -454,7 +459,7 @@ function getConn(id) {
   const acc = store.getAccount(id);
   if (!acc) throw new Error(t("Cuenta no encontrada"));
   if (!x) {
-    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion(), getProxy: () => accountProxy(x.acc, store.get().settings, proxyPassword) });
+    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion(), getProxy: () => accountProxy(x.acc, store.get().settings, proxyPassword), log: connLog() });
     x.historyOptions = (roomJid) => historyOptions(id, roomJid);
     x.on("event", (ev) => onAccountEvent(x, ev));
     accounts.set(id, x);
@@ -663,11 +668,11 @@ function registerIpc() {
 
   // La red ha vuelto (evento «online» de la ventana) o el PC sale de suspensión: cada cuenta lo comprueba o reintenta
   // ya, sin esperar al siguiente ping o reintento.
-  const nudgeAccounts = () => {
-    for (const x of accounts.values()) x.nudge();
+  const nudgeAccounts = (why) => {
+    for (const x of accounts.values()) x.nudge(why);
   };
-  handle("network:online", () => nudgeAccounts());
-  powerMonitor.on("resume", () => setTimeout(nudgeAccounts, 3000)); // margen para que la red se levante
+  handle("network:online", () => nudgeAccounts("window reports network online"));
+  powerMonitor.on("resume", () => setTimeout(() => nudgeAccounts("resume from sleep"), 3000)); // margen para que la red se levante
 
   handle("presence:set", (id, show, status) => getConn(id).setPresence(show, status));
 
