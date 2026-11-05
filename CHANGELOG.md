@@ -8,6 +8,16 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Fleet calendar** in *Fleet pings*: a *List | Upcoming | Month* switch in the header.
+  - *Upcoming* is an agenda by EVE day: EVE and local time, countdown, target group and *Show ping*, which jumps to the ping card. *Month* is a Monday-first grid with previous, next and today.
+  - Fleets come from the pings' formup time. Times are read better: "tomorrow at 17:15", "tonight", weekdays ("friday 19:00"), "at downtime" (11:00 EVE) and dates. A ping at 21:33 EVE saying "Tomorrow at 17:15" is now the next day at 17:15. A number without context is never taken as a time.
+  - Pings of the same op (within 15 min, with the same calendar link or a similar title, to the same group) are one fleet.
+  - A link to an alliance calendar or event in the ping is stored and can be copied, but the app never opens or fetches it.
+  - Suggested fleets (dashed purple) are accepted or dismissed; a dismissed suggestion doesn't come back.
+  - The formup reminders now cover every active calendar fleet, including ones added by hand, with the same alert ids as before.
+  - The mini window lists the next three fleets.
+  - Everything is stored locally (`settings.fleets`) and anything older than 90 days is pruned.
+  - Developer API in `src/renderer/js/fleets.js` and `fleet-time.js`, with hooks for header and per-fleet actions in `fleet-view.js`.
 - **Export fleets to a calendar (.ics)** for Outlook, Google Calendar or the Windows calendar, from the fleet calendar view: *Export .ics* in the header saves all upcoming active fleets, and *.ics* on each active fleet saves that one.
   - The file goes where you choose in the Save dialog and is never sent anywhere. The main process checks it is a calendar of at most 1 MB and cleans up the suggested name.
   - By default it only contains "Fleet", the group and the time (UTC), because an imported calendar may sync to Outlook or Google servers. *Preferences → Fleet pings → Calendar export* can add the title, FC, formup, doctrine and note (with a privacy warning), the fleet link and a reminder (15, 30 or 60 minutes before).

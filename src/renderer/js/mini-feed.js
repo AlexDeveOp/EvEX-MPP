@@ -67,9 +67,12 @@ function push() {
   if (!miniEnabled()) return void (lastJson = "");
   const now = Date.now();
   const state = miniState(now);
-  // Se vuelve a calcular justo cuando la primera flota empieza y cuando deja de contar (15 min después).
+  // Se vuelve a calcular justo cuando la primera flota empieza, cuando deja de contar (15 min después) y a medianoche
+  // EVE, cuando «mañ 19:00» pasa a ser «19:00».
   const first = state.fleets[0];
-  if (first) boundary = setTimeout(() => schedule(0), Math.max(0, (first.at > now ? first.at : first.at + 15 * 60e3) - now) + 500);
+  const midnight = (Math.floor(now / 86400e3) + 1) * 86400e3;
+  const next = first ? Math.min(first.at > now ? first.at : first.at + 15 * 60e3, midnight) : midnight;
+  boundary = setTimeout(() => schedule(0), Math.max(0, next - now) + 500);
   const json = JSON.stringify(state);
   if (json === lastJson) return;
   lastJson = json;
