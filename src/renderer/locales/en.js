@@ -1449,4 +1449,11 @@ export default {
   "Menciones (también con Ctrl+K)": "Mentions (also with Ctrl+K)",
   "Menciones: hay mensajes sin ver (también con Ctrl+K)": "Mentions: there are unseen messages (also with Ctrl+K)",
   "Menciones: {n} sin ver": "Mentions: {n} unseen",
+  // Calendario: botón de cada ping y de dónde viene una flota sacada de una sala
+  "Abrir el mensaje en su sala": "Open the message in its room",
+  "Ver mensaje": "View message",
+  "En el calendario: editar": "In the calendar: edit",
+  "Sugerida · {where}": "Suggested · {where}",
+  "Desde {where} · nota: {note}": "From {where} · note: {note}",
+  "Desde {where}": "From {where}",
 };

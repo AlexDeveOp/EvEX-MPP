@@ -7,7 +7,7 @@
 //   flota», «Exportar .ics»…).
 // - addFleetRowAction(build): build(fleet, { refresh }) → elemento o null para las acciones de cada flota (Editar,
 //   Exportar…).
-import { S } from "./state.js";
+import { S, displayName } from "./state.js";
 import { h, icon, toast } from "./dom.js";
 import { fmtEve, fmtTime } from "./format.js";
 import { fleetCountdown } from "./countdown.js";
@@ -98,7 +98,18 @@ function dayLabel(start, now) {
 
 // ---------- Próximas ----------
 
+// «# sala · autor» de una flota sacada de un mensaje; el nombre de la sala se saca ahora (marcador o JID).
+function originText(o) {
+  const room = `# ${displayName(o.accountId, o.room)}`;
+  return o.nick ? `${room} · ${o.nick}` : room;
+}
+
 function sourceText(f) {
+  if (f.origin && (f.source === "message" || f.msgKey)) {
+    const where = originText(f.origin);
+    if (f.status === "pending") return t("Sugerida · {where}", { where });
+    return f.note && f.source === "manual" ? t("Desde {where} · nota: {note}", { where, note: f.note }) : t("Desde {where}", { where });
+  }
   if (f.source === "message") return f.status === "pending" ? t("Sugerida: hora encontrada en un mensaje de una sala") : t("Desde un mensaje de una sala");
   if (f.source === "manual") return f.note ? t("Añadida a mano · nota: {note}", { note: f.note }) : t("Añadida a mano");
   const d = fleetDetails(f);

@@ -23,3 +23,14 @@
 .fleet-error:empty {
   min-height: 0;
 }
+
+/* Botón del calendario en el pie de cada ping, solo icono, pegado a «Copiar». */
+.ping-foot .ping-fleet-btn {
+  padding: 3px 6px;
+}
+.ping-foot .ping-fleet-btn ~ .btn {
+  margin-left: -8px;
+}
+.ping-foot .ping-fleet-btn.in-cal {
+  color: var(--accent);
+}

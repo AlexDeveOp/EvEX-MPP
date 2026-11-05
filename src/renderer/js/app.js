@@ -7,7 +7,8 @@ import { useFleets, registerFleetActions } from "./fleet-manual.js";
 import { addFleetHeaderAction, addFleetRowAction } from "./fleet-view.js";
 import { h, icon, $, toast, modal, prompt, clear } from "./dom.js";
 import { applyAppearance } from "./themes.js";
-import { initChat, markReceipt, focusComposer } from "./chat.js";
+import { initChat, markReceipt, focusComposer, showRoomMessage } from "./chat.js";
+import { addPingCardAction } from "./pings.js";
 import { initSidebar } from "./sidebar.js";
 import { initOccupants } from "./occupants.js";
 import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, markRead, updateBadge, pingsConv, notifyAttention } from "./convs.js";
@@ -42,7 +43,7 @@ async function boot() {
   applyAppearance();
   // Calendario de flotas: «Añadir flota», «Añadir al calendario» y las sugeridas de las salas (antes de que lleguen mensajes).
   useFleets(fleetsApi, { parseFleetTime });
-  registerFleetActions({ addFleetHeaderAction, addFleetRowAction });
+  registerFleetActions({ addFleetHeaderAction, addFleetRowAction, addPingCardAction, showMessage: (o, key) => showRoomMessage(o.accountId, o.room, key) });
 
   for (const [hash, file] of Object.entries(init.avatars || {})) S.avatars.set(hash, `media://evex/avatars/${file}`);
   for (const [id, snap] of Object.entries(init.states)) applySnapshot(id, snap);

@@ -27,7 +27,52 @@ export function titleFromText(text, max = 80) {
   return chars.length > max ? `${chars.slice(0, max - 1).join("").replace(SPACES, "")}…` : line;
 }
 
-// deps: { parseFleetTime(text, msgTs) → ms | null, addFleet(f), isDismissed(msgKey), allFleets() }.
+// ---------- lo que ya está en el calendario ----------
+// No se sugiere una flota que ya está en el calendario: una activa (de ping, a mano o aceptada) a ±30 min de la hora
+// encontrada. Salvo que el mensaje nombre un grupo distinto del de esa flota (dos ops a la misma hora: caps y subcaps).
+
+export const SAME_FLEET_MS = 30 * 60e3;
+// Grupos de destino que se reconocen en un mensaje, y sus otros nombres (también los del pie de los pings).
+const GROUPS = {
+  caps: ["caps", "capitals?", "capitales?", "allcaps", "dreads?", "dreadnoughts?", "carriers?", "fax(?:es)?"],
+  supers: ["supers?", "supercaps?", "supercarriers?", "titans?"],
+  subcaps: ["subcaps?", "subcapitals?", "subcapitales?"],
+  all: ["all", "everyone", "everybody", "todos"],
+};
+const GROUP_RES = Object.entries(GROUPS).map(([g, words]) => [g, new RegExp(`^(?:${words.join("|")})$`, "i")]);
+const WORD = /[\p{L}\p{N}_]+/gu;
+
+// Nombre de grupo normalizado («Capitales» → caps). Lo que no se reconoce va en minúsculas, tal cual.
+export function normGroup(name) {
+  const g = String(name || "").replace(INVISIBLE, "").trim().toLowerCase();
+  if (!g) return "";
+  for (const [canon, re] of GROUP_RES) if (re.test(g)) return canon;
+  return g;
+}
+
+// El primer grupo conocido que nombra un texto, o "".
+export function groupOf(text) {
+  for (const w of String(text || "").replace(INVISIBLE, "").match(WORD) || []) {
+    for (const [canon, re] of GROUP_RES) if (re.test(w)) return canon;
+  }
+  return "";
+}
+
+// La flota activa que ya cubre esa hora (y ese grupo), o null. Una sin grupo, o un mensaje sin grupo, cuentan como la
+// misma op; con los dos grupos conocidos y distintos, son ops distintas.
+export function coveringFleet(fleets, at, group = "", { except = "" } = {}) {
+  const g = normGroup(group);
+  return (
+    (fleets || []).find((f) => {
+      if (f.id === except || f.status === "pending" || f.status === "dismissed") return false;
+      if (Math.abs(f.at - at) > SAME_FLEET_MS) return false;
+      const fg = normGroup(f.group);
+      return !g || !fg || fg === g;
+    }) || null
+  );
+}
+
+// deps: { parseFleetTime(text, msgTs) → ms | null, addFleet(f), isDismissed(msgKey), allFleets(opts) }.
 // Devuelve consider(accountId, room, mensaje, { roomName }) → la flota creada o null.
 export function createFleetSuggester(deps, { now = () => Date.now(), maxAhead = 14 * 86400e3, grace = 30 * 60e3 } = {}) {
   const seen = new Set();
@@ -38,28 +83,67 @@ export function createFleetSuggester(deps, { now = () => Date.now(), maxAhead = 
     if (seen.size > 5000) seen.clear();
     if (!looksLikeFleet(m.body)) return null;
     if (deps.isDismissed(m.key)) return null;
-    if (deps.allFleets().some((f) => f.msgKey === m.key)) return null;
+    // También las retiradas solas (ver retireCovered): no vuelven al repasar el historial.
+    if (deps.allFleets({ includeDismissed: true }).some((f) => f.msgKey === m.key)) return null;
     const at = deps.parseFleetTime(m.body, m.ts);
     if (!Number.isFinite(at)) return null;
     // Ya pasada (con un margen por si el formup va con retraso) o demasiado lejos para ser de verdad la de este mensaje.
     const n = now();
     if (at < n - grace || at > Math.max(n, m.ts) + maxAhead) return null;
+    const group = groupOf(m.body);
+    if (coveringFleet(deps.allFleets(), at, group)) return null;
     return deps.addFleet({
       at,
       title: `«${titleFromText(m.body, 70)}»`,
-      group: "",
+      group,
       note: t("Sugerida: hora encontrada en un mensaje de {nick} en {room}", { nick: m.nick || "?", room: roomName }),
       source: "message",
       msgKey: m.key,
+      origin: { accountId, room, nick: m.nick || "" },
     });
   };
+}
+
+// Las sugeridas pendientes que ya cubre otra flota (p. ej. llega luego el ping de esa op) se retiran solas: quedan como
+// «dismissed» pero sin marcar el mensaje como descartado por el usuario, y no vuelven porque su flota sigue guardada.
+// Devuelve cuántas se retiraron.
+export function retireCovered(deps) {
+  const list = deps.allFleets();
+  let n = 0;
+  for (const f of list) {
+    if (f.status !== "pending" || f.source !== "message") continue;
+    if (!coveringFleet(list, f.at, f.group, { except: f.id })) continue;
+    deps.updateFleet(f.id, { status: "dismissed" });
+    n++;
+  }
+  return n;
 }
 
 // ---------- conexión con fleets.js ----------
 
 let suggester = null;
+let stopWatch = null;
+let retiring = false;
 export function connectSuggestions(deps, opts) {
+  stopWatch?.();
+  stopWatch = null;
   suggester = deps ? createFleetSuggester(deps, opts) : null;
+  // Al cambiar el calendario (llega un ping con hora, se acepta o añade una flota), se retiran las que ya sobran.
+  if (deps?.onChange && deps.updateFleet) {
+    const check = () => {
+      if (retiring) return;
+      retiring = true;
+      try {
+        retireCovered(deps);
+      } catch (e) {
+        console.error("fleet-suggest", e);
+      } finally {
+        retiring = false;
+      }
+    };
+    stopWatch = deps.onChange(check) || null;
+    check();
+  }
 }
 
 // Un mensaje de sala (en directo o del historial). Sin el calendario conectado no hace nada.

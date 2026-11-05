@@ -167,6 +167,25 @@ function watchFresh(ts) {
   sweepTimer.unref?.(); // en los tests (Node), que el temporizador no impida terminar
 }
 
+// Otras partes de la app pueden poner botones en el pie de cada tarjeta, antes de «Copiar» (p. ej. el del calendario
+// de flotas), sin que este fichero dependa de ellas: build(ping) → elemento o null.
+const cardActions = [];
+export function addPingCardAction(build) {
+  cardActions.push(build);
+}
+function cardActionEls(m) {
+  const out = [];
+  for (const build of cardActions) {
+    try {
+      const el = build(m);
+      if (el) out.push(el);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  return out;
+}
+
 // opts.srp: vista «Solo marcados» (muestra el panel de SRP de cada ping).
 export function pingCard(m, opts = {}) {
   const p = parsePing(m.body);
@@ -217,6 +236,7 @@ export function pingCard(m, opts = {}) {
         S.settings.showLocalTime !== false ? h("span", { class: "muted" }, `${fmtDateTime(m.ts)} local`) : null,
         S.settings.showEveTime !== false ? h("span", { class: "eve" }, t("{eve} EVE", { eve: fmtEve(m.ts, true) })) : null,
       ),
+      ...cardActionEls(m),
       h(
         "button",
         {
