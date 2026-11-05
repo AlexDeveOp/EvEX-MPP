@@ -97,6 +97,8 @@ export const DEFAULT_SETTINGS = {
   // Calendario de flotas (src/renderer/js/fleets.js): las añadidas a mano o desde salas, los retoques de las de los
   // pings y los mensajes descartados como sugerencia. Solo local; lo de más de 90 días se borra.
   fleets: { items: {}, overrides: {}, dismissed: {} },
+  // Exportar flotas a .ics (renderer/js/ics.js): por defecto lo mínimo (opsec); alarm en minutos, 0 = sin aviso.
+  fleetIcs: { details: false, includeLink: false, alarm: 0 },
   // Mini ventana para jugar (src/main/mini-window.js). La posición se guarda aparte, por monitor.
   mini: { enabled: false, opacity: 0.85, clickThrough: false },
   behavior: {
