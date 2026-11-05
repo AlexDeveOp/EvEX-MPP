@@ -9,6 +9,14 @@ import { startFakeProxy, makeSelfSignedCert } from "../fake-proxy.mjs";
 const AUTH = { username: "piloto", password: "s3cr3to" };
 const CERT = makeSelfSignedCert();
 const TLS = { ca: [CERT.cert] };
+
+test("certificado de prueba: un número de serie que empieza por 0x00 sigue siendo válido (#81)", async () => {
+  const { X509Certificate } = await import("node:crypto");
+  for (const first of [[0x00, 0x01], [0x00, 0x80], [0x80, 0x00], [0xff, 0xff]]) {
+    const c = makeSelfSignedCert("localhost", { serial: [...first, 2, 3, 4, 5, 6, 7] });
+    assert.doesNotThrow(() => new X509Certificate(c.cert), `serie ${first}`);
+  }
+});
 let echo;
 let echoPort;
 let web;
