@@ -1382,5 +1382,6 @@ export default {
   "Para los avisos antes del formup que solo valen para algunos grupos": "For formup reminders that only apply to some groups",
   "Nota": "Note",
   "Añadir al calendario": "Add to calendar",
+  "Editar en el calendario": "Edit in the calendar",
   "Sugerida: hora encontrada en un mensaje de {nick} en {room}": "Suggested: time found in a message from {nick} in {room}",
 };

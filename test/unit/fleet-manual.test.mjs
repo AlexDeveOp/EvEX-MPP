@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
-import { eveParts, fromEveParts, nextHour, validateFleet, prefillFromMessage, prefillFromPing, useFleets, fleetsReady, calendarMenuItem } from "../../src/renderer/js/fleet-manual.js";
+import { eveParts, fromEveParts, nextHour, validateFleet, prefillFromMessage, prefillFromPing, pendingFor, useFleets, fleetsReady, calendarMenuItem } from "../../src/renderer/js/fleet-manual.js";
 import { createFleetSuggester, looksLikeFleet, titleFromText, considerRoomMessage } from "../../src/renderer/js/fleet-suggest.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
@@ -69,10 +69,30 @@ test("sin el calendario conectado, el menú «Añadir al calendario» sale desac
 });
 
 test("prefillFromPing usa lo que saca fleets.js del ping y guarda la clave del ping", () => {
-  useFleets(fakeFleets(), { parseFleetTime: fakeParse });
+  const f = fakeFleets();
+  useFleets(f, { parseFleetTime: fakeParse });
   assert.equal(fleetsReady(), true);
   assert.equal(calendarMenuItem(() => ({})).disabled, false);
+  assert.equal(calendarMenuItem(() => ({})).label, "Añadir al calendario");
   assert.deepEqual(prefillFromPing({ key: "p1", body: "Capital fleet up now!!\nFC: Bob" }), { at: NOW + 3600e3, title: "Capital fleet up now!!", group: "caps", link: "https://ejemplo.com/cal", pingKeys: ["p1"], source: "manual" });
+  // Un ping sin hora de formup: título y grupo (del pie) del propio ping.
+  f.fleetFromPing = () => null;
+  const PING = "Roam now\n\n~~~ This was a coord broadcast from bob to allcaps at 2026-11-05 12:00:00 EVE ~~~";
+  assert.deepEqual(prefillFromPing({ key: "p2", body: PING }), { at: null, title: "Roam now", group: "allcaps", link: "", pingKeys: ["p2"], source: "manual" });
+  // Un ping que ya es una flota del calendario: se abre esa para editarla.
+  f.list.push({ id: "ping-op-1", at: NOW, title: "Op", pingKeys: ["p3"], status: "active" });
+  assert.equal(prefillFromPing({ key: "p3", body: PING }).id, "ping-op-1");
+  assert.equal(calendarMenuItem(() => prefillFromPing({ key: "p3", body: PING })).label, "Editar en el calendario");
+  useFleets(null);
+});
+
+test("pendingFor encuentra la sugerida pendiente de un mensaje para aceptarla en vez de duplicarla", () => {
+  const f = fakeFleets();
+  useFleets(f, { parseFleetTime: fakeParse });
+  f.list.push({ id: "s1", msgKey: "m9", status: "pending" }, { id: "s2", msgKey: "m8", status: "active" });
+  assert.equal(pendingFor("m9")?.id, "s1");
+  assert.equal(pendingFor("m8"), null, "ya aceptada");
+  assert.equal(pendingFor(""), null);
   useFleets(null);
 });
 

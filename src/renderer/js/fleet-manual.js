@@ -4,6 +4,7 @@ import { h, modal, field, toast } from "./dom.js";
 import { fmtDateTime } from "./format.js";
 import { t } from "./i18n.js";
 import { titleFromText, connectSuggestions } from "./fleet-suggest.js";
+import { parsePing } from "./pings.js";
 
 let fleets = null; // { addFleet, updateFleet, removeFleet, allFleets, isDismissed, fleetFromPing }
 let parseTime = null; // parseFleetTime(text, msgTs) de formup.js
@@ -62,10 +63,18 @@ export function prefillFromMessage(m, roomName, parse = parseTime) {
   };
 }
 
-// Desde un ping: lo que saque fleets.js del ping (hora del formup, título, grupo, enlace).
+// Desde un ping. Si el ping ya está en el calendario (fleets.js convierte en flota los pings con hora de formup), se
+// abre esa flota para editarla; si no, lo que se saque del ping: hora, título, grupo del pie y enlace.
 export function prefillFromPing(m) {
+  const existing = m.key && fleets?.allFleets?.().find((f) => (f.pingKeys || []).includes(m.key));
+  if (existing) return { ...existing };
   const base = fleets?.fleetFromPing?.(m) || {};
-  return { at: base.at ?? null, title: base.title || titleFromText(m.body), group: base.group || "", link: base.link || "", pingKeys: m.key ? [m.key] : [], source: "manual" };
+  return { at: base.at ?? null, title: base.title || titleFromText(m.body), group: base.group || parsePing(m.body).footer?.to || "", link: base.link || "", pingKeys: m.key ? [m.key] : [], source: "manual" };
+}
+
+// Al añadir a mano un mensaje que ya tenía una sugerida pendiente, se acepta esa (con lo escrito) en vez de duplicarla.
+export function pendingFor(msgKey) {
+  return (msgKey && fleets?.allFleets?.().find((f) => f.msgKey === msgKey && f.status === "pending")) || null;
 }
 
 // ---------- formulario ----------
@@ -99,7 +108,9 @@ export function openAddFleet(prefill = {}, { groups = [] } = {}) {
     const err = validateFleet(data);
     error.textContent = err;
     if (err) return;
+    const pending = !editing && pendingFor(prefill.msgKey);
     if (editing) fleets.updateFleet(prefill.id, data);
+    else if (pending) fleets.updateFleet(pending.id, { ...data, status: "active" });
     else fleets.addFleet({ ...data, link: prefill.link || "", source: prefill.source || "manual", ...(prefill.pingKeys?.length ? { pingKeys: prefill.pingKeys } : {}), ...(prefill.msgKey ? { msgKey: prefill.msgKey } : {}) });
     close();
     toast(editing ? t("Flota guardada") : t("Flota añadida al calendario"), { kind: "success" });
@@ -131,7 +142,9 @@ export function openAddFleet(prefill = {}, { groups = [] } = {}) {
   return m;
 }
 
-// Elemento de menú «Añadir al calendario» (clic derecho en un mensaje de sala o un ping).
-export function calendarMenuItem(getPrefill, opts) {
-  return { label: t("Añadir al calendario"), icon: "calendar", disabled: !fleets, action: () => openAddFleet(getPrefill(), opts) };
+// Elemento de menú «Añadir al calendario» (clic derecho en un mensaje de sala o un ping). Si lo que se va a abrir ya es
+// una flota del calendario (un ping con hora), dice «Editar en el calendario».
+export function calendarMenuItem(getPrefill, opts = {}) {
+  const prefill = fleets ? getPrefill() : null;
+  return { label: prefill?.id ? t("Editar en el calendario") : t("Añadir al calendario"), icon: "calendar", disabled: !fleets, action: () => openAddFleet(prefill || getPrefill(), opts) };
 }
