@@ -14,6 +14,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - It is filled from the local history when the app starts (rooms active in the last 30 days, the last 1,000 messages of each), so mentions from before you opened the app are there too, and new ones arrive live. Large rooms are read from the end of the file, not in full.
   - The count does not add to the taskbar badge, which already counts the room's mentions.
 
+### Changed
+- **Formup reminder, more flexible** (*Preferences → Fleet pings → Formup countdown*). The alert before a ping's formup time now has more options:
+  - Several reminders at once: 5, 10, 15, 30 minutes and 1 hour before (plus the alert at the exact time, as before). The single "alert in advance" setting from earlier versions is kept.
+  - Only for some target groups of the ping footer (e.g. `all, caps`), like the voice reading.
+  - Optionally read aloud ("Formup in 15 minutes. <title>"), with the voice and speed of *Read pings aloud*.
+  - Two copies of the same ping (another connection, the server archive) now give one reminder, not two.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added
