@@ -1,6 +1,6 @@
 // Posición y tamaño de la mini ventana, por monitor. Sin Electron: se prueba con pantallas de mentira.
 // saved = { last: id del último monitor, byDisplay: { [id]: { x, y, width, height } } }
-export const MINI_DEFAULT = { width: 300, height: 150 };
+export const MINI_DEFAULT = { width: 300, height: 190 }; // con sitio para las 3 próximas flotas
 export const MINI_MIN = { width: 220, height: 96 };
 export const MINI_MAX = { width: 640, height: 420 };
 const MARGIN = 16;

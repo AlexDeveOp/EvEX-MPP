@@ -4,7 +4,6 @@ import { placeBounds, rememberBounds, fitBounds, clampOpacity, validRect, MINI_D
 import { S } from "../../src/renderer/js/state.js";
 import { pingsConv } from "../../src/renderer/js/convs.js";
 import { miniState } from "../../src/renderer/js/mini-feed.js";
-import { nextFormup } from "../../src/renderer/js/formup.js";
 import { countdownText, timeAgo } from "../../src/renderer/js/countdown.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
@@ -49,6 +48,7 @@ const ping = (title, formup, to, ts) => ({ key: title + ts, ts, nick: "pingbot",
 
 beforeEach(() => {
   S.settings = structuredClone(TEST_SETTINGS);
+  delete S.settings.fleets;
   // Los no leídos (totalUnread) miran el nivel de aviso de cada conversación.
   S.settings.notifications = { ...(S.settings.notifications || {}), roomModes: S.settings.notifications?.roomModes || {} };
   const pc = pingsConv();
@@ -64,34 +64,17 @@ test("miniState: último ping (solo título y grupo), próximo formup y contador
   const s = miniState(now);
   assert.deepEqual(s.ping, { title: `Roam${ZW} now`, group: "all", ts: now - 60e3 }, "el título va tal cual, con sus invisibles");
   assert.equal(JSON.stringify(s).includes("secret-channel"), false, "nunca el texto entero del ping");
-  assert.equal(s.formup.at, Date.UTC(2026, 10, 6, 19, 0));
-  assert.equal("title" in s.formup, false, "del formup solo la hora");
+  // Próximas flotas del calendario: hora (con el día si no es hoy), título y grupo; nada más del ping.
+  assert.deepEqual(s.fleets, [{ at: Date.UTC(2026, 10, 6, 19, 0), when: "19:00", title: "Dread fleet", group: "caps", manual: false }]);
+  assert.equal(typeof s.countdown, "boolean");
   assert.equal(s.pings, 2);
   assert.equal(typeof s.unread, "number");
   assert.equal(s.mentions, 0);
 });
 
-test("nextFormup: el más cercano que no sea viejo; nada si todos pasaron", () => {
-  const now = Date.UTC(2026, 10, 6, 18, 30);
-  const msgs = [ping("A", "20:00", "all", now - 3600e3), ping("B", "19:00", "all", now - 1800e3), ping("C", "18:00", "all", now - 7200e3)];
-  assert.equal(nextFormup(msgs, now).m.key, msgs[1].key);
-  assert.equal(nextFormup([msgs[2]], now), null, "a las 18:00 y son las 18:30: ya pasó");
-  assert.equal(nextFormup([msgs[2]], Date.UTC(2026, 10, 6, 18, 10)).m.key, msgs[2].key, "10 min después aún es «¡Formup ahora!»");
-});
-
-test("nextFormup: el que empieza pronto gana al que empezó hace 10 min; cuándo cambia la elección", () => {
-  const now = Date.UTC(2026, 10, 6, 18, 30);
-  const started = ping("Started", "18:20", "all", now - 3600e3);
-  const soon = ping("Soon", "18:35", "all", now - 1800e3);
-  const later = ping("Later", "19:30", "all", now - 1800e3);
-  const r = nextFormup([started, later, soon], now);
-  assert.equal(r.m.key, soon.key);
-  assert.equal(r.until, Date.UTC(2026, 10, 6, 18, 35), "cambia cuando empieza");
-  const onlyStarted = nextFormup([started], now);
-  assert.equal(onlyStarted.m.key, started.key, "sin ninguno futuro, el que empezó");
-  assert.equal(onlyStarted.until, Date.UTC(2026, 10, 6, 18, 35), "y deja de valer 15 min después de su hora");
-  assert.equal(nextFormup([started], Date.UTC(2026, 10, 6, 18, 36)), null);
+test("validRect", () => {
   assert.equal(validRect({ x: 0, y: 0, width: 1, height: 1 }), true);
+  assert.equal(validRect({ x: 0, y: 0, width: 0, height: 1 }), false);
 });
 
 test("countdown.js: textos sin la ventana principal", () => {

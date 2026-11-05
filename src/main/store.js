@@ -94,6 +94,9 @@ export const DEFAULT_SETTINGS = {
   pingHighlight: "60",
   // SRP: marcar pings para pedir el reembolso de naves (renderer/js/srp.js). Las marcas, por clave del mensaje.
   srp: { enabled: false, deadlineDays: 0, marks: {} },
+  // Calendario de flotas (src/renderer/js/fleets.js): las añadidas a mano o desde salas, los retoques de las de los
+  // pings y los mensajes descartados como sugerencia. Solo local; lo de más de 90 días se borra.
+  fleets: { items: {}, overrides: {}, dismissed: {} },
   // Mini ventana para jugar (src/main/mini-window.js). La posición se guarda aparte, por monitor.
   mini: { enabled: false, opacity: 0.85, clickThrough: false },
   behavior: {

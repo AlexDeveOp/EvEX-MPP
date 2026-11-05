@@ -8,6 +8,16 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Fleet calendar** in *Fleet pings*: a *List | Upcoming | Month* switch in the header.
+  - *Upcoming* is an agenda by EVE day: EVE and local time, countdown, target group and *Show ping*, which jumps to the ping card. *Month* is a Monday-first grid with previous, next and today.
+  - Fleets come from the pings' formup time. Times are read better: "tomorrow at 17:15", "tonight", weekdays ("friday 19:00"), "at downtime" (11:00 EVE) and dates. A ping at 21:33 EVE saying "Tomorrow at 17:15" is now the next day at 17:15. A number without context is never taken as a time.
+  - Pings of the same op (within 15 min, with the same calendar link or a similar title, to the same group) are one fleet.
+  - A link to an alliance calendar or event in the ping is stored and can be copied, but the app never opens or fetches it.
+  - Suggested fleets (dashed purple) are accepted or dismissed; a dismissed suggestion doesn't come back.
+  - The formup reminders now cover every active calendar fleet, including ones added by hand, with the same alert ids as before.
+  - The mini window lists the next three fleets.
+  - Everything is stored locally (`settings.fleets`) and anything older than 90 days is pruned.
+  - Developer API in `src/renderer/js/fleets.js` and `fleet-time.js`, with hooks for header and per-fleet actions in `fleet-view.js`.
 - **Mini window for gaming** (*Preferences → Fleet pings → Mini window for gaming*, the tray menu or the button in the pings view). A small always-on-top window, also over EVE in borderless mode:
   - Shows the latest ping (title and target group only, never the whole text), the countdown to the next formup and the unread pings, mentions and messages. Clicking it opens fleet pings (or mentions, or the app).
   - It never takes focus or flashes the taskbar (both can throw a full-screen game out of focus).

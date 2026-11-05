@@ -24,3 +24,15 @@ export function timeAgo(ts, now = Date.now()) {
   if (s < 86400) return t("hace {n} h", { n: Math.floor(s / 3600) });
   return t("hace {n} d", { n: Math.floor(s / 86400) });
 }
+
+// Cuenta atrás corta de una flota del calendario (agenda y mini ventana).
+// «en 2 h 14 min», «en 25 min», «en 2 d», «¡ahora!» (hasta 15 min después).
+export function fleetCountdown(at, now = Date.now()) {
+  const diff = at - now;
+  if (diff <= 0) return diff > -15 * 60e3 ? t("¡ahora!") : "";
+  const min = Math.ceil(diff / 60e3);
+  if (min < 60) return t("en {n} min", { n: min });
+  if (min < 24 * 60) return t("en {h} h {m} min", { h: Math.floor(min / 60), m: min % 60 });
+  return t("en {d} d", { d: Math.round(diff / 86400e3) });
+}
+
