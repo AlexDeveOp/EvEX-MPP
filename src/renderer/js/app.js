@@ -1,6 +1,6 @@
 // Arranque de la interfaz y traducción de eventos XMPP al estado local.
 import { S, api, onMain, emit, on, conn, account, contact, rosterOf, roomState, convKey, displayName, PINGS_KEY } from "./state.js";
-import { loadMentions } from "./mentions.js";
+import { loadMentions, mentionsTitlebarState } from "./mentions.js";
 import * as fleetsApi from "./fleets.js";
 import { parseFleetTime } from "./fleet-time.js";
 import { useFleets, registerFleetActions } from "./fleet-manual.js";
@@ -429,6 +429,17 @@ function startEveClock() {
 function bindTitlebar() {
   startEveClock();
   $("#tb-switch").addEventListener("click", openSwitcher);
+  // «@»: abre la bandeja de menciones, aunque su entrada de la barra lateral esté oculta; con menciones sin ver, un puntito.
+  const mentionsBtn = $("#tb-mentions");
+  mentionsBtn.addEventListener("click", () => openConv(null, "*", "mentions"));
+  const paintMentions = () => {
+    const st = mentionsTitlebarState();
+    mentionsBtn.classList.toggle("has-dot", st.dot);
+    mentionsBtn.title = st.title;
+    mentionsBtn.setAttribute("aria-label", st.label);
+  };
+  for (const evt of ["sidebar", "tabs", "settings"]) on(evt, paintMentions);
+  paintMentions();
   $("#tb-rooms").addEventListener("click", () => S.accounts[0] && openRoomBrowser(currentAccount()));
   $("#tb-search").addEventListener("click", () => {
     const c = S.active && S.convs.get(S.active);

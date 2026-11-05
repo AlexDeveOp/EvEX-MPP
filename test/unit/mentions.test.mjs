@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
-import { mentionMatch, mentionsConv, addMention, loadMentions, markMentionsSeen, markRoomMentionsSeen, isRoomLog, visibleMentions, mentionRooms, showMentionsEntry, HISTORY_DAYS } from "../../src/renderer/js/mentions.js";
+import { mentionMatch, mentionsConv, addMention, loadMentions, markMentionsSeen, markRoomMentionsSeen, isRoomLog, visibleMentions, mentionRooms, showMentionsEntry, mentionsTitlebarState, HISTORY_DAYS } from "../../src/renderer/js/mentions.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
 const ROOM = "ops@conference.example.com";
@@ -161,4 +161,14 @@ test("la entrada «Menciones» está oculta salvo con menciones sin ver, con su 
   S.settings.notifications.alwaysShowMentions = true;
   S.tabs = [];
   assert.equal(showMentionsEntry(), true);
+});
+
+test("el icono «@» de la barra de título: puntito sin número con menciones sin ver; el número solo en el aria-label", () => {
+  assert.deepEqual(mentionsTitlebarState(0), { dot: false, title: "Menciones (también con Ctrl+K)", label: "Menciones" });
+  const st = mentionsTitlebarState(3);
+  assert.equal(st.dot, true);
+  assert.doesNotMatch(st.title, /3/);
+  assert.equal(st.label, "Menciones: 3 sin ver");
+  assert.equal(mentionsTitlebarState(-1).dot, false);
+  assert.equal(mentionsTitlebarState(undefined).dot, mentionsConv().pending > 0);
 });
