@@ -49,6 +49,8 @@ const ping = (title, formup, to, ts) => ({ key: title + ts, ts, nick: "pingbot",
 
 beforeEach(() => {
   S.settings = structuredClone(TEST_SETTINGS);
+  // Los no leídos (totalUnread) miran el nivel de aviso de cada conversación.
+  S.settings.notifications = { ...(S.settings.notifications || {}), roomModes: S.settings.notifications?.roomModes || {} };
   const pc = pingsConv();
   pc.messages.length = 0;
   pc.unread = 0;
