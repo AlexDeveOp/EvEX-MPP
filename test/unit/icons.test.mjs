@@ -55,6 +55,23 @@ test("la insignia de mensajes sin leer añade un punto rojo arriba a la derecha"
   assert.notDeepEqual(plain.px(206, 50), badge.px(206, 50));
 });
 
+test("«No molestar» añade una insignia roja con borde blanco y campana blanca abajo a la derecha, compatible con las demás", () => {
+  const muted = decodePng(renderIcon(64, { muted: true }));
+  assert.deepEqual(muted.px(56, 38).slice(0, 3), [239, 68, 68], "círculo rojo");
+  assert.deepEqual(muted.px(62, 44).slice(0, 3), [255, 255, 255], "borde blanco");
+  assert.deepEqual(muted.px(44, 36).slice(0, 3), [255, 255, 255], "cúpula de la campana");
+  assert.equal(muted.px(0, 0)[3], 0, "las esquinas de arriba siguen transparentes");
+  // Con mensajes sin leer, el punto rojo de arriba sigue ahí.
+  const both = decodePng(renderIcon(64, { badge: true, muted: true }));
+  assert.deepEqual(both.px(51, 12).slice(0, 3), [239, 68, 68], "punto de sin leer");
+  assert.deepEqual(both.px(56, 38).slice(0, 3), [239, 68, 68], "insignia de No molestar");
+  // Sobre la sirena de pings: la parte de arriba de la sirena se sigue viendo.
+  const alert = decodePng(renderAlertIcon(64, undefined, undefined, { muted: true }));
+  assert.deepEqual(alert.px(56, 38).slice(0, 3), [239, 68, 68]);
+  assert.deepEqual(alert.px(32, 24), [255, 255, 255, 255], "cúpula de la sirena");
+  assert.deepEqual(decodePng(renderAlertIcon(64)).px(56, 38).slice(0, 3), [0xf5, 0x9e, 0x0b], "sin No molestar, ámbar");
+});
+
 test("luminance y contrast siguen la fórmula de WCAG", () => {
   assert.equal(luminance("#000000"), 0);
   assert.equal(luminance("#ffffff"), 1);

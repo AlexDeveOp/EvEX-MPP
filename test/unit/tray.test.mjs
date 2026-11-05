@@ -3,7 +3,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { app, Tray } from "electron";
-import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd } from "../../src/main/tray.js";
+import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd, trayLook } from "../../src/main/tray.js";
 import * as store from "../../src/main/store.js";
 import { tempDir } from "./helpers.mjs";
 
@@ -209,4 +209,25 @@ test("en Linux no se recrea una bandeja que ya se ha quitado", (t) => {
   assert.equal(Tray.created.length, count);
   // refreshTray con la bandeja quitada no falla.
   refreshTray();
+});
+
+test("trayLook: icono, insignias y texto según sin leer, pings y «No molestar»", () => {
+  assert.deepEqual(trayLook({}), { kind: "normal", badge: false, muted: false, tooltip: "EvEX-MPP" });
+  assert.deepEqual(trayLook({ unread: 3 }), { kind: "normal", badge: true, muted: false, tooltip: "EvEX-MPP — 3 sin leer" });
+  assert.deepEqual(trayLook({ dnd: { active: true, label: "No molestar activado" } }), { kind: "normal", badge: false, muted: true, tooltip: "EvEX-MPP · No molestar activado" });
+  const all = trayLook({ unread: 2, pings: 1, dnd: { active: true, label: "No molestar hasta las 08:00 (horario)" } });
+  assert.deepEqual(all, { kind: "alert", badge: true, muted: true, tooltip: "¡1 ping de flota sin leer! · No molestar hasta las 08:00 (horario)" });
+  assert.equal(trayLook({ dnd: { active: true } }).tooltip, "EvEX-MPP · No molestar", "sin etiqueta, el texto genérico");
+});
+
+test("setTrayDnd cambia el icono de la bandeja y su texto, y vuelve al quitarlo", (t) => {
+  const tray = setup(t);
+  setTrayDnd({ active: false });
+  const plain = tray.image;
+  setTrayDnd({ active: true, label: "No molestar activado" });
+  assert.notEqual(tray.image, plain, "icono con la campana tachada");
+  assert.equal(tray.tooltip, "EvEX-MPP · No molestar activado");
+  setTrayDnd({ active: false });
+  assert.equal(tray.image, plain);
+  assert.equal(tray.tooltip, "EvEX-MPP");
 });
