@@ -17,10 +17,6 @@ import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
 import { userData, mediaDir, avatarDir } from "./paths.js";
 import { createConnLog } from "./conn-log.js";
-
-// Un solo registro de conexión para todas las cuentas (userData/connection.log); se crea al usarlo, con userData ya fijado.
-let connLogFn = null;
-const connLog = () => (connLogFn ||= createConnLog(path.join(userData(), "connection.log")));
 import { autostartFile, autostartExec, desktopEntry } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
@@ -42,6 +38,8 @@ if (process.env.EVEX_USERDATA) app.setPath("userData", path.resolve(process.env.
 // Versión portable: los datos viajan junto al .exe (las contraseñas cifradas solo valen en el PC donde se guardaron).
 else if (process.env.PORTABLE_EXECUTABLE_DIR) app.setPath("userData", path.join(process.env.PORTABLE_EXECUTABLE_DIR, "EvEX-MPP-datos"));
 if (!app.requestSingleInstanceLock()) app.quit();
+// Un solo registro de conexión para todas las cuentas, en la carpeta de datos ya fijada (ver conn-log.js).
+const connLog = createConnLog(path.join(userData(), "connection.log"));
 // Linux: Chromium solo usa las voces del sistema (speech-dispatcher) para «Leer en voz alta» si se le pide al arrancar.
 if (process.platform === "linux") app.commandLine.appendSwitch("enable-speech-dispatcher");
 
@@ -459,7 +457,7 @@ function getConn(id) {
   const acc = store.getAccount(id);
   if (!acc) throw new Error(t("Cuenta no encontrada"));
   if (!x) {
-    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion(), getProxy: () => accountProxy(x.acc, store.get().settings, proxyPassword), log: connLog() });
+    x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion(), getProxy: () => accountProxy(x.acc, store.get().settings, proxyPassword), log: connLog });
     x.historyOptions = (roomJid) => historyOptions(id, roomJid);
     x.on("event", (ev) => onAccountEvent(x, ev));
     accounts.set(id, x);

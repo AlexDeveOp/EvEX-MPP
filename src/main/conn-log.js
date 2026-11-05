@@ -7,22 +7,42 @@ import path from "node:path";
 
 export const MAX_BYTES = 512 * 1024;
 
+const sizeOf = (file) => {
+  try {
+    return fs.statSync(file).size;
+  } catch {
+    return 0; // todavía no existe
+  }
+};
+
 export function createConnLog(file, { maxBytes = MAX_BYTES, echo = !!process.env.EVEX_DEBUG } = {}) {
+  const old = /\.log$/.test(file) ? file.replace(/\.log$/, ".old.log") : `${file}.old`;
   let size = -1;
+  let dirReady = false;
   return (accountId, text) => {
     const line = `${new Date().toISOString()} [${accountId}] ${text}\n`;
     if (echo) process.stdout.write(`[connection] ${line}`);
+    const bytes = Buffer.byteLength(line);
     try {
-      if (size < 0) size = fs.existsSync(file) ? fs.statSync(file).size : 0;
-      if (size + line.length > maxBytes) {
-        fs.renameSync(file, file.replace(/\.log$/, ".old.log"));
+      if (!dirReady) {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        dirReady = true;
+      }
+      if (size < 0) size = sizeOf(file);
+      if (size > 0 && size + bytes > maxBytes) {
+        try {
+          fs.renameSync(file, old);
+        } catch {
+          // Si no se puede renombrar (Windows: otro programa lo tiene abierto), se vacía para no dejar de apuntar.
+          fs.writeFileSync(file, "");
+        }
         size = 0;
       }
-      fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.appendFileSync(file, line);
-      size += Buffer.byteLength(line);
+      size += bytes;
     } catch {
       size = -1; // sin disco o sin permiso: el registro no debe romper la conexión
+      dirReady = false;
     }
   };
 }

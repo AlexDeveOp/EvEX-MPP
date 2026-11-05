@@ -96,7 +96,28 @@ export const OCCUPANT_BATCH_MS = 120;
 // Ping al servidor cada PING_EVERY; sin respuesta en PING_TIMEOUT, la conexión se da por muerta y se rehace.
 export const RECONNECT = { PING_EVERY: 30000, PING_TIMEOUT: 20000, STALL: 30000, SUPERVISE_EVERY: 5000, MAX_DELAY: 30000 };
 // Estados de xmpp.js con el TCP ya abierto y la sesión negociándose (apertura del stream, STARTTLS, login, bind).
+// Un aviso de red no corta ese intento si ha avanzado hace menos de NEGOTIATION_GRACE: está vivo. Si lleva más
+// quieto, puede ir por una ruta muerta (cambio de Wi-Fi o VPN), y se reintenta ya.
 const NEGOTIATING = new Set(["connect", "opening", "open"]);
+export const NEGOTIATION_GRACE = 5000;
+
+// Como start() de xmpp.js, pero recogiendo su promesa de «online»: si el socket falla a mitad de la negociación,
+// xmpp.js rechaza esa promesa cuando ya nadie la espera, y quedaría como rechazo sin capturar en el proceso principal.
+async function startClient(xmpp) {
+  if (xmpp.status !== "offline") throw new Error("Connection is not offline");
+  const { service, domain, lang } = xmpp.options;
+  await xmpp.connect(service);
+  const online = new Promise((resolve, reject) => {
+    const done = () => (xmpp.off("online", onOnline), xmpp.off("error", onError));
+    const onOnline = (address) => (done(), resolve(address));
+    const onError = (err) => (done(), reject(err));
+    xmpp.on("online", onOnline);
+    xmpp.on("error", onError);
+  });
+  online.catch(() => {});
+  await xmpp.open({ domain, lang });
+  return online;
+}
 
 // Errores de red: con ellos se sigue reintentando, porque la red puede volver. Los demás (contraseña, TLS, falta de
 // mecanismo…) son definitivos.
@@ -378,10 +399,9 @@ export class XmppAccount extends EventEmitter {
       return true;
     });
 
-    // Registro de conexión: avisos de error del servidor (<stream:error>) y de Stream Management, sin stanzas.
+    // Registro de conexión: Stream Management (los <stream:error> ya llegan como «error», con su condición).
     xmpp.on("nonza", (el) => {
-      if (el.name === "error" || el.name === "stream:error") this.trace(`stream:error ${el.children.map((c) => c.name).filter(Boolean).join(",")}`);
-      else if (/^(enabled|failed|resumed)$/.test(el.name)) this.trace(`sm ${el.name}${el.attrs.resume ? ` resume=${el.attrs.resume}` : ""}${el.attrs.max ? ` max=${el.attrs.max}` : ""}`);
+      if (/^(enabled|failed|resumed)$/.test(el.name)) this.trace(`sm ${el.name}${el.attrs.resume ? ` resume=${el.attrs.resume}` : ""}${el.attrs.max ? ` max=${el.attrs.max}` : ""}`);
     });
     xmpp.on("status", (s, info) => {
       const reason = s === "disconnect" ? ` clean=${!!info?.clean}${info?.reason ? ` reason=${describeForLog(info.reason)}` : ""}` : "";
@@ -440,8 +460,13 @@ export class XmppAccount extends EventEmitter {
     clearInterval(this.supervisor);
     this.supervisor = setInterval(() => this.supervise(), RECONNECT.SUPERVISE_EVERY);
     try {
-      await Promise.race([xmpp.start(), startFailed]);
+      await Promise.race([startClient(xmpp), startFailed]);
     } catch (err) {
+      // Si entretanto se desconectó o empezó otra conexión, este fallo es del intento viejo: no se toca la nueva.
+      if (this.xmpp !== xmpp) {
+        this.trace(`superseded attempt failed: ${describeForLog(err)}`);
+        return;
+      }
       if (this.state !== "error") {
         if (this.wantOnline && isNetworkError(err)) {
           // Sin red al conectar (p. ej. el PC arranca o despierta antes que el Wi-Fi): se sigue intentando en
@@ -564,7 +589,7 @@ export class XmppAccount extends EventEmitter {
     if (!x || !this.wantOnline || this.state === "error") return;
     this.trace(`${why} (${x.status})`);
     if (x.status === "online") return this.checkAlive();
-    if (NEGOTIATING.has(x.status) && Date.now() - this.lastProgress < RECONNECT.STALL) return;
+    if (NEGOTIATING.has(x.status) && Date.now() - this.lastProgress < NEGOTIATION_GRACE) return;
     x.reconnect.delay = 1000;
     this.restartConnection(why);
   }

@@ -5,18 +5,27 @@ import path from "node:path";
 import { createConnLog, describeForLog } from "../../src/main/conn-log.js";
 import { tempDir } from "./helpers.mjs";
 
+const read = (file) => fs.readFileSync(file, "utf8");
+
 test("el registro de conexión apunta cada línea con hora y cuenta, y rota al llenarse", (t) => {
   const dir = tempDir(t);
   const file = path.join(dir, "sub", "connection.log");
   const log = createConnLog(file, { maxBytes: 200, echo: false });
   log("cuenta1", "connect");
-  const first = fs.readFileSync(file, "utf8");
-  assert.match(first, /^\d{4}-\d\d-\d\dT[\d:.]+Z \[cuenta1\] connect\n$/);
-  for (let i = 0; i < 10; i++) log("cuenta1", `línea ${i}`);
-  const old = path.join(dir, "sub", "connection.old.log");
-  assert.ok(fs.existsSync(old), "el anterior se guarda aparte");
-  assert.ok(fs.statSync(file).size <= 200);
-  assert.match(fs.readFileSync(file, "utf8"), /línea 9/);
+  assert.match(read(file), /^\d{4}-\d\d-\d\dT[\d:.]+Z \[cuenta1\] connect\n$/);
+  for (let i = 0; i < 10; i++) log("cuenta1", `línea ${i} · ñ`);
+  assert.match(read(path.join(dir, "sub", "connection.old.log")), /línea/, "el anterior se guarda aparte");
+  const now = fs.readFileSync(file);
+  assert.ok(now.length <= 200, `cuenta bytes, no caracteres (${now.length})`);
+  assert.match(now.toString("utf8"), /línea 9/);
+});
+
+test("un nombre sin .log también rota, a <nombre>.old", (t) => {
+  const file = path.join(tempDir(t), "conexion.txt");
+  const log = createConnLog(file, { maxBytes: 120, echo: false });
+  for (let i = 0; i < 6; i++) log("c", `línea ${i}`);
+  assert.match(read(`${file}.old`), /línea/);
+  assert.ok(fs.readFileSync(file).length <= 120);
 });
 
 test("si no se puede escribir, el registro no lanza", (t) => {

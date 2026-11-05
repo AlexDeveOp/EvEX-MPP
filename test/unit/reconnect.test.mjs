@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import net from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { XmppAccount, RECONNECT, isNetworkError } from "../../src/main/xmpp-account.js";
+import { XmppAccount, RECONNECT, NEGOTIATION_GRACE, isNetworkError } from "../../src/main/xmpp-account.js";
 import { tempDir } from "./helpers.mjs";
 
 const MOCK = 18299 + Math.floor(Math.random() * 500);
@@ -144,23 +144,53 @@ test("un aviso de red no corta un intento que ya está negociando con el servido
   assert.ok(lines.some((l) => l.startsWith("rn connect (")));
   assert.ok(lines.some((l) => l.includes("prueba (opening)") || l.includes("prueba (open)")));
   assert.ok(!lines.some((l) => l.includes("restart connection")));
-  // Cierre sin reset: un ECONNRESET a mitad de la negociación rechaza una promesa interna de xmpp.js que ya nadie
-  // espera (la de «online» de start()), y node:test lo contaría como fallo de esta prueba.
-  await acc.disconnect(true);
-  for (const p of r.pairs) p.cli.end();
 });
 
-test("desconectar con el servidor sin contestar y un reset después no deja una excepción sin capturar", async () => {
+test("un intento que lleva tiempo quieto sí se rehace con el aviso de red (puede ir por una ruta muerta)", async (t) => {
+  const r = await relay(t);
+  r.mode = "mute";
+  const acc = account(t, r.port);
+  acc.connect("test").catch(() => {});
+  await until(() => ["opening", "open"].includes(acc.xmpp?.status), 2000);
+  const lines = [];
+  acc.connLog = (id, text) => lines.push(text);
+  acc.lastProgress = Date.now() - NEGOTIATION_GRACE - 1;
+  acc.nudge("prueba");
+  // (El relé mudo no lee su lado, así que no se entera del cierre: se comprueba por el registro y el estado.)
+  assert.ok(lines.some((l) => /^restart connection \((opening|open)\): prueba$/.test(l)), lines.join("\n"));
+  await until(() => lines.some((l) => l.startsWith("disconnect (")), 1000);
+});
+
+test("un reset a mitad del login no deja un rechazo sin capturar (la promesa «online» de xmpp.js)", async (t) => {
+  const rejected = [];
+  const onRejection = (e) => rejected.push(e);
+  process.on("unhandledRejection", onRejection);
+  t.after(() => process.off("unhandledRejection", onRejection));
   const socks = [];
   const server = net.createServer((c) => (c.on("error", () => {}), socks.push(c)));
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
-  const acc = new XmppAccount({ id: "rd", jid: "usuario@test.local", host: "127.0.0.1", port: server.address().port, security: "opportunistic" }, { avatarDir: ".", version: "1" });
+  t.after(() => new Promise((r) => server.close(r)));
+  const acc = account(t, server.address().port);
   acc.connect("test").catch(() => {});
   await until(() => acc.xmpp?.status === "opening", 2000);
-  await acc.disconnect(true); // espera 3 s al servidor y deja de esperar
-  for (const s of socks) s.resetAndDestroy(); // antes: «Uncaught ECONNRESET» en el proceso principal
+  for (const s of socks) s.resetAndDestroy(); // el servidor corta durante la negociación
   await sleep(500);
-  await new Promise((r) => server.close(r));
+  assert.deepEqual(rejected.map((e) => e?.code), []);
+});
+
+test("desconectar con el servidor sin contestar y un reset después: ni excepción sin capturar ni estado «error»", async (t) => {
+  const socks = [];
+  const server = net.createServer((c) => (c.on("error", () => {}), socks.push(c)));
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  t.after(() => new Promise((r) => server.close(r)));
+  const acc = account(t, server.address().port);
+  const connecting = acc.connect("test").catch(() => {});
+  await until(() => acc.xmpp?.status === "opening", 2000);
+  await acc.disconnect(); // espera 3 s al servidor y deja de esperar
+  for (const s of socks) s.resetAndDestroy(); // antes: «Uncaught ECONNRESET» en el proceso principal
+  await connecting;
+  await sleep(300);
+  assert.equal(acc.state, "offline", "el fallo del intento viejo no pone la cuenta en «error»");
 });
 
 test("qué errores cuentan como de red", () => {
