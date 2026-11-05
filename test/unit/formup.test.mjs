@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
 import { parsePing } from "../../src/renderer/js/pings.js";
-import { parseFormup, countdownText, countdownSettings, dueAlerts } from "../../src/renderer/js/formup.js";
+import { parseFormup, countdownText, countdownSettings, dueAlerts, wantedGroups, reminderSpeech } from "../../src/renderer/js/formup.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
 S.settings = structuredClone(TEST_SETTINGS);
@@ -53,9 +53,54 @@ test("dueAlerts avisa antes y a la hora, una sola vez y nunca tarde", () => {
   const msgs = [{ key: "p1", ts: TS, body: "Op\nFormup Time: 19:00" }];
   assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 49)), []);
   const early = dueAlerts(msgs, cfg, utc(18, 50, 3) + 5000);
-  assert.deepEqual(early.map((a) => [a.id, a.minutes]), [["p1|10", 10]]);
-  assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 50) + 5000, { "p1|10": 1 }), [], "ya avisado");
+  const id10 = `${utc(19, 0)}|op|10`;
+  assert.deepEqual(early.map((a) => [a.id, a.minutes]), [[id10, 10]]);
+  assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 50) + 5000, { [id10]: 1 }), [], "ya avisado");
   assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 55)), [], "pasado el margen no avisa tarde");
-  assert.deepEqual(dueAlerts(msgs, cfg, utc(19, 0) + 1000).map((a) => a.id), ["p1|0"]);
+  assert.deepEqual(dueAlerts(msgs, cfg, utc(19, 0) + 1000).map((a) => a.id), [`${utc(19, 0)}|op|0`]);
   assert.deepEqual(dueAlerts(msgs, { ...cfg, alert: false }, utc(19, 0) + 1000), []);
+});
+
+test("countdownSettings: el «before» antiguo pasa a la lista de avisos antes", () => {
+  assert.deepEqual(countdownSettings({ pingCountdown: { before: 15 } }).befores, [15]);
+  assert.deepEqual(countdownSettings({ pingCountdown: { before: 0 } }).befores, [], "0 era «solo a la hora»");
+  assert.deepEqual(countdownSettings({}).befores, [5], "por defecto, 5 min antes, como antes");
+  assert.deepEqual(countdownSettings({ pingCountdown: { before: 15, befores: [10, 60, 10, -3, "x"] } }).befores, [60, 10], "manda la lista nueva, sin repetidos ni valores raros");
+  assert.equal("before" in countdownSettings({ pingCountdown: { before: 15 } }), false, "al guardar ya no se escribe el campo antiguo");
+});
+
+test("dueAlerts: varios avisos antes, cada uno en su momento", () => {
+  const cfg = countdownSettings({ pingCountdown: { befores: [60, 15, 5], atTime: false } });
+  const msgs = [{ key: "p1", ts: Date.UTC(2026, 10, 3, 17, 30), body: "Op\nFormup Time: 19:00" }];
+  assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 0) + 1000).map((a) => a.minutes), [60]);
+  assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 45) + 1000).map((a) => a.minutes), [15]);
+  assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 55) + 1000).map((a) => a.minutes), [5]);
+  assert.deepEqual(dueAlerts(msgs, cfg, utc(19, 0) + 1000), [], "sin el aviso a la hora");
+  // Un ping que llega 20 min antes del formup no avisa de la hora previa ni de los 30 que ya pasaron.
+  const late = [{ key: "p2", ts: utc(18, 40), body: "Op\nFormup Time: 19:00" }];
+  assert.deepEqual(dueAlerts(late, cfg, utc(18, 0) + 1000), []);
+  assert.deepEqual(dueAlerts(late, cfg, utc(18, 45) + 1000).map((a) => a.minutes), [15]);
+});
+
+test("dueAlerts: solo los grupos elegidos y una vez por ping aunque llegue repetido", () => {
+  const body = (to, stamp) => `Capital fleet
+Formup Time: 19:00
+
+~~~ This was a coord broadcast from bob to ${to} at 2026-11-03 18:00:${stamp} EVE ~~~`;
+  const msgs = [
+    { key: "a", ts: TS, body: body("all", "00.1") },
+    { key: "b", ts: TS + 20, body: body("all", "01.1") },
+    { key: "c", ts: TS, body: body("caps", "00.1").replace("Capital fleet", "Dread fleet") },
+  ];
+  const cfg = countdownSettings({ pingCountdown: { befores: [10] } });
+  assert.deepEqual(dueAlerts(msgs, cfg, utc(18, 50) + 1000).map((a) => a.m.key), ["a", "c"], "las dos copias de «a» avisan una vez");
+  assert.deepEqual(dueAlerts(msgs, { ...cfg, groups: "Caps" }, utc(18, 50) + 1000).map((a) => a.m.key), ["c"]);
+  assert.deepEqual(wantedGroups(" all, Caps\n"), ["all", "caps"]);
+  assert.deepEqual(wantedGroups(""), []);
+});
+
+test("reminderSpeech: lo que se lee en voz alta", () => {
+  assert.equal(reminderSpeech(15, "Capital fleet up"), "Formup in 15 minutes. Capital fleet up");
+  assert.equal(reminderSpeech(1, ""), "Formup in 1 minute");
+  assert.equal(reminderSpeech(0, "Op"), "Formup now. Op");
 });
