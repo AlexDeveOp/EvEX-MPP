@@ -910,11 +910,6 @@ export default {
   "Avisar cuando llegue el formup": "Alert when formup arrives",
   "Con burbuja y sonido, aunque esté activado «No molestar»": "With popup and sound, even in “Do not disturb”",
   "Avisar antes": "Alert in advance",
-  "No, solo a la hora": "No, only at formup time",
-  "5 minutos antes": "5 minutes before",
-  "10 minutos antes": "10 minutes before",
-  "15 minutos antes": "15 minutes before",
-  "30 minutos antes": "30 minutes before",
   "Avisar también a la hora exacta del formup": "Also alert at the exact formup time",
   "El aviso se queda en pantalla hasta cerrarlo": "The alert stays on screen until closed",
   "Sonido del aviso": "Alert sound",
@@ -1311,4 +1306,10 @@ export default {
   "Dejar pasar las menciones": "Let mentions through",
   "Mientras está activo, avisan los mensajes que te mencionan o tienen tus palabras clave (salvo en salas o chats en «Nada»).": "While it is on, messages that mention you or contain your keywords still alert you (except in rooms or chats set to “Nothing”).",
   "Los pings de flota y los avisos de conexión perdida o recuperada suenan siempre.": "Fleet pings and connection lost or restored alerts always make a sound.",
+  // Aviso antes del formup: varios minutos, grupos y voz (src/renderer/js/formup.js)
+  "1 hora": "1 hour",
+  "{n} min": "{n} min",
+  "Puedes elegir varios. Ninguno = solo a la hora del formup (si está activado abajo).": "You can pick several. None = only at formup time (if turned on below).",
+  "Leer el aviso en voz alta": "Read the alert aloud",
+  "Con la voz y la velocidad de «Leer los pings en voz alta», en inglés: «{example}»": "With the voice and speed of “Read pings aloud”, in English: “{example}”",
 };

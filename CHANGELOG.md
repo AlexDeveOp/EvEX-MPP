@@ -7,6 +7,24 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **Alerts per room and per chat.** Each room and private chat can be set to *Use the general setting*, *Everything*, *Only mentions and keywords* or *Nothing*.
+  - Set it from the bell in the conversation header, the ⋮ menu or a right-click on the room or contact in the sidebar.
+  - It affects sound, pop-up, taskbar flashing and the unread numbers on tabs, sidebar and taskbar. *Nothing* doesn't count at all and shows a crossed-out bell in the sidebar.
+  - Messages are still saved. Keyword rules set to *always alert* still win, as before.
+- **Do not disturb on a schedule** (*Preferences → Notifications → Do not disturb*).
+  - From–to times that can cross midnight (23:00–07:00), on chosen days of the week.
+  - Optionally *Let mentions through*.
+  - A quick toggle in your status menu and in the tray menu, and a notice in the title bar while it is on. Clicking the notice turns it off; during the schedule, it stays off until that window ends.
+  - It doesn't change your XMPP status. Fleet pings and connection lost or restored alerts always get through; the voice of pings and of the formup reminder follows the same rule.
+
+### Changed
+- **Formup reminder, more flexible** (*Preferences → Fleet pings → Formup countdown*). The alert before a ping's formup time now has more options:
+  - Several reminders at once: 5, 10, 15, 30 minutes and 1 hour before (plus the alert at the exact time, as before). The single "alert in advance" setting from earlier versions is kept.
+  - Only for some target groups of the ping footer (e.g. `all, caps`), like the voice reading.
+  - Optionally read aloud ("Formup in 15 minutes. <title>"), with the voice and speed of *Read pings aloud*.
+  - Two copies of the same ping (another connection, the server archive) now give one reminder, not two.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added

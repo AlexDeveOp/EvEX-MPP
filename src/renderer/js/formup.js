@@ -1,19 +1,36 @@
 // Cuenta atrás del formup: lee la hora del formup de un ping (hora EVE = UTC), la muestra en la tarjeta
 // y avisa unos minutos antes y a la hora, según Preferencias → Pings de flota → Cuenta atrás del formup.
 import { S, api } from "./state.js";
+import { dndState } from "./notify-rules.js";
 import { parsePing } from "./pings.js";
 import { pingsConv, loadHistory } from "./convs.js";
 import { playRuleSound } from "./sounds.js";
+import { speak, speechAvailable, voiceSettings } from "./tts.js";
 import { themeColors } from "./themes.js";
 import { fmtTime, fmtEve, fmtEveDateTime } from "./format.js";
 
 import { t } from "./i18n.js";
 const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
 
-export const COUNTDOWN_DEFAULTS = { enabled: true, alert: true, before: 5, atTime: true, sticky: true, sound: { preset: "radar", file: "", volume: 1 } };
+// befores: minutos antes del formup en los que se avisa (varios a la vez). groups: solo estos grupos de destino del pie
+// del ping, separados por comas (vacío = todos). speak: leer el aviso en voz alta con la voz de la lectura de pings.
+export const COUNTDOWN_DEFAULTS = { enabled: true, alert: true, befores: [5], atTime: true, sticky: true, groups: "", speak: false, sound: { preset: "radar", file: "", volume: 1 } };
+export const BEFORE_CHOICES = [5, 10, 15, 30, 60];
 export function countdownSettings(s = S.settings) {
   const c = s?.pingCountdown || {};
-  return { ...COUNTDOWN_DEFAULTS, ...c, sound: { ...COUNTDOWN_DEFAULTS.sound, ...(c.sound || {}) } };
+  // Hasta la 0.8.0 había un solo «before» (0 = solo a la hora).
+  const raw = Array.isArray(c.befores) ? c.befores : c.before !== undefined ? [c.before] : COUNTDOWN_DEFAULTS.befores;
+  const befores = [...new Set(raw.map(Number).filter((n) => Number.isInteger(n) && n > 0 && n <= 24 * 60))].sort((a, b) => b - a);
+  const { before: _old, ...rest } = c;
+  return { ...COUNTDOWN_DEFAULTS, ...rest, befores, sound: { ...COUNTDOWN_DEFAULTS.sound, ...(c.sound || {}) } };
+}
+
+// Grupos de destino elegidos («all, caps»), en minúsculas. Vacío = todos.
+export function wantedGroups(groups) {
+  return String(groups || "")
+    .split(/[,\n]/)
+    .map((g) => g.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 // Campos que dan la hora: «Formup Time», «Time», «When», «Start Time», «Undock», «Formup» (si lleva hora)…
@@ -122,30 +139,52 @@ function formupOf(m) {
   return cache.get(m.key);
 }
 
+// Un aviso se identifica por la hora del formup y el título del ping, no por la clave del ping: dos copias del mismo
+// broadcast (otra conexión, el archivo del servidor…) avisan una sola vez.
+function alertBase(m, at, p) {
+  const title = String(p.title || "").replace(INVISIBLE, "").replace(/\s+/g, " ").trim().toLowerCase().slice(0, 80);
+  return `${at}|${title}`;
+}
+
 // Un aviso solo salta en su momento (con 90 s de margen): si la app estaba cerrada, no llega tarde.
 const LATE_MS = 90e3;
 export function dueAlerts(messages, cfg, now = Date.now(), done = {}) {
   const out = [];
   if (!cfg.enabled || !cfg.alert) return out;
+  const groups = wantedGroups(cfg.groups);
+  const seen = new Set();
   for (const m of messages) {
     if (now - m.ts > 86400e3) continue;
     const at = formupOf(m);
     if (!at) continue;
-    const marks = [];
-    if (cfg.before > 0) marks.push([`${m.key}|${cfg.before}`, at - cfg.before * 60e3, cfg.before]);
-    if (cfg.atTime) marks.push([`${m.key}|0`, at, 0]);
+    const p = parsePing(m.body);
+    if (groups.length && !groups.includes(String(p.footer?.to || "").toLowerCase())) continue;
+    const base = alertBase(m, at, p);
+    const marks = (cfg.befores || []).map((n) => [`${base}|${n}`, at - n * 60e3, n]);
+    if (cfg.atTime) marks.push([`${base}|0`, at, 0]);
     for (const [id, when, minutes] of marks) {
-      if (done[id] || now < when || now - when > LATE_MS || when < m.ts) continue;
+      if (done[id] || seen.has(id) || now < when || now - when > LATE_MS || when < m.ts) continue;
+      seen.add(id);
       out.push({ id, m, at, minutes });
     }
   }
   return out;
 }
 
+// Texto que se lee: en inglés, como la plantilla de la lectura de pings (la voz automática es inglesa).
+export function reminderSpeech(minutes, title) {
+  const what = minutes ? `Formup in ${minutes} minute${minutes === 1 ? "" : "s"}` : "Formup now";
+  return title ? `${what}. ${title}` : what;
+}
+
 function notifyFormup({ m, at, minutes }, cfg) {
   const p = parsePing(m.body);
   const clean = (s) => s.replace(INVISIBLE, "").trim();
   playRuleSound({ id: "formup", sound: cfg.sound, dnd: true }, "ping");
+  if (cfg.speak && speechAvailable()) {
+    const voice = voiceSettings();
+    if (voice.dnd || !dndState(S.settings.notifications).active) setTimeout(() => speak(reminderSpeech(minutes, clean(p.title)), { ...voice, repeat: 1 }), 1500);
+  }
   const c = themeColors();
   api("notify", {
     kind: "ping",

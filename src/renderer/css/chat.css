@@ -1104,6 +1104,20 @@
   font-size: 0.85em;
 }
 
+/* Preferencias → Cuenta atrás del formup: minutos antes, varios a la vez. */
+.formup-befores {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.formup-befores .btn.formup-before {
+  border-color: var(--border);
+}
+.formup-befores .btn.formup-before.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
 /* Cuenta atrás del formup en la tarjeta del ping. */
 .formup-chip {
   flex: none;
