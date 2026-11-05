@@ -98,8 +98,10 @@ export function suggestedFileName(start, { many = false } = {}) {
 //   descripción. El calendario puede acabar sincronizado en la nube de Outlook o Google.
 // - details: además el título, FC, formup y doctrina (info, sacados del ping) y la nota; el formup como lugar.
 // - includeLink: el enlace de la flota (p. ej. el del calendario de la alianza) solo si se pide expresamente.
-const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
-const clean = (v) => String(v ?? "").replace(INVISIBLE, "").replace(/[ \t]+/g, " ").trim();
+// Los textos van tal cual, sin quitar los caracteres invisibles: algunas alianzas los usan como marca de agua para
+// rastrear filtraciones, y un calendario exportado no debe quedar «limpio». Solo se recortan los extremos; el
+// escapado de RFC 5545 lo hace escapeText.
+const clean = (v) => String(v ?? "").trim();
 
 export const fleetUid = (id) => `${id}@evex-mpp`;
 
@@ -115,7 +117,7 @@ export function fleetEvent(fleet, { details = false, includeLink = false, info =
       ["Formup", clean(info.formup)],
       ["Doctrine", clean(info.doctrine)],
     ].filter(([, v]) => v);
-    const note = String(fleet.note ?? "").replace(INVISIBLE, "").trim();
+    const note = clean(fleet.note);
     const text = [...fields.map(([k, v]) => `${k}: ${v}`), note].filter(Boolean).join("\n");
     if (text) ev.description = text;
     if (clean(info.formup)) ev.location = clean(info.formup);

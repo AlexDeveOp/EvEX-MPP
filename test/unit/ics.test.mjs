@@ -76,13 +76,13 @@ test("fleetEvent con detalles: título, FC/formup/doctrina del ping y nota; form
   const info = { fc: "Ejemplo FC", formup: "1DQ1-A", doctrine: "Typhoons" };
   const ev = fleetEvent(fleet(), { details: true, info, alarmMinutes: 15, dtstamp: STAMP });
   assert.equal(ev.summary, "Fleet (caps): Capital fleet up now");
-  assert.equal(ev.description, "FC: Ejemplo FC\nFormup: 1DQ1-A\nDoctrine: Typhoons\nTraed cyno", "sin el carácter invisible");
+  assert.equal(ev.description, `FC: Ejemplo FC\nFormup: 1DQ1-A\nDoctrine: Typhoons\nTraed ${ZWSP}cyno`, "con el carácter invisible (marca de agua)");
   assert.equal(ev.location, "1DQ1-A");
   assert.equal(ev.url, undefined, "el enlace no va salvo que se pida");
   assert.equal(fleetEvent(fleet(), { details: true, includeLink: true, info }).url, "https://calendario.ejemplo.com/op/7");
   assert.equal(fleetEvent(fleet({ link: "javascript:alert(1)" }), { includeLink: true }).url, undefined, "solo http(s)");
   const ics = unfold(fleetsCalendar([fleet()], { details: true, infoOf: () => info, dtstamp: STAMP }));
-  assert.ok(ics.includes("DESCRIPTION:FC: Ejemplo FC\\nFormup: 1DQ1-A\\nDoctrine: Typhoons\\nTraed cyno\r\n"));
+  assert.ok(ics.includes(`DESCRIPTION:FC: Ejemplo FC\\nFormup: 1DQ1-A\\nDoctrine: Typhoons\\nTraed ${ZWSP}cyno\r\n`), "el invisible llega al fichero");
   assert.ok(ics.includes("LOCATION:1DQ1-A\r\n"));
 });
 

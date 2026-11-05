@@ -30,16 +30,16 @@ test("un ping → flota → .ics mínimo: «Fleet (caps)», la hora del formup e
   for (const leak of ["Capital", "Ejemplo FC", "1DQ1-A", "Typhoons", "DESCRIPTION", "LOCATION", "VALARM"]) assert.ok(!ics.includes(leak), `no debe salir «${leak}»`);
 });
 
-test("con detalles: título, FC, formup y doctrina del ping (sin invisibles), el formup como lugar y la alarma", () => {
+test("con detalles: título, FC, formup y doctrina del ping tal cual (con sus invisibles), el formup como lugar y la alarma", () => {
   pingsConv().messages.push(ping("a", utc(3, 12, 0), "Capital fleet up", ["Formup Time: 19:00", "Formup Location: 1DQ1-A", "Doctrine: Typhoons"], "caps"));
   const [fleet] = F.allFleets();
   assert.equal(F.fleetDetails(fleet).fc, `${ZW} Ejemplo FC`.trim(), "fleetDetails los da tal cual");
   const ics = unfold(fleetsCalendar([fleet], { ...icsOptions({ details: true, includeLink: false, alarm: 30 }), dtstamp: utc(3, 12, 1) }));
   assert.ok(ics.includes("SUMMARY:Fleet (caps): Capital fleet up\r\n"));
-  assert.ok(ics.includes("DESCRIPTION:FC: Ejemplo FC\\nFormup: 1DQ1-A\\nDoctrine: Typhoons\r\n"), "sin el carácter invisible");
+  assert.ok(ics.includes(`DESCRIPTION:FC: ${ZW} Ejemplo FC\\nFormup: 1DQ1-A\\nDoctrine: Typhoons\r\n`), "con el invisible del ping (marca de agua)");
   assert.ok(ics.includes("LOCATION:1DQ1-A\r\n"));
   assert.ok(ics.includes("TRIGGER:-PT30M\r\n"));
-  assert.ok(!ics.includes(ZW));
+  assert.ok(ics.includes(ZW), "la marca de agua se conserva");
 });
 
 test("las flotas descartadas o pendientes no se exportan", () => {
