@@ -24,11 +24,21 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - It doesn't change your XMPP status. Fleet pings and connection lost or restored alerts always get through; the voice of pings and of the formup reminder follows the same rule.
 
 ### Changed
+- **Pop-ups now appear on the main screen by default.** Before, they appeared on the screen where the mouse was, so with two monitors a ping could show up on the secondary one. New option *Pop-up screen* (*Preferences → Notifications*, next to the corner): *Main screen* (the default), *Where the mouse is* (the old behavior), *Screen with the EvEX-MPP window*, or a specific monitor by number and resolution. Picking one shows a test pop-up there.
+  - The screen is chosen when the first pop-up of a stack opens and stays while any is open, so a ping that stays on screen does not jump to another monitor when you move the mouse.
+  - If the chosen monitor is disconnected, pop-ups move to the main screen (no alert is lost) and go back to it when it is connected again, even if the system gives it a new id. Open pop-ups are moved when a monitor is added, removed or changes resolution.
+  - On Wayland, where alerts are system notifications, the option is disabled and says why.
 - **Formup reminder, more flexible** (*Preferences → Fleet pings → Formup countdown*). The alert before a ping's formup time now has more options:
   - Several reminders at once: 5, 10, 15, 30 minutes and 1 hour before (plus the alert at the exact time, as before). The single "alert in advance" setting from earlier versions is kept.
   - Only for some target groups of the ping footer (e.g. `all, caps`), like the voice reading.
   - Optionally read aloud ("Formup in 15 minutes. <title>"), with the voice and speed of *Read pings aloud*.
   - Two copies of the same ping (another connection, the server archive) now give one reminder, not two.
+- **Connection log** (`connection.log` in the data folder, at most 1 MB with the previous one): connects, disconnects, errors and server notices (which until now only reached the developer console), and why each reconnection happened. No messages, contacts or passwords. See [PRIVACY.md](PRIVACY.md).
+
+### Fixed
+- A network change notice (for example from a virtual network adapter) no longer cuts a connection that is still logging in and making progress, which with a distant server takes a few seconds; it was retried from scratch. An attempt that has been stuck for more than 5 seconds is still retried at once.
+- A connection reset by the server during login, or after disconnecting while the server did not answer, no longer leaves an unhandled error in the main process.
+- When a connection attempt failed after you had disconnected or reconnected, it could put the account in the error state or cut the new connection.
 
 ### Security
 - Updated the development dependency minimatch to 11.0.4 (GHSA-g3hv-75wg-m249, denial of service in glob patterns). It is only used by the build tools, not shipped in the app.

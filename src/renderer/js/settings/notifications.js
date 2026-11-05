@@ -8,6 +8,44 @@ import { isWindows, onWindows, trayAvailable } from "../system.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
 import { dndGroup } from "./dnd-schedule.js";
 
+// Pantalla de las burbujas. Los monitores se piden al abrir Preferencias (pueden cambiar); al elegir una opción sale
+// una burbuja de prueba en esa pantalla. En Wayland las burbujas son notificaciones del sistema: la opción no aplica.
+function popupDisplayField(n, set) {
+  const current = n.popupDisplay || "primary";
+  let displays = [];
+  const sel = select(
+    [
+      ["primary", t("Pantalla principal")],
+      ["cursor", t("Donde esté el ratón")],
+      ["window", t("Pantalla de la ventana de EvEX-MPP")],
+    ],
+    current,
+    (v) => {
+      const d = displays.find((x) => x.value === v);
+      set((x) => {
+        x.popupDisplay = v;
+        x.popupDisplayHint = d ? { bounds: d.bounds } : null;
+      });
+      api("popup:test", v, popupTestColors()).catch(() => {});
+    },
+  );
+  const row = field(t("Pantalla de las burbujas"), sel, t("Al elegir una, sale una burbuja de prueba en esa pantalla. Si el monitor elegido no está conectado, salen en la principal."));
+  api("popup:displays")
+    .then((info) => {
+      displays = info?.displays || [];
+      for (const d of displays) sel.append(h("option", { value: d.value }, d.label));
+      // Un monitor guardado que ahora no está conectado: se muestra igual para no cambiar la opción sin querer.
+      if (current.startsWith("display:") && !displays.some((d) => d.value === current)) sel.append(h("option", { value: current }, t("Monitor guardado (no conectado ahora)")));
+      sel.value = current;
+      if (info?.system) {
+        sel.disabled = true;
+        row.querySelector(".field-hint").textContent = t("Aquí los avisos son notificaciones del sistema (Wayland): salen donde decida el escritorio, así que no se puede elegir la pantalla.");
+      }
+    })
+    .catch(() => {});
+  return row;
+}
+
 export const notificationTabs = {
   notifications() {
     const n = S.settings.notifications;
@@ -59,6 +97,7 @@ export const notificationTabs = {
             (v) => set((x) => (x.popupCorner = v)),
           ),
         ),
+        popupDisplayField(n, set),
         field(t("Duración de los avisos de mensajes"), range(3, 30, 1, n.popupDuration, (v) => set((x) => (x.popupDuration = v)), (v) => `${v} s`)),
         toggle(n.pingSticky, (v) => set((x) => (x.pingSticky = v)), t("Los pings se quedan en pantalla hasta cerrarlos"), t("Si no, desaparecen como los mensajes")),
         trayAvailable() ? toggle(n.trayBlink, (v) => set((x) => (x.trayBlink = v)), t("Parpadear el «!» de la bandeja con pings sin leer")) : null,

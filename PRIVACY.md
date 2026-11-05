@@ -11,6 +11,7 @@ Everything is stored only on your PC, in `%APPDATA%\EvEX-MPP` (portable version:
 - **Accounts and settings**: `config.json`.
 - **Passwords**: `secrets.json`, encrypted with Windows (DPAPI through Electron `safeStorage`), so only your Windows user can decrypt them.
 - **Message history**: `logs\`, plain JSONL files.
+- **Connection log**: `connection.log` (and the previous one, `connection.old.log`; at most 1 MB in all). Only connection events, so a dropped connection can be explained: when it connects or disconnects, errors and server notices, and why it reconnected. No messages, contacts or passwords. It never leaves your PC unless you attach it to a bug report yourself.
 - **Images and sounds you add** (backgrounds, custom emoji, sounds) and contacts' avatars: copies in `media\` (avatars in `media\avatars\`). *My GIFs* keeps only the links (earlier versions also kept a thumbnail in `media\gifs\`).
 
 Uninstalling the app does not delete this folder, so your history is kept. Delete it by hand to remove all data.
@@ -58,6 +59,7 @@ Todo se guarda solo en tu PC, en `%APPDATA%\EvEX-MPP` (versión portable: en la 
 - **Cuentas y ajustes**: `config.json`.
 - **Contraseñas**: `secrets.json`, cifradas con Windows (DPAPI mediante `safeStorage` de Electron); solo tu usuario de Windows puede descifrarlas.
 - **Historial de mensajes**: `logs\`, ficheros JSONL de texto.
+- **Registro de conexión**: `connection.log` (y el anterior, `connection.old.log`; como mucho 1 MB entre los dos). Solo eventos de la conexión, para poder explicar un corte: cuándo conecta o se desconecta, los errores y avisos del servidor y por qué se reconectó. Ni mensajes, ni contactos, ni contraseñas. No sale de tu PC salvo que tú lo adjuntes a un informe de fallo.
 - **Imágenes y sonidos que añades** (fondos, emojis personalizados, sonidos) y avatares de los contactos: copias en `media\` (los avatares en `media\avatars\`). *Mis GIFs* guarda solo los enlaces (las versiones anteriores también guardaban una miniatura en `media\gifs\`).
 
 Al desinstalar la app, esta carpeta no se borra, así que conservas el historial. Bórrala a mano para eliminar todos los datos.
