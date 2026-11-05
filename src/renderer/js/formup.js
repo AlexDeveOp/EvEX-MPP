@@ -162,6 +162,7 @@ function notifyFormup({ fleet, at, minutes }, cfg) {
       .map((f) => ({ key: f.key, value: clean(f.value).slice(0, 140) })),
     footer: t("Formup a las {time} EVE", { time: fmtEve(at) }),
     sticky: cfg.sticky,
+    reminder: true,
     accountId: null,
     conv: "*",
     convType: "pings",

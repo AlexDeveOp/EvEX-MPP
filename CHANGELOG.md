@@ -21,6 +21,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **New app icon:** a cynosural beacon (a column of light with its ring) with the fleet arriving, instead of the generic chat bubble. The tray, the taskbar and other small sizes (48 px and below) show just the cyno, thicker, so it still reads at 16 px. The unread dot and the Do not disturb badge work as before, and the fleet ping siren is unchanged. The title bar shows the small one.
 - **Fleet calendar times** read "17:15 EVE" on one line, in the time's font, with the local time below.
 
+### Fixed
+- The formup reminder stayed on screen until closed whenever fleet pings were set to stay, even with its own *The alert stays on screen until closed* option off. It now follows only its own option ([#78](https://github.com/AlexDeveOp/EvEX-MPP/issues/78)).
+
 ## [0.9.0] - 2026-11-05
 
 ### Added
