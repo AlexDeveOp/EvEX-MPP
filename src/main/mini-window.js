@@ -79,12 +79,8 @@ function open() {
   // «screen-saver» queda por encima de juegos en ventana sin bordes y de la barra de tareas (igual que las burbujas).
   win.setAlwaysOnTop(true, "screen-saver");
   win.setVisibleOnAllWorkspaces?.(true);
-  const later = () => {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveBounds, 400);
-  };
-  win.on("moved", later);
-  win.on("resized", later);
+  win.on("moved", saveLater);
+  win.on("resized", saveLater);
   win.on("closed", () => {
     clearTimeout(saveTimer);
     win = null;
@@ -96,6 +92,11 @@ function open() {
     win.showInactive();
   });
   options.onChange(true);
+}
+
+function saveLater() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveBounds, 400);
 }
 
 function close() {
@@ -125,6 +126,14 @@ export function miniIpc(handle) {
     if (isMiniOpen()) win.webContents.send("mini-state", state);
   });
   handle("mini:get", () => lastState);
+  // Sin marco y sin foco, Windows no da bordes para cambiar el tamaño: la página tiene un asa en la esquina.
+  handle("mini:resize", (size) => {
+    if (!isMiniOpen() || current.clickThrough) return;
+    const b = win.getBounds();
+    const next = fitBounds({ x: b.x, y: b.y, width: Number(size?.width) || b.width, height: Number(size?.height) || b.height }, screen.getDisplayMatching(b).workArea);
+    win.setBounds(next);
+    saveLater();
+  });
   handle("mini:click", (target) => {
     if (current.clickThrough) return;
     // { show: true }: solo traer la app (no leídos); menciones o, por defecto, la vista de pings.

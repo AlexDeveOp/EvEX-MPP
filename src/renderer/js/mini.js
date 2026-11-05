@@ -64,6 +64,7 @@ function paint() {
   if (f) body.append(f);
   body.addEventListener("click", () => call("mini:click", { accountId: null, conv: "*", convType: "pings" }).catch(() => {}));
   root.append(bar, body);
+  document.body.classList.toggle("through", !!s.clickThrough);
 }
 
 window.evex.on("mini-state", (s) => {
@@ -76,5 +77,42 @@ call("mini:get")
     paint();
   })
   .catch(() => paint());
-// La cuenta atrás y el «hace X min» cambian solos.
-setInterval(() => state && paint(), 1000);
+// Asa para cambiar el tamaño (esquina de abajo a la derecha). Se pide al proceso principal en cada fotograma.
+// Fuera de #mini, que se repinta cada segundo: así no se pierde a mitad de un arrastre.
+const grip = el("div", "grip");
+document.body.append(grip);
+grip.title = t("Arrastra para cambiar el tamaño");
+grip.addEventListener("click", (e) => e.stopPropagation());
+grip.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  grip.setPointerCapture(e.pointerId);
+  const start = { x: e.screenX, y: e.screenY, width: window.innerWidth, height: window.innerHeight };
+  let frame = 0;
+  const move = (ev) => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => call("mini:resize", { width: start.width + ev.screenX - start.x, height: start.height + ev.screenY - start.y }).catch(() => {}));
+  };
+  const up = () => {
+    grip.removeEventListener("pointermove", move);
+    grip.removeEventListener("pointerup", up);
+  };
+  grip.addEventListener("pointermove", move);
+  grip.addEventListener("pointerup", up);
+});
+
+// La cuenta atrás y el «hace X min» cambian solos. Solo se cambian sus textos: repintar todo cada segundo podía
+// perder un clic (si el repintado caía entre pulsar y soltar).
+function tick() {
+  if (!state) return;
+  const now = Date.now();
+  const ago = root.querySelector(".ago");
+  if (ago && state.ping) ago.textContent = timeAgo(state.ping.ts, now);
+  const line = root.querySelector(".formup");
+  if (!state.formup) return;
+  const c = countdownText(state.formup.at, now, { eveDateTime: () => state.formup.eveDateTime, eve: () => state.formup.eve });
+  if (!line || c.state === "old") return void (line && paint());
+  line.dataset.state = c.state;
+  line.querySelector(".cd").textContent = c.text;
+}
+setInterval(tick, 1000);

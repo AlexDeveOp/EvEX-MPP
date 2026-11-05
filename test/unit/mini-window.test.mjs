@@ -1,0 +1,76 @@
+import { test, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+import { placeBounds, rememberBounds, fitBounds, clampOpacity, MINI_DEFAULT, MINI_MIN, MINI_MAX } from "../../src/main/mini-bounds.js";
+import { S } from "../../src/renderer/js/state.js";
+import { pingsConv } from "../../src/renderer/js/convs.js";
+import { miniState } from "../../src/renderer/js/mini-feed.js";
+import { nextFormup } from "../../src/renderer/js/formup.js";
+import { countdownText, timeAgo } from "../../src/renderer/js/countdown.js";
+import { TEST_SETTINGS } from "./helpers.mjs";
+
+const primary = { id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1040 } };
+const above = { id: 2, workArea: { x: 0, y: -1440, width: 2560, height: 1400 } };
+
+test("placeBounds: sin nada guardado, abajo a la derecha del monitor principal", () => {
+  const b = placeBounds(null, [primary, above], 1);
+  assert.deepEqual(b, { x: 1920 - MINI_DEFAULT.width - 16, y: 1040 - MINI_DEFAULT.height - 16, ...MINI_DEFAULT });
+});
+
+test("placeBounds: vuelve al último monitor y a su posición; si ese monitor ya no está, al principal", () => {
+  let saved = rememberBounds(null, 1, { x: 100, y: 100, width: 320, height: 160 });
+  saved = rememberBounds(saved, 2, { x: 50, y: -1300, width: 360, height: 170 });
+  assert.equal(saved.last, "2");
+  assert.deepEqual(placeBounds(saved, [primary, above], 1), { x: 50, y: -1300, width: 360, height: 170 });
+  assert.deepEqual(placeBounds(saved, [primary], 1), { x: 100, y: 100, width: 320, height: 160 }, "el de arriba desconectado");
+});
+
+test("fitBounds: dentro del área útil y entre el tamaño mínimo y el máximo", () => {
+  const wa = primary.workArea;
+  assert.deepEqual(fitBounds({ x: 1900, y: 1030, width: 300, height: 150 }, wa), { x: 1620, y: 890, width: 300, height: 150 });
+  assert.deepEqual(fitBounds({ x: -50, y: -50, width: 10, height: 10 }, wa), { x: 0, y: 0, ...MINI_MIN });
+  assert.deepEqual(fitBounds({ x: 0, y: 0, width: 5000, height: 5000 }, wa), { x: 0, y: 0, ...MINI_MAX });
+  assert.equal(clampOpacity(0.1), 0.3);
+  assert.equal(clampOpacity("x"), 0.85);
+  assert.equal(clampOpacity(1), 1);
+});
+
+const ZW = String.fromCharCode(0x200b, 0x200c);
+const ping = (title, formup, to, ts) => ({ key: title + ts, ts, nick: "pingbot", body: `${title}\nFC Name:${ZW} Bob\nDoctrine: Ferox\n${formup ? `Formup Time: ${formup}\n` : ""}Comms: secret-channel\n\n~~~ This was a coord broadcast from bob to ${to} at 2026-11-06 18:00:00 EVE ~~~` });
+
+beforeEach(() => {
+  S.settings = structuredClone(TEST_SETTINGS);
+  const pc = pingsConv();
+  pc.messages.length = 0;
+  pc.unread = 0;
+});
+
+test("miniState: último ping (solo título y grupo), próximo formup y contadores", () => {
+  const now = Date.UTC(2026, 10, 6, 18, 30);
+  const pc = pingsConv();
+  pc.messages.push(ping("Dread fleet", "19:00", "caps", now - 20 * 60e3), ping(`Roam${ZW} now`, null, "all", now - 60e3));
+  pc.unread = 2;
+  const s = miniState(now);
+  assert.deepEqual(s.ping, { title: `Roam${ZW} now`, group: "all", ts: now - 60e3 }, "el título va tal cual, con sus invisibles");
+  assert.equal(JSON.stringify(s).includes("secret-channel"), false, "nunca el texto entero del ping");
+  assert.equal(s.formup.at, Date.UTC(2026, 10, 6, 19, 0));
+  assert.equal(s.formup.title, "Dread fleet");
+  assert.equal(s.pings, 2);
+  assert.equal(typeof s.unread, "number");
+  assert.equal(s.mentions, 0);
+});
+
+test("nextFormup: el más cercano que no sea viejo; nada si todos pasaron", () => {
+  const now = Date.UTC(2026, 10, 6, 18, 30);
+  const msgs = [ping("A", "20:00", "all", now - 3600e3), ping("B", "19:00", "all", now - 1800e3), ping("C", "18:00", "all", now - 7200e3)];
+  assert.equal(nextFormup(msgs, now).m.key, msgs[1].key);
+  assert.equal(nextFormup([msgs[2]], now), null, "a las 18:00 y son las 18:30: ya pasó");
+  assert.equal(nextFormup([msgs[2]], Date.UTC(2026, 10, 6, 18, 10)).m.key, msgs[2].key, "10 min después aún es «¡Formup ahora!»");
+});
+
+test("countdown.js: textos sin la ventana principal", () => {
+  const at = Date.UTC(2026, 10, 6, 19, 0);
+  assert.equal(countdownText(at, at - 125e3).text, "Formup en 02:05");
+  assert.equal(countdownText(at, at - 30 * 3600e3, { eveDateTime: () => "07/11 19:00" }).text, "Formup el 07/11 19:00 EVE");
+  assert.equal(timeAgo(at - 5 * 60e3, at), "hace 5 min");
+  assert.equal(timeAgo(at - 10e3, at), "ahora");
+});

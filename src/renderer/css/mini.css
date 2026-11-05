@@ -120,3 +120,17 @@ body {
 .mini.through .count {
   cursor: default;
 }
+/* Asa para cambiar el tamaño. */
+.grip {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 0 55%, var(--text2, #8b98a9) 55% 62%, transparent 62% 72%, var(--text2, #8b98a9) 72% 79%, transparent 79%);
+  opacity: 0.6;
+}
+body.through .grip {
+  display: none;
+}
