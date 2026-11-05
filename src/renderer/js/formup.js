@@ -9,9 +9,11 @@ import { speak, speechAvailable, voiceSettings } from "./tts.js";
 import { themeColors } from "./themes.js";
 import { fmtTime, fmtEve, fmtEveDateTime } from "./format.js";
 import { countdownText as baseCountdown } from "./countdown.js";
+import { INVISIBLE, TIME_KEY, parseFormup, parseFleetTime } from "./fleet-time.js";
+
+export { parseFormup, parseFleetTime };
 
 import { t } from "./i18n.js";
-const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
 
 // befores: minutos antes del formup en los que se avisa (varios a la vez). groups: solo estos grupos de destino del pie
 // del ping, separados por comas (vacío = todos). speak: leer el aviso en voz alta con la voz de la lectura de pings.
@@ -34,48 +36,6 @@ export function wantedGroups(groups) {
     .filter(Boolean);
 }
 
-// Campos que dan la hora: «Formup Time», «Time», «When», «Start Time», «Undock», «Formup» (si lleva hora)…
-const TIME_KEY = /^(?:(?:form\s*-?up|fleet|start|undock|op)\s*)?(?:time|at|when)$|^form\s*-?up$|^undock$/i;
-const DATE_RE = /\b(\d{4})[-./](\d{1,2})[-./](\d{1,2})\b/;
-const HHMM = String.raw`\b([01]?\d|2[0-3]):([0-5]\d)\b|\b([01]\d|2[0-3])([0-5]\d)(?=\s*(?:eve|utc|et)\b)`;
-const RELATIVE_RE = /\b(?:in|en|dentro de)\s+(\d{1,3})\s*(m|mins?|minutes?|minutos?|h|hrs?|hours?|horas?)\b/i;
-// En texto libre la hora necesita contexto: «formup at 19:00», «undock 1930 EVE», «fleet @ 19:00», «19:00 EVE».
-const CONTEXT_RE = new RegExp(String.raw`(?:\b(?:form\s*-?up|undock|fleet|start|at)\b|@)[^\n\d]{0,24}(?:${HHMM})|(?:${HHMM})\s*(?:eve|utc|et)\b`, "i");
-
-function relative(text, ts) {
-  const m = text.match(RELATIVE_RE);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return ts + n * (/^h/i.test(m[2]) ? 3600e3 : 60e3);
-}
-
-// Hora absoluta en el texto. Sin fecha, se toma el día del ping; si queda más de 6 h antes del ping,
-// es del día siguiente (un ping a las 23:30 para un formup a las 00:15).
-function absolute(text, ts, re) {
-  const m = text.match(re);
-  if (!m) return null;
-  const g = m.slice(1).filter((x) => x !== undefined);
-  const [hh, mm] = g.slice(-2).map(Number);
-  const d = text.match(DATE_RE);
-  const base = new Date(ts);
-  const at = d ? Date.UTC(+d[1], +d[2] - 1, +d[3], hh, mm) : Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), hh, mm);
-  return !d && at < ts - 6 * 3600e3 ? at + 86400e3 : at;
-}
-
-// p = resultado de parsePing (el pie «This was a broadcast … at …» es la hora de envío, no la del formup).
-export function parseFormup(p, ts) {
-  if (!p || !ts) return null;
-  const clean = (s) => String(s || "").replace(INVISIBLE, "");
-  for (const f of p.fields || []) {
-    if (!TIME_KEY.test(f.key.trim())) continue;
-    const v = clean(f.value);
-    const at = relative(v, ts) ?? absolute(v, ts, new RegExp(HHMM, "i"));
-    if (at) return at;
-  }
-  // Clave y valor se unen sin espacio: parsePing parte «fight 21:00 EVE» como si fuera un campo «fight 21: 00 EVE».
-  const text = clean([p.title, ...(p.fields || []).map((f) => `${f.key}:${f.value}`), ...(p.extra || [])].join("\n"));
-  return relative(text, ts) ?? absolute(text, ts, CONTEXT_RE);
-}
 
 // Texto del chip (countdown.js), con la fecha y la hora EVE según los ajustes.
 export function countdownText(at, now = Date.now()) {
