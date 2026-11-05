@@ -1,6 +1,10 @@
 // Arranque de la interfaz y traducción de eventos XMPP al estado local.
 import { S, api, onMain, emit, on, conn, account, contact, rosterOf, roomState, convKey, displayName, PINGS_KEY } from "./state.js";
 import { loadMentions } from "./mentions.js";
+import * as fleetsApi from "./fleets.js";
+import { parseFleetTime } from "./fleet-time.js";
+import { useFleets, registerFleetActions } from "./fleet-manual.js";
+import { addFleetHeaderAction, addFleetRowAction } from "./fleet-view.js";
 import { h, icon, $, toast, modal, prompt, clear } from "./dom.js";
 import { applyAppearance } from "./themes.js";
 import { initChat, markReceipt, focusComposer } from "./chat.js";
@@ -36,6 +40,9 @@ async function boot() {
   S.system = { ...S.system, ...(init.system || {}) };
   S.focused = init.focused;
   applyAppearance();
+  // Calendario de flotas: «Añadir flota», «Añadir al calendario» y las sugeridas de las salas (antes de que lleguen mensajes).
+  useFleets(fleetsApi, { parseFleetTime });
+  registerFleetActions({ addFleetHeaderAction, addFleetRowAction });
 
   for (const [hash, file] of Object.entries(init.avatars || {})) S.avatars.set(hash, `media://evex/avatars/${file}`);
   for (const [id, snap] of Object.entries(init.states)) applySnapshot(id, snap);

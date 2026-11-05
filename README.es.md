@@ -119,6 +119,7 @@ Para **cambiar el idioma**, ve a Preferencias → Apariencia → Idioma. Las opc
 **Mensajes**
 - Hora local (gris) y **hora EVE/UTC** (ámbar) en cada mensaje; cualquiera de las dos se puede ocultar. Reloj EVE en la barra de título.
 - Historial local con búsqueda y menciones con palabras clave.
+- **Calendario de flotas**: añade flotas a mano (hora EVE, título, grupo y nota) o con clic derecho en un mensaje de sala o un ping → *Añadir al calendario*. Las horas de flota que salen en los mensajes de las salas aparecen como sugeridas que puedes añadir o descartar; nunca entran solas.
 - **Bandeja de menciones**: una vista con los mensajes de las salas que te mencionan o coinciden con tus palabras clave, también los de antes de abrir la app, con filtro por sala y por texto. Con un clic vas a ese mensaje en su sala. Aparece en la barra lateral cuando hay menciones sin ver (o siempre, si lo prefieres), y Ctrl+K la abre.
 - Corregir el último mensaje con ↑, citas y `/me`.
 - Los comandos de Pidgin para XMPP, con sugerencias al escribir `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` y `/help`. Autocompletado de apodos (Tab) y de `:emoji:`.

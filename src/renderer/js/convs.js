@@ -1,6 +1,7 @@
 // Conversaciones abiertas: pestañas, entrada de mensajes, no leídos, menciones, notificaciones y pings.
 import { S, api, emit, convKey, account, roomState, displayName, saveSettings, PINGS_KEY, MENTIONS_KEY, conn } from "./state.js";
 import { mentionsConv, loadMentions, addMention, markMentionsSeen, markRoomMentionsSeen } from "./mentions.js";
+import { considerRoomMessage } from "./fleet-suggest.js";
 import { mentionRegex, fmtTime, fmtEve } from "./format.js";
 import { playSound, playRuleSound, startPingRepeat } from "./sounds.js";
 import { matchRule, ruleLabel } from "./keywords.js";
@@ -338,6 +339,8 @@ export function ingestMessage(ev) {
   emit("message", { conv: c, msg });
   // Las menciones y palabras clave de las salas también van a la bandeja de menciones.
   if (type === "groupchat") addMention(c.accountId, c.conv, msg, { visible: S.active === c.key && S.focused });
+  // Y las horas de flota que se lean en ellos, como sugeridas del calendario (nunca entran solas).
+  if (type === "groupchat") considerRoomMessage(c.accountId, c.conv, msg, { roomName: convTitle(c) });
 
   if (msg.out || msg.sys) {
     if (msg.out && S.active === c.key) markRead(c.key);

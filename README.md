@@ -119,6 +119,7 @@ To **change the language**, go to Preferences → Appearance → Language. The o
 **Messages**
 - Local time (grey) and **EVE/UTC time** (amber) on every message; either can be hidden. EVE clock in the title bar.
 - Local history with search, and mentions with custom keywords.
+- **Fleet calendar**: add fleets yourself (EVE time, title, group, note), or right-click a room message or a ping → *Add to calendar*. Fleet times mentioned in room messages show up as suggestions you can add or dismiss; they are never added on their own.
 - **Mentions inbox**: one view with the room messages that mention you or match your keywords, also from before you opened the app, with a filter by room and text. Click one to jump to that message in its room. It appears in the sidebar when there are unseen mentions (or always, if you prefer), and Ctrl+K opens it.
 - Correct your last message with ↑, quotes and `/me`.
 - Pidgin's XMPP commands, with suggestions as you type `/`: `/me`, `/say`, `/nick`, `/topic`, `/join`, `/part`, `/msg`, `/query`, `/invite`, `/kick`, `/ban`, `/unban`, `/role`, `/affiliate`, `/config`, `/ping`, `/buzz`, `/status`, `/away`, `/back`, `/clear` and `/help`. Nickname (Tab) and `:emoji:` completion.

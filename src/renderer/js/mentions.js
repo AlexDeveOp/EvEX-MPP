@@ -5,6 +5,7 @@ import { h, icon, iconButton } from "./dom.js";
 import { mentionRegex, formatBody, fmtDateTime, fmtEve, fmtTimes, timeAgo } from "./format.js";
 import { matchRule, highlightRules, ruleLabel } from "./keywords.js";
 import { t } from "./i18n.js";
+import { considerRoomMessage } from "./fleet-suggest.js";
 
 // Límites del historial que se repasa al abrir la app: las salas con actividad reciente y sus últimos mensajes.
 // Las salas grandes (600+ mensajes) solo se leen desde el final del fichero (logs:tail).
@@ -207,6 +208,8 @@ async function scanHistory(c, now = Date.now()) {
           const m = { key: e.key, ts: e.ts, nick: e.nick, body: e.body, out: !!e.out, sys: !!e.sys, rep: e.rep };
           const match = mentionMatch(acc.id, room, m);
           if (match) found.push(toItem(acc.id, room, m, match));
+          // Mismo repaso para las flotas sugeridas del calendario: así no se leen dos veces los mismos ficheros.
+          considerRoomMessage(acc.id, room, m, { roomName: displayName(acc.id, room) });
         }
       }
     }
