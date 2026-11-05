@@ -12,6 +12,9 @@
 //   «!avatar» le pone otro y «!sinavatar» se lo quita.
 // Con MOCK_MAM=1 anuncia archivo de mensajes (XEP-0313) y guarda en él un ping de hace 40 minutos que nunca se entregó,
 // como si hubiera llegado con la app cerrada.
+// Con MOCK_DEMO=1 (npm run demo) usa datos de ejemplo genéricos: dominio ejemplo.com, salas general, capitales y
+// logistica, textos en inglés como los pings reales, menciones al entrar en general y capitales, y un ping nuevo al
+// minuto de conectar. El historial de antes lo escribe test/demo/profile.mjs en el perfil de la demo.
 import net from "node:net";
 import zlib from "node:zlib";
 import crypto from "node:crypto";
@@ -19,16 +22,32 @@ import Parser from "@xmpp/xml/lib/Parser.js";
 import xml from "@xmpp/xml";
 
 const PORT = Number(process.env.MOCK_PORT) || 5299;
-const DOMAIN = "test.local";
+const DEMO = !!process.env.MOCK_DEMO;
+const DOMAIN = DEMO ? "ejemplo.com" : "test.local";
 const CONF = `conference.${DOMAIN}`;
 const MEMBER = { affiliation: "member", role: "participant" };
-const ROOMS = {
+const DEMO_ROOMS = {
+  general: { name: "general", subject: "General chat · be nice · fleet pings go to the bot", occupants: ["alice", "bob", "carol", "dave"], changeSubject: "1", me: MEMBER },
+  capitales: { name: "capitales", subject: "Capital pilots · check your fuel before every op", occupants: ["fc_bob", "erin", "frank"], changeSubject: "0", me: MEMBER },
+  logistica: { name: "logistica", subject: "Hauling and contracts", occupants: ["erin", "carol"], changeSubject: "0", me: MEMBER },
+};
+const ROOMS = DEMO ? DEMO_ROOMS : {
   general: { name: "general", subject: "Bienvenidos a general — sala de pruebas", occupants: ["piloto_uno", "piloto_dos", "piloto_tres"], changeSubject: "1", me: MEMBER },
   operaciones: { name: "Operaciones", subject: "Sala de pruebas", occupants: ["comandante_x"], changeSubject: "0", me: MEMBER },
   entrenamiento: { name: "entrenamiento", subject: "", occupants: ["instructor_y"], changeSubject: "0", me: { affiliation: "owner", role: "moderator" } },
   anuncios: { name: "anuncios", subject: "Solo los moderadores cambian este tema", occupants: ["portavoz"], me: MEMBER, rejectSubject: true },
   secret: { name: "secret", subject: "", occupants: [], password: "pw", me: MEMBER },
 };
+// Ping nuevo de la demo: formup dentro de 45 minutos, con la hora EVE en el campo y en el pie.
+function demoPing() {
+  const pad = (n) => String(n).padStart(2, "0");
+  const eve = (ts) => {
+    const d = new Date(ts);
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+  };
+  const now = Date.now();
+  return ["Subcap fleet forming NOW, undock soon!", "FC Name: Bob FC", `Formup Time: ${eve(now + 45 * 60e3)}`, "Formup Location: Jita", "Doctrine: Ferox", "", `~~~ This was a coord broadcast from bob to all at ${eve(now)}:00.000000 EVE ~~~`].join(String.fromCharCode(10));
+}
 // Otros servicios del dominio, para el descubrimiento de servidores de salas: un segundo servidor de salas (chat.),
 // una pasarela IRC (conference/irc, no cuenta como servidor de salas) y servicios que no son de salas.
 const CHAT = `chat.${DOMAIN}`;
@@ -339,7 +358,7 @@ net
       const to = st.attrs.to;
       if (!to) {
         // Presencia inicial: los contactos aparecen conectados
-        send(xml("presence", { from: `alice@${DOMAIN}/phone`, to: jid }, xml("show", {}, "away"), xml("status", {}, "En el trabajo")));
+        send(xml("presence", { from: `alice@${DOMAIN}/phone`, to: jid }, xml("show", {}, "away"), xml("status", {}, DEMO ? "At work" : "En el trabajo")));
         // Como un servidor real: con +notify en las capacidades, manda el último avatar XEP-0084 de cada contacto.
         const caps = st.getChild("c", "http://jabber.org/protocol/caps");
         if (caps && !sock.pepSent) {
@@ -355,10 +374,10 @@ net
                 xml(
                   "message",
                   { from: `pingbot@${DOMAIN}/bot`, to: jid, type: "chat" },
-                  xml("body", {}, "Capital fleet up now!!\nFC Name:\u200b\u200c Bob FC\nFormup Location: Jita\nPAP Type: Strategic\nComms: Op 1 https://example.com/comms\nDoctrine: Typhoons\n\n~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00.000000 EVE ~~~"),
+                  xml("body", {}, DEMO ? demoPing() : "Capital fleet up now!!\nFC Name:\u200b\u200c Bob FC\nFormup Location: Jita\nPAP Type: Strategic\nComms: Op 1 https://example.com/comms\nDoctrine: Typhoons\n\n~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00.000000 EVE ~~~"),
                 ),
               ),
-            2500,
+            DEMO ? 60e3 : 2500,
           );
         }
         return;
@@ -395,10 +414,13 @@ net
       send(xml("presence", { from: `${roomJid}/${nick}`, to: jid }, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", room.me), xml("status", { code: "110" }))));
       const since = st.getChild("x")?.getChild("history")?.attrs.since;
       const histTs = Date.now() - 3600e3;
-      if (!since || Date.parse(since) < histTs)
+      if (!DEMO && (!since || Date.parse(since) < histTs))
         send(xml("message", { from: `${roomJid}/${room.occupants[0] || "ghost"}`, to: jid, type: "groupchat" }, xml("body", {}, `Mensaje de historial en ${room.name} :) con https://example.com/foto.png`), xml("delay", { xmlns: "urn:xmpp:delay", stamp: new Date(histTs).toISOString() })));
       send(xml("message", { from: roomJid, to: jid, type: "groupchat" }, xml("subject", {}, room.subject)));
-      if (roomId === "general") {
+      // Demo: menciones sin ver en dos salas al entrar.
+      if (DEMO && roomId === "general") setTimeout(() => send(xml("message", { from: `${roomJid}/alice`, to: jid, type: "groupchat", id: "d1" }, xml("body", {}, `hey ${nick}, welcome back o7`))), 1500);
+      if (DEMO && roomId === "capitales") setTimeout(() => send(xml("message", { from: `${roomJid}/fc_bob`, to: jid, type: "groupchat", id: "d2" }, xml("body", {}, `${nick} can you bring your dread to the next op?`))), 2500);
+      if (!DEMO && roomId === "general") {
         setTimeout(() => send(xml("message", { from: `${roomJid}/piloto_dos`, to: jid, type: "groupchat", id: "m1" }, xml("body", {}, `hola ${nick}, *bienvenido* a la sala 🚀 :thumbsup:`))), 1200);
         setTimeout(() => send(xml("presence", { from: `${roomJid}/novato`, to: jid }, xml("x", { xmlns: "http://jabber.org/protocol/muc#user" }, xml("item", { affiliation: "none", role: "visitor" })))), 1600);
       }
