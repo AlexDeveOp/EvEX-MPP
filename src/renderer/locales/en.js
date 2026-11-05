@@ -1381,4 +1381,7 @@ export default {
   "El calendario no es válido.": "The calendar is not valid.",
   "El calendario es demasiado grande (máximo 1 MB).": "The calendar is too large (1 MB at most).",
   "Calendario (iCalendar)": "Calendar (iCalendar)",
+  "Exportar .ics": "Export .ics",
+  "Guardar las próximas flotas en un calendario (.ics) para Outlook, Google o Windows": "Save the upcoming fleets to a calendar (.ics) for Outlook, Google or Windows",
+  "Guardar esta flota en un calendario (.ics)": "Save this fleet to a calendar (.ics)",
 };

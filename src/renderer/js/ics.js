@@ -65,7 +65,7 @@ export function eventLines({ uid, start, end, durationMinutes = 60, summary, des
   if (!uid) throw new Error("falta el UID");
   const startMs = new Date(start).getTime();
   const endMs = end != null ? new Date(end).getTime() : startMs + durationMinutes * 60e3;
-  const lines = ["BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${formatUtc(dtstamp)}`, `DTSTART:${formatUtc(startMs)}`, `DTEND:${formatUtc(endMs)}`, `SUMMARY:${escapeText(summary || "Fleet")}`];
+  const lines = ["BEGIN:VEVENT", `UID:${escapeText(uid)}`, `DTSTAMP:${formatUtc(dtstamp)}`, `DTSTART:${formatUtc(startMs)}`, `DTEND:${formatUtc(endMs)}`, `SUMMARY:${escapeText(summary || "Fleet")}`];
   if (description) lines.push(`DESCRIPTION:${escapeText(description)}`);
   if (location) lines.push(`LOCATION:${escapeText(location)}`);
   // URL es de tipo URI (§3.8.4.6): no se escapa como texto; solo se quitan los saltos de línea.

@@ -48,6 +48,7 @@ test("eventLines: UID, DTSTAMP, inicio y fin en UTC, alarma opcional", () => {
   assert.ok(withAlarm.includes("DTEND:20261105T230000Z"));
   assert.deepEqual(withAlarm.slice(withAlarm.indexOf("BEGIN:VALARM"), withAlarm.indexOf("END:VALARM") + 1), ["BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Fleet", "TRIGGER:-PT15M", "END:VALARM"]);
   assert.throws(() => eventLines({ start: AT }), /UID/);
+  assert.ok(eventLines({ uid: "p-a;b,c|1@evex-mpp", start: AT }).includes("UID:p-a\\;b\\,c|1@evex-mpp"), "el UID es texto: se escapa");
   assert.ok(eventLines({ uid: "u", start: AT, url: "https://ejemplo.com/a,b;c" }).includes("URL:https://ejemplo.com/a,b;c"), "URL sin escapar como texto");
 });
 
