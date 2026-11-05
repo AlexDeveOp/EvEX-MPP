@@ -57,7 +57,15 @@ test("las horas van con el momento de crear el perfil: formups hoy, mañana y el
   assert.ok(pings.some((p) => /caps ~~~|to caps at/.test(p.body)), "uno a caps");
   const free = pings.find((p) => p.body.startsWith("Tomorrow at 17:15"));
   assert.equal(parseFleetTime(free.body, free.ts), Date.UTC(2026, 10, 6, 17, 15));
-  assert.ok(free.body.split(/\s+/).includes("https://foro.ejemplo.com/calendar/event/123-final-timer"), free.body);
+  // El enlace de ejemplo, comprobado por sus partes (servidor y ruta), no buscando un texto dentro de otro.
+  const links = free.body
+    .split(/\s+/)
+    .filter((w) => w.startsWith("https:"))
+    .map((w) => new URL(w));
+  assert.deepEqual(
+    links.map((u) => [u.protocol, u.hostname, u.pathname]),
+    [["https:", "foro.ejemplo.com", "/calendar/event/123-final-timer"]],
+  );
   // Todo el historial es anterior a ahora.
   assert.ok(pings.every((p) => p.ts < NOW));
   const op = demoRoomHistory(NOW).capitales.find((m) => m.body.startsWith("big op"));
