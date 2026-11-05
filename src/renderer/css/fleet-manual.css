@@ -1,0 +1,25 @@
+/* ---------- calendario de flotas: añadir o editar una flota ---------- */
+
+.fleet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: min(440px, 80vw);
+}
+.fleet-when {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fleet-local {
+  margin-top: -4px;
+  font-size: 0.85em;
+}
+.fleet-error {
+  min-height: 1.2em;
+  color: var(--danger, #ef4444);
+  font-size: 0.9em;
+}
+.fleet-error:empty {
+  min-height: 0;
+}
