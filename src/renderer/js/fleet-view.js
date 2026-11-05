@@ -129,7 +129,8 @@ async function copyLink(link) {
 }
 
 function fleetRow(f, now, { onShowPing, refresh }) {
-  const local = S.settings.showLocalTime !== false ? t("EVE · {time} local", { time: fmtTime(f.at) }) : "EVE";
+  // «17:15 EVE» en la tipografía de la hora y, debajo, la hora local (si está activada).
+  const local = S.settings.showLocalTime !== false ? h("div", { class: "fleet-local" }, t("{time} local", { time: fmtTime(f.at) })) : null;
   const chips = h("div", { class: "fleet-chips" });
   const cd = fleetCountdown(f.at, now);
   if (cd) chips.append(h("span", { class: "chip fleet-cd", dataset: { at: String(f.at) } }, icon("clock"), h("span", { class: "fleet-cd-text" }, cd)));
@@ -158,7 +159,7 @@ function fleetRow(f, now, { onShowPing, refresh }) {
   return h(
     "div",
     { class: `fleet-row src-${f.source} st-${f.status}`, dataset: { id: f.id } },
-    h("div", { class: "fleet-time" }, h("div", { class: "fleet-eve" }, eveHM(f.at)), h("div", { class: "fleet-local" }, local)),
+    h("div", { class: "fleet-time" }, h("div", { class: "fleet-eve" }, eveHM(f.at), h("span", { class: "fleet-eve-tz" }, " EVE")), local),
     h("div", { class: "fleet-main" }, h("div", { class: "fleet-title" }, f.title || t("(flota sin título)")), h("div", { class: "fleet-sub" }, sourceText(f))),
     chips,
     actions,

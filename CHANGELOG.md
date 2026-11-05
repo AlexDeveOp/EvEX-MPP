@@ -11,7 +11,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 - **About** tab in *Preferences*: version and where it was installed from (GitHub or Microsoft Store), who makes it, and links to the repository, the changelog, the user guide, bug reports and suggestions, private security reports, the privacy policy, the license and the third-party components. Links open in your browser.
 
 ### Changed
-- **New app icon:** a cynosural beacon (a column of light with its ring) with the fleet arriving, instead of the generic chat bubble. The tray, the taskbar and other small sizes (48 px and below) show just the cyno, thicker, so it still reads at 16 px. The unread dot and the Do not disturb badge work as before, and the fleet ping siren is unchanged.
+- **New app icon:** a cynosural beacon (a column of light with its ring) with the fleet arriving, instead of the generic chat bubble. The tray, the taskbar and other small sizes (48 px and below) show just the cyno, thicker, so it still reads at 16 px. The unread dot and the Do not disturb badge work as before, and the fleet ping siren is unchanged. The title bar shows the small one.
+- **Fleet calendar times** read "17:15 EVE" on one line, in the time's font, with the local time below.
 
 ## [0.9.0] - 2026-11-05
 
