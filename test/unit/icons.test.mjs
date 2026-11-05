@@ -64,6 +64,8 @@ test("el icono de la app es un cyno con la flota: haz claro en el centro, naves 
   assert.notDeepEqual(tray.px(6, 18), [255, 255, 255, 255], "sin la nave de la izquierda");
   assert.notDeepEqual(tray.px(9, 12), [255, 255, 255, 255], "sin la nave pequeña de arriba");
   assert.deepEqual(decodePng(renderIcon(64)).px(13, 37), [255, 255, 255, 255], "a 64 px ya salen las naves");
+  // El icono de la ventana pide el dibujo pequeño también a 64 px (barra de tareas a 200 %).
+  assert.notDeepEqual(decodePng(renderIcon(64, { small: true })).px(13, 37), [255, 255, 255, 255], "small: sin naves");
 });
 
 test("la insignia de mensajes sin leer añade un punto rojo arriba a la derecha", () => {

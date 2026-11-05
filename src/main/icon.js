@@ -201,12 +201,14 @@ const TRAY_LAYOUT = {
 
 // badge: punto rojo de mensajes sin leer (arriba a la derecha); muted: insignia de «No molestar» (abajo a la derecha).
 // accent y accent2: el centro y el borde del fondo (azul espacio por defecto).
-export function renderIcon(size = 256, { accent = "#1b3a66", accent2 = "#070b12", badge = false, muted = false } = {}) {
+// small: fuerza el dibujo simplificado (solo el cyno) aunque el tamaño sea mayor, p. ej. para el icono de la ventana
+// a 200 % en la barra de tareas.
+export function renderIcon(size = 256, { accent = "#1b3a66", accent2 = "#070b12", badge = false, muted = false, small = size <= SMALL } = {}) {
   const buf = Buffer.alloc(size * size * 4);
   const a1 = hex(accent);
   const a2 = hex(accent2);
   const s = size / 256;
-  const L = size <= SMALL ? TRAY_LAYOUT : FULL_LAYOUT;
+  const L = small ? TRAY_LAYOUT : FULL_LAYOUT;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const px = x + 0.5;
