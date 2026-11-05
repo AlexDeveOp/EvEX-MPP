@@ -7,6 +7,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Changed
+- **Formup reminder, more flexible** (*Preferences → Fleet pings → Formup countdown*). The alert before a ping's formup time now has more options:
+  - Several reminders at once: 5, 10, 15, 30 minutes and 1 hour before (plus the alert at the exact time, as before). The single "alert in advance" setting from earlier versions is kept.
+  - Only for some target groups of the ping footer (e.g. `all, caps`), like the voice reading.
+  - Optionally read aloud ("Formup in 15 minutes. <title>"), with the voice and speed of *Read pings aloud*.
+  - Two copies of the same ping (another connection, the server archive) now give one reminder, not two.
+
 ## [0.8.0] - 2026-11-05
 
 ### Added

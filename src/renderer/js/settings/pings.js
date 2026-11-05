@@ -3,7 +3,7 @@ import { S, api } from "../state.js";
 import { h, icon, iconButton, field, toggle, select, range, confirmDialog, clear } from "../dom.js";
 import { srpSettings, clearMarks } from "../srp.js";
 import { PRESETS as SOUNDS, previewSound } from "../sounds.js";
-import { parseFormup, countdownText, countdownSettings } from "../formup.js";
+import { parseFormup, countdownText, countdownSettings, BEFORE_CHOICES, reminderSpeech } from "../formup.js";
 import { parsePing } from "../pings.js";
 import { fmtTime, fmtEve } from "../format.js";
 import { t } from "../i18n.js";
@@ -265,6 +265,34 @@ export function formupGroup() {
   vol.classList.add("sound-volume");
   vol.title = t("Volumen de este sonido");
 
+  // Varios avisos antes a la vez: un botón por cada opción, encendido o apagado.
+  const befores = h("div", { class: "row formup-befores", role: "group", "aria-label": t("Avisar antes") });
+  const paintBefores = () =>
+    clear(befores).append(
+      ...BEFORE_CHOICES.map((n) => {
+        const on = cfg().befores.includes(n);
+        return h(
+          "button",
+          {
+            class: `btn small ghost formup-before ${on ? "on" : ""}`,
+            type: "button",
+            "aria-pressed": String(on),
+            onclick: () => {
+              const list = cfg().befores;
+              set({ befores: on ? list.filter((x) => x !== n) : [...list, n] });
+              paintBefores();
+            },
+          },
+          n === 60 ? t("1 hora") : t("{n} min", { n }),
+        );
+      }),
+    );
+  paintBefores();
+
+  const groups = h("input", { class: "input", placeholder: t("Todos los grupos") });
+  groups.value = c.groups;
+  groups.addEventListener("change", () => set({ groups: groups.value.trim() }));
+
   // Probar con el texto de un ping: qué hora del formup se lee.
   const sample = h("textarea", { class: "input", rows: 3, placeholder: t("Pega aquí un ping para ver qué hora del formup se lee") });
   const result = h("p", { class: "muted small formup-test" });
@@ -278,21 +306,12 @@ export function formupGroup() {
     t("Cuenta atrás del formup"),
     toggle(c.enabled, (v) => set({ enabled: v }), t("Mostrar la cuenta atrás"), t("Muestra en la tarjeta del ping cuánto falta para el formup")),
     toggle(c.alert, (v) => set({ alert: v }), t("Avisar cuando llegue el formup"), t("Con burbuja y sonido, aunque esté activado «No molestar»")),
-    field(
-      t("Avisar antes"),
-      select(
-        [
-          ["0", t("No, solo a la hora")],
-          ["5", t("5 minutos antes")],
-          ["10", t("10 minutos antes")],
-          ["15", t("15 minutos antes")],
-          ["30", t("30 minutos antes")],
-        ],
-        String(c.before),
-        (v) => set({ before: Number(v) }),
-      ),
-    ),
+    field(t("Avisar antes"), befores, t("Puedes elegir varios. Ninguno = solo a la hora del formup (si está activado abajo).")),
     toggle(c.atTime, (v) => set({ atTime: v }), t("Avisar también a la hora exacta del formup")),
+    field(t("Solo estos grupos"), groups, t("Destinatarios del pie del ping (p. ej. «all, caps»), separados por comas. Vacío = todos.")),
+    speechAvailable()
+      ? toggle(c.speak, (v) => set({ speak: v }), t("Leer el aviso en voz alta"), t("Con la voz y la velocidad de «Leer los pings en voz alta», en inglés: «{example}»", { example: reminderSpeech(15, "Capital fleet up") }))
+      : null,
     toggle(c.sticky, (v) => set({ sticky: v }), t("El aviso se queda en pantalla hasta cerrarlo")),
     field(t("Sonido del aviso"), h("div", { class: "row sound-row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cfg().sound)), pick, vol)),
     h(
