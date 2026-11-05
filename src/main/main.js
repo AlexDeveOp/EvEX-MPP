@@ -161,6 +161,22 @@ function registerProtocols() {
 
 // ---------- ventana ----------
 
+// Icono de la ventana (barra de tareas y Alt+Tab): un tamaño por escala de pantalla, todos con el dibujo pequeño
+// (solo el cyno). Con un único PNG de 256, Windows lo reducía y en la barra de tareas se veía el dibujo con naves.
+function windowIcon() {
+  const img = nativeImage.createEmpty();
+  for (const [scaleFactor, px] of [
+    [1, 32],
+    [1.25, 40],
+    [1.5, 48],
+    [2, 64],
+    [2.5, 80],
+    [3, 96],
+  ])
+    img.addRepresentation({ scaleFactor, width: px, height: px, buffer: renderIcon(px, { small: true }) });
+  return img;
+}
+
 function createWindow() {
   const s = store.get().settings;
   const bounds = s.layout.window || { width: 1280, height: 820 };
@@ -170,7 +186,7 @@ function createWindow() {
     minHeight: 480,
     show: false,
     title: "EvEX-MPP",
-    icon: nativeImage.createFromBuffer(renderIcon(256)),
+    icon: windowIcon(),
     backgroundColor: "#0d1117",
     titleBarStyle: "hidden",
     webPreferences: {

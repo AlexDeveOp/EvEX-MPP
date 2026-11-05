@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Changed
+- **New app icon:** a cynosural beacon (a column of light with its ring) with the fleet arriving, instead of the generic chat bubble. The tray, the taskbar and other small sizes (48 px and below) show just the cyno, thicker, so it still reads at 16 px. The unread dot and the Do not disturb badge work as before, and the fleet ping siren is unchanged.
+
 ## [0.9.0] - 2026-11-05
 
 ### Added
