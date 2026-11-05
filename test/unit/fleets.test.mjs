@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
 import { pingsConv } from "../../src/renderer/js/convs.js";
 import * as F from "../../src/renderer/js/fleets.js";
+import { fleetAlerts, countdownSettings } from "../../src/renderer/js/formup.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
 globalThis.window.evex = { call: async () => {} };
@@ -121,4 +122,24 @@ test("fleetDetails: FC, formup y doctrina del ping más antiguo; vacío en las m
   const f = F.getFleet("p-a");
   assert.deepEqual(F.fleetDetails(f), { fc: `${ZW} Bob`.trim(), formup: "Jita", doctrine: "Ferox" });
   assert.deepEqual(F.fleetDetails(F.addFleet({ at: utc(7, 18, 0), title: "x" })), { fc: "", formup: "", doctrine: "" });
+});
+
+test("no se juntan ops distintas a la misma hora: otro título u otro grupo", () => {
+  const msgs = pingsConv().messages;
+  msgs.push(ping("cap", utc(3, 12, 0), "Capital fleet", ["Formup Time: 19:00"], "all"));
+  msgs.push(ping("dread", utc(3, 12, 1), "Dread fleet", ["Formup Time: 19:00"], "all"));
+  msgs.push(ping("cap2", utc(3, 12, 2), "Capital fleet", ["Formup Time: 19:00"], "caps"));
+  assert.deepEqual(F.allFleets().map((f) => f.id).sort(), ["p-cap", "p-cap2", "p-dread"]);
+  assert.equal(F.similarTitle("Capital fleet", "Dread fleet"), false, "«fleet» no cuenta");
+});
+
+test("los avisos de formup valen para las flotas a mano, no para las sugeridas sin aceptar", () => {
+  const cfg = countdownSettings({ pingCountdown: { befores: [10], atTime: true } });
+  const at = utc(7, 18, 30);
+  const m = F.addFleet({ at, title: "Roam con la corp" });
+  const s = F.addFleet({ at: utc(7, 18, 40), title: "big op", source: "message", msgKey: "k" });
+  const now = at - 10 * 60e3 + 5000;
+  assert.deepEqual(fleetAlerts(F.allFleets(), cfg, now, {}).map((a) => [a.fleet.id, a.minutes]), [[m.id, 10]]);
+  F.acceptFleet(s.id);
+  assert.deepEqual(fleetAlerts(F.allFleets(), cfg, utc(7, 18, 30) + 5000, {}).map((a) => [a.fleet.id, a.minutes]).sort(), [[m.id, 0], [s.id, 10]].sort());
 });

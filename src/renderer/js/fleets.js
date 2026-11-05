@@ -4,7 +4,7 @@
 // abre ni se pide desde aquí (hace falta la sesión del foro).
 //
 // Fleet = { id, at (ms UTC), title, group, source: "ping"|"manual"|"message", pingKeys: [], msgKey, link, note,
-//           status: "active"|"pending"|"dismissed" }
+//           status: "active"|"pending"|"dismissed", announcedAt (cuándo se anunció o se añadió) }
 // - De ping: id "p-<clave del ping más antiguo de la op>"; varios pings de la misma op (±15 min y mismo enlace o título
 //   parecido) son una sola flota. Los cambios del usuario se guardan aparte (overrides) sin tocar el ping.
 // - Manual o de mensaje: id "m-<aleatorio>"; las de mensaje empiezan «pending» (sugeridas: se aceptan o se descartan).
@@ -79,7 +79,9 @@ function watchPings() {
 // ---------- flotas de los pings ----------
 
 const norm = (s) => String(s || "").replace(INVISIBLE, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-const words = (s) => new Set(norm(s).split(" ").filter((w) => w.length >= 3));
+// Palabras que salen en casi todos los pings y no distinguen una op de otra.
+const COMMON = new Set(["fleet", "fleets", "form", "formup", "forming", "now", "the", "and", "for", "with", "ping", "all", "op", "ops", "up", "undock", "reminder", "last", "call", "please", "everyone", "join"]);
+const words = (s) => new Set(norm(s).split(" ").filter((w) => w.length >= 3 && !COMMON.has(w)));
 
 // ¿Mismo título? Igual, uno contiene al otro o comparten al menos la mitad de las palabras.
 export function similarTitle(a, b) {
@@ -92,7 +94,7 @@ export function similarTitle(a, b) {
   if (!wa.size || !wb.size) return false;
   let common = 0;
   for (const w of wa) if (wb.has(w)) common++;
-  return common / Math.min(wa.size, wb.size) >= 0.5;
+  return common / Math.min(wa.size, wb.size) > 0.5;
 }
 
 // Enlace a un calendario o evento (de la alianza) dentro del ping. Solo se guarda: nunca se abre ni se pide.
@@ -141,7 +143,10 @@ export function fleetsFromPings(messages) {
   for (const m of [...messages].sort((a, b) => a.ts - b.ts)) {
     const f = fleetFromPing(m);
     if (!f) continue;
-    const op = ops.find((o) => Math.abs(o.at - f.at) <= SAME_OP_MS && ((f.link && f.link === o.link) || similarTitle(f.title, o.title)));
+    // Misma op: hora parecida y mismo enlace, o título parecido y sin grupos distintos (un ping a «caps» y otro a «all»
+    // a la misma hora pueden ser flotas diferentes).
+    const sameGroup = (o) => !f.group || !o.group || f.group.toLowerCase() === o.group.toLowerCase();
+    const op = ops.find((o) => Math.abs(o.at - f.at) <= SAME_OP_MS && ((f.link && f.link === o.link) || (sameGroup(o) && similarTitle(f.title, o.title))));
     if (op) {
       op.pingKeys.push(m.key);
       op.at = f.at; // el recordatorio más reciente trae la hora más al día
@@ -149,7 +154,7 @@ export function fleetsFromPings(messages) {
       op.group ||= f.group;
       continue;
     }
-    ops.push({ id: `p-${m.key}`, at: f.at, title: f.title, group: f.group, source: "ping", pingKeys: [m.key], msgKey: "", link: f.link, note: "", status: "active" });
+    ops.push({ id: `p-${m.key}`, at: f.at, title: f.title, group: f.group, source: "ping", pingKeys: [m.key], msgKey: "", link: f.link, note: "", status: "active", announcedAt: m.ts });
   }
   return ops;
 }
@@ -236,6 +241,7 @@ export function addFleet({ at, title = "", group = "", note = "", link = "", sou
     pingKeys: [...pingKeys].map(String),
     msgKey: String(msgKey || ""),
     status: STATUSES.includes(status) ? status : source === "message" ? "pending" : "active",
+    announcedAt: Date.now(),
   };
   st.items[f.id] = f;
   saveSettings();

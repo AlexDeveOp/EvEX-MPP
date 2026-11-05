@@ -10,6 +10,7 @@ import { themeColors } from "./themes.js";
 import { fmtTime, fmtEve, fmtEveDateTime } from "./format.js";
 import { countdownText as baseCountdown } from "./countdown.js";
 import { INVISIBLE, TIME_KEY, parseFormup, parseFleetTime } from "./fleet-time.js";
+import { allFleets, fleetsFromPings } from "./fleets.js";
 
 export { parseFormup, parseFleetTime };
 
@@ -109,36 +110,40 @@ export function nextFormup(messages, now = Date.now()) {
   return best && { ...best, until: best.at > now ? best.at : best.at + FORMUP_NOW_MS };
 }
 
-// Un aviso se identifica por la hora del formup y el título del ping, no por la clave del ping: dos copias del mismo
-// broadcast (otra conexión, el archivo del servidor…) avisan una sola vez.
-function alertBase(m, at, p) {
-  const title = String(p.title || "").replace(INVISIBLE, "").replace(/\s+/g, " ").trim().toLowerCase().slice(0, 80);
-  return `${at}|${title}`;
+// Un aviso se identifica por la hora del formup y el título, no por la clave del ping: dos copias del mismo broadcast
+// (otra conexión, el archivo del servidor…) avisan una sola vez. Es el mismo id que antes del calendario.
+function alertBase(at, title) {
+  return `${at}|${String(title || "").replace(INVISIBLE, "").replace(/\s+/g, " ").trim().toLowerCase().slice(0, 80)}`;
 }
 
-// Un aviso solo salta en su momento (con 90 s de margen): si la app estaba cerrada, no llega tarde.
+// Avisos de las flotas del calendario (fleets.js): las de los pings, las añadidas a mano y las sugeridas ya aceptadas.
+// Un aviso solo salta en su momento (con 90 s de margen): si la app estaba cerrada, no llega tarde; y no avisa de un
+// momento anterior a cuando se anunció la flota (un ping que llega 20 min antes no da el aviso de «30 min antes»).
 const LATE_MS = 90e3;
-export function dueAlerts(messages, cfg, now = Date.now(), done = {}) {
+export function fleetAlerts(fleets, cfg, now = Date.now(), done = {}) {
   const out = [];
   if (!cfg.enabled || !cfg.alert) return out;
   const groups = wantedGroups(cfg.groups);
   const seen = new Set();
-  for (const m of messages) {
-    if (now - m.ts > 86400e3) continue;
-    const at = formupOf(m);
-    if (!at) continue;
-    const p = parsePing(m.body);
-    if (groups.length && !groups.includes(String(p.footer?.to || "").toLowerCase())) continue;
-    const base = alertBase(m, at, p);
-    const marks = (cfg.befores || []).map((n) => [`${base}|${n}`, at - n * 60e3, n]);
-    if (cfg.atTime) marks.push([`${base}|0`, at, 0]);
+  for (const f of fleets) {
+    if (f.status !== "active" || !Number.isFinite(f.at) || now - f.at > 86400e3) continue;
+    if (groups.length && !groups.includes(String(f.group || "").toLowerCase())) continue;
+    const base = alertBase(f.at, f.title);
+    const marks = (cfg.befores || []).map((n) => [`${base}|${n}`, f.at - n * 60e3, n]);
+    if (cfg.atTime) marks.push([`${base}|0`, f.at, 0]);
     for (const [id, when, minutes] of marks) {
-      if (done[id] || seen.has(id) || now < when || now - when > LATE_MS || when < m.ts) continue;
+      if (done[id] || seen.has(id) || now < when || now - when > LATE_MS || when < (f.announcedAt || 0)) continue;
       seen.add(id);
-      out.push({ id, m, at, minutes });
+      out.push({ id, fleet: f, at: f.at, minutes });
     }
   }
   return out;
+}
+
+// Los mismos avisos a partir de los pings (las ops juntadas como en el calendario); `m` es el primer ping de la op.
+export function dueAlerts(messages, cfg, now = Date.now(), done = {}) {
+  const byKey = new Map(messages.map((m) => [m.key, m]));
+  return fleetAlerts(fleetsFromPings(messages), cfg, now, done).map((a) => ({ ...a, m: byKey.get(a.fleet.pingKeys[0]) }));
 }
 
 // Texto que se lee: en inglés, como la plantilla de la lectura de pings (la voz automática es inglesa).
@@ -147,9 +152,21 @@ export function reminderSpeech(minutes, title) {
   return title ? `${what}. ${title}` : what;
 }
 
-function notifyFormup({ m, at, minutes }, cfg) {
-  const p = parsePing(m.body);
-  const clean = (s) => s.replace(INVISIBLE, "").trim();
+// El aviso de una flota de ping lleva los campos de su ping (el más reciente de la op); el de una flota a mano, su
+// título y su nota.
+function alertContent(fleet) {
+  const keys = fleet.pingKeys || [];
+  const msgs = pingsConv().messages;
+  for (let i = keys.length - 1; i >= 0; i--) {
+    const m = msgs.find((x) => x.key === keys[i]);
+    if (m) return parsePing(m.body);
+  }
+  return { title: fleet.title || "", fields: fleet.note ? [{ key: t("Nota"), value: fleet.note }] : [] };
+}
+
+function notifyFormup({ fleet, at, minutes }, cfg) {
+  const p = alertContent(fleet);
+  const clean = (s) => String(s || "").replace(INVISIBLE, "").trim();
   playRuleSound({ id: "formup", sound: cfg.sound, dnd: true }, "ping");
   if (cfg.speak && speechAvailable()) {
     const voice = voiceSettings();
@@ -178,7 +195,7 @@ let watchTimer = null;
 function sweep() {
   const cfg = countdownSettings();
   if (!cfg.enabled || !cfg.alert || !S.settings.notifications.enabled) return;
-  for (const a of dueAlerts(pingsConv().messages, cfg, Date.now(), fired())) {
+  for (const a of fleetAlerts(allFleets(), cfg, Date.now(), fired())) {
     markFired(a.id);
     notifyFormup(a, cfg);
   }
