@@ -20,6 +20,12 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - Only for some target groups of the ping footer (e.g. `all, caps`), like the voice reading.
   - Optionally read aloud ("Formup in 15 minutes. <title>"), with the voice and speed of *Read pings aloud*.
   - Two copies of the same ping (another connection, the server archive) now give one reminder, not two.
+- **Connection log** (`connection.log` in the data folder, at most 1 MB with the previous one): connects, disconnects, errors and server notices (which until now only reached the developer console), and why each reconnection happened. No messages, contacts or passwords. See [PRIVACY.md](PRIVACY.md).
+
+### Fixed
+- A network change notice (for example from a virtual network adapter) no longer cuts a connection that is still logging in and making progress, which with a distant server takes a few seconds; it was retried from scratch. An attempt that has been stuck for more than 5 seconds is still retried at once.
+- A connection reset by the server during login, or after disconnecting while the server did not answer, no longer leaves an unhandled error in the main process.
+- When a connection attempt failed after you had disconnected or reconnected, it could put the account in the error state or cut the new connection.
 
 ### Security
 - Updated the development dependency minimatch to 11.0.4 (GHSA-g3hv-75wg-m249, denial of service in glob patterns). It is only used by the build tools, not shipped in the app.
