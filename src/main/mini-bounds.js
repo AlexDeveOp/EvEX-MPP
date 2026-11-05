@@ -7,6 +7,10 @@ const MARGIN = 16;
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+// Un rectángulo guardado sirve si sus cuatro valores son números finitos y el tamaño es positivo (un
+// mini-window.json roto o editado a mano no debe dar NaN a la ventana).
+export const validRect = (b) => !!b && ["x", "y", "width", "height"].every((k) => Number.isFinite(b[k])) && b.width > 0 && b.height > 0;
+
 // Ajusta un rectángulo al área útil del monitor (sin salirse ni quedar más grande que ella).
 export function fitBounds(b, wa) {
   const width = clamp(Math.round(b.width), MINI_MIN.width, Math.min(MINI_MAX.width, wa.width));
@@ -26,7 +30,7 @@ export function placeBounds(saved, displays, primaryId) {
   const d = byId.get(String(saved?.last)) || byId.get(String(primaryId)) || displays[0];
   const wa = d.workArea;
   const b = saved?.byDisplay?.[String(d.id)];
-  if (b) return fitBounds(b, wa);
+  if (validRect(b)) return fitBounds(b, wa);
   return fitBounds({ x: wa.x + wa.width - MINI_DEFAULT.width - MARGIN, y: wa.y + wa.height - MINI_DEFAULT.height - MARGIN, ...MINI_DEFAULT }, wa);
 }
 

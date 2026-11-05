@@ -129,17 +129,23 @@ function formupOf(m) {
   return cache.get(m.key);
 }
 
-// Próximo formup entre los pings de las últimas 24 h: el más cercano que aún no sea viejo (hasta 15 min después de
-// la hora cuenta como «¡Formup ahora!»). Para la mini ventana.
+// Próximo formup entre los pings de las últimas 24 h, para la mini ventana: el siguiente que aún no ha empezado; si no
+// hay ninguno, el que empezó hace menos (hasta 15 min después cuenta como «¡Formup ahora!»). Un formup que ya empezó
+// no tapa al que empieza dentro de 5 min. `until` dice cuándo cambia la elección (empieza el elegido o deja de valer).
+export const FORMUP_NOW_MS = 15 * 60e3;
 export function nextFormup(messages, now = Date.now()) {
-  let best = null;
+  let future = null;
+  let started = null;
   for (const m of messages) {
     if (now - m.ts > 86400e3) continue;
     const at = formupOf(m);
-    if (!at || at < now - 15 * 60e3) continue;
-    if (!best || at < best.at) best = { at, m };
+    if (!at || at < now - FORMUP_NOW_MS) continue;
+    if (at > now) {
+      if (!future || at < future.at) future = { at, m };
+    } else if (!started || at > started.at) started = { at, m };
   }
-  return best;
+  const best = future || started;
+  return best && { ...best, until: best.at > now ? best.at : best.at + FORMUP_NOW_MS };
 }
 
 // Un aviso se identifica por la hora del formup y el título del ping, no por la clave del ping: dos copias del mismo

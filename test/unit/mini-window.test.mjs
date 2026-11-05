@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { placeBounds, rememberBounds, fitBounds, clampOpacity, MINI_DEFAULT, MINI_MIN, MINI_MAX } from "../../src/main/mini-bounds.js";
+import { placeBounds, rememberBounds, fitBounds, clampOpacity, validRect, MINI_DEFAULT, MINI_MIN, MINI_MAX } from "../../src/main/mini-bounds.js";
 import { S } from "../../src/renderer/js/state.js";
 import { pingsConv } from "../../src/renderer/js/convs.js";
 import { miniState } from "../../src/renderer/js/mini-feed.js";
@@ -22,6 +22,16 @@ test("placeBounds: vuelve al último monitor y a su posición; si ese monitor ya
   assert.equal(saved.last, "2");
   assert.deepEqual(placeBounds(saved, [primary, above], 1), { x: 50, y: -1300, width: 360, height: 170 });
   assert.deepEqual(placeBounds(saved, [primary], 1), { x: 100, y: 100, width: 320, height: 160 }, "el de arriba desconectado");
+});
+
+test("placeBounds: un mini-window.json roto vuelve a la posición por defecto, sin NaN", () => {
+  const def = placeBounds(null, [primary], 1);
+  for (const bad of [{ x: "a", y: 0, width: 300, height: 150 }, { x: 0, y: 0 }, { x: 0, y: 0, width: null, height: 150 }, { x: 0, y: 0, width: -5, height: 150 }, "texto", 42]) {
+    const b = placeBounds({ last: "1", byDisplay: { 1: bad } }, [primary], 1);
+    assert.deepEqual(b, def, JSON.stringify(bad));
+  }
+  assert.deepEqual(placeBounds({ last: "1", byDisplay: null }, [primary], 1), def);
+  assert.deepEqual(placeBounds("roto", [primary], 1), def);
 });
 
 test("fitBounds: dentro del área útil y entre el tamaño mínimo y el máximo", () => {
@@ -65,6 +75,21 @@ test("nextFormup: el más cercano que no sea viejo; nada si todos pasaron", () =
   assert.equal(nextFormup(msgs, now).m.key, msgs[1].key);
   assert.equal(nextFormup([msgs[2]], now), null, "a las 18:00 y son las 18:30: ya pasó");
   assert.equal(nextFormup([msgs[2]], Date.UTC(2026, 10, 6, 18, 10)).m.key, msgs[2].key, "10 min después aún es «¡Formup ahora!»");
+});
+
+test("nextFormup: el que empieza pronto gana al que empezó hace 10 min; cuándo cambia la elección", () => {
+  const now = Date.UTC(2026, 10, 6, 18, 30);
+  const started = ping("Started", "18:20", "all", now - 3600e3);
+  const soon = ping("Soon", "18:35", "all", now - 1800e3);
+  const later = ping("Later", "19:30", "all", now - 1800e3);
+  const r = nextFormup([started, later, soon], now);
+  assert.equal(r.m.key, soon.key);
+  assert.equal(r.until, Date.UTC(2026, 10, 6, 18, 35), "cambia cuando empieza");
+  const onlyStarted = nextFormup([started], now);
+  assert.equal(onlyStarted.m.key, started.key, "sin ninguno futuro, el que empezó");
+  assert.equal(onlyStarted.until, Date.UTC(2026, 10, 6, 18, 35), "y deja de valer 15 min después de su hora");
+  assert.equal(nextFormup([started], Date.UTC(2026, 10, 6, 18, 36)), null);
+  assert.equal(validRect({ x: 0, y: 0, width: 1, height: 1 }), true);
 });
 
 test("countdown.js: textos sin la ventana principal", () => {

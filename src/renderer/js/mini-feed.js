@@ -1,11 +1,11 @@
 // Datos de la mini ventana para jugar (src/main/mini-window.js): se calculan aquí, en la ventana principal, y se
 // mandan al proceso principal solo si cambian. Por opsec, del ping solo van el título y el grupo, nunca el texto
 // entero; el título va tal cual llega (con sus caracteres invisibles, sin tocarlos).
-import { S, api, on, onMain, updateSettings } from "./state.js";
+import { S, api, on, emit, onMain, updateSettings } from "./state.js";
 import { pingsConv, totalUnread } from "./convs.js";
 import { mentionsConv } from "./mentions.js";
 import { parsePing } from "./pings.js";
-import { nextFormup } from "./formup.js";
+import { nextFormup, countdownSettings } from "./formup.js";
 import { fmtEve, fmtEveDateTime, fmtTime } from "./format.js";
 import { themeColors } from "./themes.js";
 import { currentLang } from "./i18n.js";
@@ -18,11 +18,14 @@ function latest(messages) {
   return last;
 }
 
+// Próximo formup que enseña la mini (solo con la cuenta atrás activada, como en las tarjetas de los pings).
+const miniFormup = (messages, now) => (countdownSettings().enabled ? nextFormup(messages, now) : null);
+
 export function miniState(now = Date.now()) {
   const pc = pingsConv();
   const last = latest(pc.messages);
   const p = last ? parsePing(last.body) : null;
-  const f = nextFormup(pc.messages, now);
+  const f = miniFormup(pc.messages, now);
   const c = themeColors();
   return {
     ping: last ? { title: String(p.title || "").slice(0, TITLE_MAX), group: p.footer?.to || "", ts: last.ts } : null,
@@ -47,10 +50,17 @@ export const toggleMini = () => setMini({ enabled: !miniEnabled() });
 
 let lastJson = "";
 let timer = null;
+let boundary = null;
 function push() {
   timer = null;
+  clearTimeout(boundary);
+  boundary = null;
   if (!miniEnabled()) return void (lastJson = "");
-  const state = miniState();
+  const now = Date.now();
+  const state = miniState(now);
+  // Se vuelve a calcular justo cuando cambia el formup elegido (empieza, o pasan 15 min desde su hora).
+  const f = miniFormup(pingsConv().messages, now);
+  if (f) boundary = setTimeout(() => schedule(0), Math.max(0, f.until - now) + 500);
   const json = JSON.stringify(state);
   if (json === lastJson) return;
   lastJson = json;
@@ -61,11 +71,14 @@ function schedule(ms = 150) {
   if (!timer && miniEnabled()) timer = setTimeout(push, ms);
 }
 
-// Se llama al arrancar. La bandeja pide abrir o cerrar con «mini-toggle»: el ajuste se cambia aquí, como desde
-// Preferencias, y el proceso principal abre o cierra la ventana al guardarlo.
+// Se llama al arrancar. La casilla de la bandeja la abre o la cierra el proceso principal, que guarda el ajuste y
+// avisa con «mini-changed» para que Preferencias y esta ventana lo vean.
 // Los no leídos cambian con «sidebar»/«tabs» (mensajes nuevos, marcar como leído) y los pings con «message».
 export function initMiniFeed() {
-  onMain("mini-toggle", toggleMini);
+  onMain("mini-changed", (mini) => {
+    S.settings.mini = { ...S.settings.mini, ...mini };
+    emit("settings", S.settings);
+  });
   for (const evt of ["message", "history", "sidebar", "tabs"]) on(evt, () => schedule());
   on("settings", () => {
     lastJson = "";
@@ -73,7 +86,7 @@ export function initMiniFeed() {
     timer = null;
     schedule(400);
   });
-  // El «próximo formup» cambia con la hora aunque no llegue nada: se revisa cada minuto.
+  // Por si cambia algo sin evento (p. ej. un ping antiguo que deja de contar): una revisión cada minuto.
   setInterval(() => schedule(0), 60e3);
   schedule(0);
 }

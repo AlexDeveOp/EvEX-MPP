@@ -66,7 +66,8 @@ function tick() {
   if (state.ping) ui.ago.textContent = timeAgo(state.ping.ts, now);
   const f = state.formup;
   const c = f && countdownText(f.at, now, { eveDateTime: () => f.eveDateTime, eve: () => f.eve });
-  const show = !!c && c.state !== "old";
+  // Hasta 15 min después de la hora («¡Formup ahora!»); después se oculta sin esperar a los datos siguientes.
+  const show = !!c && now - f.at <= 15 * 60e3;
   ui.formup.hidden = !show;
   if (!show) return;
   ui.formup.dataset.state = c.state;
@@ -84,7 +85,6 @@ function update(s) {
   root.classList.toggle("through", !!s.clickThrough);
   root.classList.toggle("empty", !s.ping);
   setCount(ui.pings, s.pings);
-  ui.mentions.hidden = s.mentions == null;
   setCount(ui.mentions, s.mentions);
   setCount(ui.unread, s.unread);
   body.title = s.clickThrough ? t("Los clics pasan al juego. Cámbialo en Preferencias → Pings de flota.") : t("Abrir los pings de flota");

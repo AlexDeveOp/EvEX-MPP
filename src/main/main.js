@@ -10,7 +10,7 @@ import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
-import { configureMini, applyMini, miniIpc, isMiniOpen } from "./mini-window.js";
+import { configureMini, applyMini, miniIpc, isMiniOpen, miniOnTop } from "./mini-window.js";
 import { createTray, getTray, buildTrayMenu, refreshTray, setUnread } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
@@ -559,7 +559,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, miniOnTop: !systemPopups(), hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
+      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, miniOnTop: miniOnTop(), hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
     };
   });
 
@@ -594,7 +594,7 @@ function registerIpc() {
     setLanguage(s.language);
     applySystemSettings(s);
     // El menú de la bandeja se construye con textos traducidos: rehacerlo si cambia el idioma.
-    if (getTray() && currentLang() !== before) getTray().setContextMenu(buildTrayMenu());
+    if (currentLang() !== before) refreshTrayMenu();
     return s;
   });
 
@@ -780,6 +780,22 @@ function testTimes() {
   };
 }
 
+// El menú de la bandeja lleva textos traducidos y la casilla de la mini ventana: se rehace cuando cambian.
+function refreshTrayMenu() {
+  getTray()?.setContextMenu(buildTrayMenu());
+}
+
+// Casilla de la bandeja: la mini ventana se abre o se cierra aquí mismo, aunque la ventana principal no esté lista
+// (arranque oculto) o ya no exista. Se guarda el ajuste y se avisa a la ventana principal, si la hay.
+function toggleMiniWindow() {
+  const s = store.get().settings;
+  s.mini = { ...s.mini, enabled: !isMiniOpen() };
+  store.save();
+  applyMini(s);
+  refreshTrayMenu();
+  send("mini-changed", s.mini);
+}
+
 function openFromNotification(data) {
   showWindow();
   send("nav", { accountId: data.accountId, conv: data.conv, convType: data.convType });
@@ -800,7 +816,7 @@ function applySystemSettings(s) {
   scheduleUpdateChecks(!!s.behavior.checkUpdates);
   configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
   // Mini ventana para jugar: al abrirla o cerrarla, la casilla de la bandeja cambia.
-  configureMini({ preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: () => getTray()?.setContextMenu(buildTrayMenu()) });
+  configureMini({ preload: path.join(ROOT, "src", "preload-mini.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: refreshTrayMenu });
   applyMini(s);
   refreshTray();
   try {
@@ -879,8 +895,7 @@ app.whenReady().then(async () => {
     showWindow,
     send,
     miniOpen: isMiniOpen,
-    // La ventana principal cambia el ajuste (así Preferencias y el botón de la vista de pings lo ven).
-    toggleMini: () => send("mini-toggle"),
+    toggleMini: toggleMiniWindow,
     quit: () => {
       quitting = true;
       app.quit();

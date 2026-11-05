@@ -1,8 +1,9 @@
 // Notificaciones emergentes propias: ventanitas siempre encima que suben desde la barra de tareas y se apilan.
 // En Wayland se usan las notificaciones del sistema en su lugar (ver systemPopups).
-import { BrowserWindow, Notification, app, nativeImage, screen } from "electron";
+import { BrowserWindow, Notification, nativeImage, screen } from "electron";
 import path from "node:path";
 import { renderIcon, renderAlertIcon } from "./icon.js";
+import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, waylandSession } from "./overlay.js";
 
 const WIDTH = 380;
 const MARGIN = 12;
@@ -41,19 +42,13 @@ function layout() {
 // (setBounds y setAlwaysOnTop no tienen efecto): la burbuja saldría donde decida el compositor, normalmente
 // en el centro y detrás de la ventana activa. Las notificaciones del sistema (org.freedesktop.Notifications)
 // sí aparecen en su sitio y por encima, y respetan el «No molestar» del escritorio.
-// En X11 (también XWayland) la burbuja propia funciona. Electron deja en el interruptor ozone-platform la
-// plataforma que eligió («x11» o «wayland»; p. ej. WSLg da x11 porque no define XDG_SESSION_TYPE). Si no lo
-// indica, se mira la sesión (WAYLAND_DISPLAY o XDG_SESSION_TYPE=wayland). EVEX_POPUPS=custom|system lo fuerza.
+// En X11 (también XWayland) la burbuja propia funciona (ver waylandSession en overlay.js). EVEX_POPUPS=custom|system
+// lo fuerza.
 // Si la notificación falla (no hay servicio de notificaciones), se muestra la burbuja propia como reserva.
 export function systemPopups() {
   const forced = process.env.EVEX_POPUPS;
   if (forced === "custom") return false;
-  if (forced !== "system") {
-    if (process.platform !== "linux") return false;
-    const ozone = app.commandLine.getSwitchValue("ozone-platform");
-    if (ozone === "x11") return false;
-    if (ozone !== "wayland" && !process.env.WAYLAND_DISPLAY && process.env.XDG_SESSION_TYPE !== "wayland") return false;
-  }
+  if (forced !== "system" && !waylandSession()) return false;
   return Notification.isSupported();
 }
 
@@ -98,23 +93,13 @@ function showCustomPopup(id, data) {
   const win = new BrowserWindow({
     width: WIDTH,
     height: p.height,
-    show: false,
-    frame: false,
+    ...OVERLAY_WINDOW,
     transparent: true,
     resizable: false,
     movable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    skipTaskbar: true,
-    focusable: false,
-    alwaysOnTop: true,
-    hasShadow: false,
-    webPreferences: { preload: options.preload, contextIsolation: true, sandbox: true, nodeIntegration: false, backgroundThrottling: false },
+    webPreferences: overlayWebPreferences(options.preload),
   });
-  // «screen-saver» queda por encima de juegos en ventana sin bordes y de la barra de tareas.
-  win.setAlwaysOnTop(true, "screen-saver");
-  win.setVisibleOnAllWorkspaces?.(true);
+  raiseOverlay(win);
   p.win = win;
   popups.unshift(p);
   while (popups.length > MAX) closePopup(popups[popups.length - 1].id, true);

@@ -23,5 +23,5 @@ export default [
   // Interfaz: navegador (sandbox, sin Node).
   { files: ["src/renderer/**"], languageOptions: { globals: globals.browser } },
   // Preload: CommonJS con acceso limitado a Node.
-  { files: ["src/preload.cjs"], languageOptions: { sourceType: "commonjs", globals: { ...globals.node, ...globals.browser } } },
+  { files: ["src/preload.cjs", "src/preload-mini.cjs"], languageOptions: { sourceType: "commonjs", globals: { ...globals.node, ...globals.browser } } },
 ];
