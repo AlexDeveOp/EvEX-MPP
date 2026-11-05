@@ -18,6 +18,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - The mini window lists the next three fleets.
   - Everything is stored locally (`settings.fleets`) and anything older than 90 days is pruned.
   - Developer API in `src/renderer/js/fleets.js` and `fleet-time.js`, with hooks for header and per-fleet actions in `fleet-view.js`.
+- **Export fleets to a calendar (.ics)** for Outlook, Google Calendar or the Windows calendar, from the fleet calendar view: *Export .ics* in the header saves all upcoming active fleets, and *.ics* on each active fleet saves that one.
+  - The file goes where you choose in the Save dialog and is never sent anywhere. The main process checks it is a calendar of at most 1 MB and cleans up the suggested name.
+  - By default it only contains "Fleet", the group and the time (UTC), because an imported calendar may sync to Outlook or Google servers. *Preferences → Fleet pings → Calendar export* can add the title, FC, formup, doctrine and note (with a privacy warning), the fleet link and a reminder (15, 30 or 60 minutes before).
+  - Text from the pings goes as is, invisible characters included, so a leaked calendar keeps any watermark.
+  - RFC 5545: escaped text, lines folded at 75 octets, CRLF and stable UIDs, so exporting again updates the events instead of duplicating them.
 - **Mini window for gaming** (*Preferences → Fleet pings → Mini window for gaming*, the tray menu or the button in the pings view). A small always-on-top window, also over EVE in borderless mode:
   - Shows the latest ping (title and target group only, never the whole text), the countdown to the next formup and the unread pings, mentions and messages. Clicking it opens fleet pings (or mentions, or the app).
   - It never takes focus or flashes the taskbar (both can throw a full-screen game out of focus).

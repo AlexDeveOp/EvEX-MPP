@@ -20,6 +20,7 @@ import { showUpdate } from "./updates.js";
 import { offerPidginRepair } from "./pidgin-repair.js";
 import { playSound, stopPingRepeat } from "./sounds.js";
 import { initDnd } from "./dnd.js";
+import { initFleetExport } from "./fleet-export.js";
 
 import { t, locale, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
@@ -80,6 +81,7 @@ async function boot() {
   setTimeout(() => loadMentions().catch(console.error), 2500);
   startFormupWatch();
   initMiniFeed();
+  initFleetExport();
   document.getElementById("app").classList.remove("booting");
   setTimeout(() => offerPidginRepair().catch(console.error), 1500);
   // Proxy general con usuario y sin contraseña (Linux sin llavero, tras reiniciar): sin ella, la app no sale a Internet.
