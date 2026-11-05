@@ -1445,4 +1445,8 @@ export default {
   "Exportar .ics": "Export .ics",
   "Guardar las próximas flotas en un calendario (.ics) para Outlook, Google o Windows": "Save the upcoming fleets to a calendar (.ics) for Outlook, Google or Windows",
   "Guardar esta flota en un calendario (.ics)": "Save this fleet to a calendar (.ics)",
+  // Icono «@» de la barra de título
+  "Menciones (también con Ctrl+K)": "Mentions (also with Ctrl+K)",
+  "Menciones: hay mensajes sin ver (también con Ctrl+K)": "Mentions: there are unseen messages (also with Ctrl+K)",
+  "Menciones: {n} sin ver": "Mentions: {n} unseen",
 };

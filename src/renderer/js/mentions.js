@@ -230,6 +230,17 @@ export function showMentionsEntry({ always = S.settings?.notifications?.alwaysSh
   return !!(always || pending > 0 || open || active);
 }
 
+// Icono «@» de la barra de título: un puntito (sin número) con menciones sin ver. El número solo va en el aria-label,
+// para quien usa un lector de pantalla.
+export function mentionsTitlebarState(pending = mentionsConv().pending) {
+  const n = Math.max(0, Number(pending) || 0);
+  return {
+    dot: n > 0,
+    title: n > 0 ? t("Menciones: hay mensajes sin ver (también con Ctrl+K)") : t("Menciones (también con Ctrl+K)"),
+    label: n > 0 ? t("Menciones: {n} sin ver", { n }) : t("Menciones"),
+  };
+}
+
 // ---------- filtro ----------
 
 export function mentionRooms(items) {

@@ -128,3 +128,26 @@
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   transition: background 1.2s;
 }
+
+/* Icono «@» de la barra de título: puntito con menciones sin ver (sin número). */
+#tb-mentions {
+  position: relative;
+}
+#tb-mentions .tb-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--titlebar);
+  display: none;
+  pointer-events: none;
+}
+#tb-mentions.has-dot .tb-dot {
+  display: block;
+}
+#tb-mentions.has-dot {
+  color: var(--text);
+}
