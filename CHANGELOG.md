@@ -7,6 +7,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **Mentions inbox:** a *Mentions* entry under *Fleet pings* in the sidebar gathers the room messages that mention you (your nickname, alias, username or room nickname, and the mention words in *Preferences → Notifications*) or match one of your keyword rules.
+  - Each entry shows the room, who wrote it, how long ago, local and EVE time, and the text with the mention highlighted. Click it (or press Enter) to open the room at that message, loading older history if needed; the message is highlighted for a moment.
+  - Filter by text or by room. The counter shows the ones you haven't seen. They count as seen when you leave the inbox, with *Mark all as seen*, or when you read them in their room.
+  - It is filled from the local history when the app starts (rooms active in the last 30 days, the last 1,000 messages of each), so mentions from before you opened the app are there too, and new ones arrive live. Large rooms are read from the end of the file, not in full.
+  - The count does not add to the taskbar badge, which already counts the room's mentions.
+
 ### Changed
 - **Formup reminder, more flexible** (*Preferences → Fleet pings → Formup countdown*). The alert before a ping's formup time now has more options:
   - Several reminders at once: 5, 10, 15, 30 minutes and 1 hour before (plus the alert at the exact time, as before). The single "alert in advance" setting from earlier versions is kept.
