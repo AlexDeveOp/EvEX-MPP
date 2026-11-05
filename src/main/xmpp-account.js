@@ -8,6 +8,7 @@ import path from "node:path";
 import { t, tk } from "./i18n.js";
 import ConnectionTLS from "@xmpp/tls/lib/Connection.js";
 import { createForwarder } from "./proxy.js";
+import { describeForLog } from "./conn-log.js";
 const NS = {
   ROSTER: "jabber:iq:roster",
   DISCO_INFO: "http://jabber.org/protocol/disco#info",
@@ -94,6 +95,29 @@ export const OCCUPANT_BATCH_MS = 120;
 // que olvida la conexión): sin estas comprobaciones la app se quedaba «conectada» o «conectando» para siempre.
 // Ping al servidor cada PING_EVERY; sin respuesta en PING_TIMEOUT, la conexión se da por muerta y se rehace.
 export const RECONNECT = { PING_EVERY: 30000, PING_TIMEOUT: 20000, STALL: 30000, SUPERVISE_EVERY: 5000, MAX_DELAY: 30000 };
+// Estados de xmpp.js con el TCP ya abierto y la sesión negociándose (apertura del stream, STARTTLS, login, bind).
+// Un aviso de red no corta ese intento si ha avanzado hace menos de NEGOTIATION_GRACE: está vivo. Si lleva más
+// quieto, puede ir por una ruta muerta (cambio de Wi-Fi o VPN), y se reintenta ya.
+const NEGOTIATING = new Set(["connect", "opening", "open"]);
+export const NEGOTIATION_GRACE = 5000;
+
+// Como start() de xmpp.js, pero recogiendo su promesa de «online»: si el socket falla a mitad de la negociación,
+// xmpp.js rechaza esa promesa cuando ya nadie la espera, y quedaría como rechazo sin capturar en el proceso principal.
+async function startClient(xmpp) {
+  if (xmpp.status !== "offline") throw new Error("Connection is not offline");
+  const { service, domain, lang } = xmpp.options;
+  await xmpp.connect(service);
+  const online = new Promise((resolve, reject) => {
+    const done = () => (xmpp.off("online", onOnline), xmpp.off("error", onError));
+    const onOnline = (address) => (done(), resolve(address));
+    const onError = (err) => (done(), reject(err));
+    xmpp.on("online", onOnline);
+    xmpp.on("error", onError);
+  });
+  online.catch(() => {});
+  await xmpp.open({ domain, lang });
+  return online;
+}
 
 // Errores de red: con ellos se sigue reintentando, porque la red puede volver. Los demás (contraseña, TLS, falta de
 // mecanismo…) son definitivos.
@@ -265,8 +289,9 @@ export function useProxy(xmpp, getProxy) {
 }
 
 export class XmppAccount extends EventEmitter {
-  constructor(acc, { avatarDir, version = "", getProxy = null }) {
+  constructor(acc, { avatarDir, version = "", getProxy = null, log = null }) {
     super();
+    this.connLog = log; // (accountId, texto) => void: registro de conexión (ver conn-log.js)
     this.getProxy = getProxy; // async () => proxy con contraseña, o null para conectar directo
     this.acc = acc;
     this.avatarDir = avatarDir;
@@ -323,6 +348,10 @@ export class XmppAccount extends EventEmitter {
     room.joinTimer = null;
   }
 
+  trace(text) {
+    this.connLog?.(this.acc.id, text);
+  }
+
   setState(state, error) {
     this.state = state;
     this.event("status", { state, error: error || null, show: this.presence.show, statusText: this.presence.status });
@@ -337,6 +366,7 @@ export class XmppAccount extends EventEmitter {
     const host = this.acc.host || domain;
     const scheme = this.acc.security === "direct" ? "xmpps" : "xmpp";
     this.wantOnline = true;
+    this.trace(`connect (${scheme}, port ${this.acc.port || (scheme === "xmpps" ? 5223 : 5222)}, resource ${this.acc.resource || "EvEX-MPP"})`);
 
     const xmpp = client({
       service: `${scheme}://${host}:${this.acc.port || (scheme === "xmpps" ? 5223 : 5222)}`,
@@ -369,7 +399,13 @@ export class XmppAccount extends EventEmitter {
       return true;
     });
 
-    xmpp.on("status", (s) => {
+    // Registro de conexión: Stream Management (los <stream:error> ya llegan como «error», con su condición).
+    xmpp.on("nonza", (el) => {
+      if (/^(enabled|failed|resumed)$/.test(el.name)) this.trace(`sm ${el.name}${el.attrs.resume ? ` resume=${el.attrs.resume}` : ""}${el.attrs.max ? ` max=${el.attrs.max}` : ""}`);
+    });
+    xmpp.on("status", (s, info) => {
+      const reason = s === "disconnect" ? ` clean=${!!info?.clean}${info?.reason ? ` reason=${describeForLog(info.reason)}` : ""}` : "";
+      this.trace(`${s} (state ${this.state})${reason}`);
       this.lastProgress = Date.now();
       // Espera entre reintentos: 1 s tras perder una conexión que funcionaba, y el doble en cada fallo seguido.
       if (s === "online") xmpp.reconnect.delay = 1000;
@@ -391,6 +427,7 @@ export class XmppAccount extends EventEmitter {
     const startFailed = new Promise((_, reject) => (failStart = reject));
     startFailed.catch(() => {});
     xmpp.on("error", (err) => {
+      this.trace(`error ${describeForLog(err)}`);
       const msg = this.describeError(err);
       // Errores que no se arreglan reintentando: contraseña, falta de TLS o de mecanismo de autenticación.
       if (err?.condition === "not-authorized" || err?.fatal) {
@@ -423,14 +460,19 @@ export class XmppAccount extends EventEmitter {
     clearInterval(this.supervisor);
     this.supervisor = setInterval(() => this.supervise(), RECONNECT.SUPERVISE_EVERY);
     try {
-      await Promise.race([xmpp.start(), startFailed]);
+      await Promise.race([startClient(xmpp), startFailed]);
     } catch (err) {
+      // Si entretanto se desconectó o empezó otra conexión, este fallo es del intento viejo: no se toca la nueva.
+      if (this.xmpp !== xmpp) {
+        this.trace(`superseded attempt failed: ${describeForLog(err)}`);
+        return;
+      }
       if (this.state !== "error") {
         if (this.wantOnline && isNetworkError(err)) {
           // Sin red al conectar (p. ej. el PC arranca o despierta antes que el Wi-Fi): se sigue intentando en
           // segundo plano, y se avisa de por qué todavía no está conectada.
           this.setState("reconnecting", this.describeError(err));
-          this.restartConnection();
+          this.restartConnection("no network at connect");
         } else {
           this.wantOnline = false;
           clearInterval(this.supervisor);
@@ -455,6 +497,7 @@ export class XmppAccount extends EventEmitter {
   }
 
   async disconnect(silent) {
+    if (this.xmpp) this.trace(`disconnect requested (${this.xmpp.status})`);
     this.wantOnline = false;
     clearInterval(this.pingTimer);
     clearInterval(this.supervisor);
@@ -466,9 +509,14 @@ export class XmppAccount extends EventEmitter {
       if (xmpp.status === "online") {
         await xmpp.send(xml("presence", { type: "unavailable" }));
       }
-      await Promise.race([xmpp.stop(), new Promise((r) => setTimeout(r, 3000))]);
+      // Si el servidor no contesta, se deja de esperar a los 3 s; el stop() que sigue pendiente puede fallar después
+      // (p. ej. ECONNRESET), y ese rechazo se recoge aquí para que no quede sin capturar.
+      await Promise.race([xmpp.stop().catch(() => {}), new Promise((r) => setTimeout(r, 3000))]);
     } catch {}
     xmpp.removeAllListeners();
+    // El stop() puede seguir pendiente (servidor que no contesta): si luego llega un error del socket, un emisor sin
+    // oyente de «error» lo lanzaría como excepción sin capturar en el proceso principal.
+    xmpp.on("error", () => {});
     for (const r of this.rooms.values()) r.joined = false;
     if (!silent) this.setState("offline");
   }
@@ -509,7 +557,7 @@ export class XmppAccount extends EventEmitter {
     const x = this.xmpp;
     if (!x || x.status !== "online") return;
     x.iqCaller.get(xml("ping", NS.PING), parseJid(this.ownJid).domain, RECONNECT.PING_TIMEOUT).catch((err) => {
-      if (err?.name === "TimeoutError" && this.xmpp === x && x.status === "online") this.restartConnection();
+      if (err?.name === "TimeoutError" && this.xmpp === x && x.status === "online") this.restartConnection("no answer to ping");
     });
   }
 
@@ -519,13 +567,14 @@ export class XmppAccount extends EventEmitter {
     const x = this.xmpp;
     if (!x || !this.wantOnline || this.state === "error" || x.status === "online") return;
     if (Date.now() - this.lastProgress < RECONNECT.STALL) return;
-    this.restartConnection();
+    this.restartConnection(`stalled for ${Math.round((Date.now() - this.lastProgress) / 1000)} s (${x.status})`);
   }
 
   // Corta el socket actual: xmpp.js ve «disconnect» y programa otro intento. Si no hay socket, programa uno.
-  restartConnection() {
+  restartConnection(reason = "") {
     const x = this.xmpp;
     if (!x || !this.wantOnline) return;
+    this.trace(`restart connection (${x.status}): ${reason}`);
     this.lastProgress = Date.now();
     const raw = x.socket?.socket || x.socket; // con TLS directo, el socket de verdad va dentro
     if (raw?.destroy) raw.destroy();
@@ -533,12 +582,16 @@ export class XmppAccount extends EventEmitter {
   }
 
   // La red ha vuelto o el PC sale de suspensión: si está conectada, se comprueba ya; si no, se reintenta ya.
-  nudge() {
+  // Un intento que ya ha abierto el TCP y está negociando (TLS, login) se deja terminar: cortarlo solo lo retrasa,
+  // y con un servidor lejano la negociación dura segundos. Si se atasca, ya lo corta supervise().
+  nudge(why = "network notice") {
     const x = this.xmpp;
     if (!x || !this.wantOnline || this.state === "error") return;
+    this.trace(`${why} (${x.status})`);
     if (x.status === "online") return this.checkAlive();
+    if (NEGOTIATING.has(x.status) && Date.now() - this.lastProgress < NEGOTIATION_GRACE) return;
     x.reconnect.delay = 1000;
-    this.restartConnection();
+    this.restartConnection(why);
   }
 
   async discoverServer() {
