@@ -10,8 +10,9 @@
 import { S } from "./state.js";
 import { h, icon, toast } from "./dom.js";
 import { fmtEve, fmtTime } from "./format.js";
+import { fleetCountdown } from "./countdown.js";
 import { t, locale } from "./i18n.js";
-import { upcoming, fleetsBetween, fleetDetails, acceptFleet, dismissFleet, SAME_OP_MS } from "./fleets.js";
+import { upcoming, fleetsBetween, fleetDetails, acceptFleet, dismissFleet } from "./fleets.js";
 
 export const FLEET_VIEWS = ["list", "upcoming", "month"];
 const DAY = 86400e3;
@@ -54,16 +55,6 @@ const dayStart = (ts) => {
   const d = new Date(ts);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 };
-
-// «en 2 h 14 min», «en 25 min», «¡ahora!», «el sáb 18:30».
-export function fleetCountdown(at, now = Date.now()) {
-  const diff = at - now;
-  if (diff <= 0) return diff > -SAME_OP_MS ? t("¡ahora!") : "";
-  const min = Math.ceil(diff / 60e3);
-  if (min < 60) return t("en {n} min", { n: min });
-  if (min < 24 * 60) return t("en {h} h {m} min", { h: Math.floor(min / 60), m: min % 60 });
-  return t("en {d} d", { d: Math.round(diff / DAY) });
-}
 
 function dayLabel(start, now) {
   const today = dayStart(now);
@@ -162,7 +153,8 @@ function renderMonth(root, now, opts) {
   const first = new Date(start);
   const end = Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 1);
   const fleets = fleetsBetween(start, end);
-  const title = new Intl.DateTimeFormat(locale(), { month: "long", year: "numeric", timeZone: "UTC" }).format(start);
+  const raw = new Intl.DateTimeFormat(locale(), { month: "long", year: "numeric", timeZone: "UTC" }).format(start);
+  const title = raw.charAt(0).toUpperCase() + raw.slice(1);
   root.append(
     h(
       "div",
@@ -205,7 +197,7 @@ function renderMonth(root, now, opts) {
 // Pinta la vista elegida dentro de `root` (la lista de la vista de pings).
 // opts: { onShowPing(pingKey), setView(view), setMonth(offset), monthOffset, refresh() }
 export function renderFleetView(root, view, opts, now = Date.now()) {
-  const box = h("div", { class: `fleet-view fleet-${view}` });
+  const box = h("div", { class: `fleet-view view-${view}` });
   if (view === "month") renderMonth(box, now, opts);
   else renderUpcoming(box, now, opts);
   root.append(box);

@@ -49,6 +49,7 @@ const ping = (title, formup, to, ts) => ({ key: title + ts, ts, nick: "pingbot",
 
 beforeEach(() => {
   S.settings = structuredClone(TEST_SETTINGS);
+  delete S.settings.fleets;
   // Los no leídos (totalUnread) miran el nivel de aviso de cada conversación.
   S.settings.notifications = { ...(S.settings.notifications || {}), roomModes: S.settings.notifications?.roomModes || {} };
   const pc = pingsConv();
@@ -64,8 +65,9 @@ test("miniState: último ping (solo título y grupo), próximo formup y contador
   const s = miniState(now);
   assert.deepEqual(s.ping, { title: `Roam${ZW} now`, group: "all", ts: now - 60e3 }, "el título va tal cual, con sus invisibles");
   assert.equal(JSON.stringify(s).includes("secret-channel"), false, "nunca el texto entero del ping");
-  assert.equal(s.formup.at, Date.UTC(2026, 10, 6, 19, 0));
-  assert.equal("title" in s.formup, false, "del formup solo la hora");
+  // Próximas flotas del calendario: hora (con el día si no es hoy), título y grupo; nada más del ping.
+  assert.deepEqual(s.fleets, [{ at: Date.UTC(2026, 10, 6, 19, 0), when: "19:00", title: "Dread fleet", group: "caps", manual: false }]);
+  assert.equal(typeof s.countdown, "boolean");
   assert.equal(s.pings, 2);
   assert.equal(typeof s.unread, "number");
   assert.equal(s.mentions, 0);
