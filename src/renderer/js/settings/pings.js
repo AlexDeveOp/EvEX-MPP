@@ -10,6 +10,7 @@ import { t } from "../i18n.js";
 import { isWindows, onWindows } from "../system.js";
 import { VOICE_DEFAULTS, TEMPLATE_FIELDS, voiceSettings, listVoices, pingSpeech, speak, stopSpeaking, speechAvailable } from "../tts.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
+import { setMini } from "../mini-feed.js";
 
 // «Pings de flota» → SRP: marcar pings para pedir el reembolso de naves perdidas (killmail, nota, estado y plazo).
 // Desactivado por defecto: quien no lo use no ve ni la bandera ni el filtro.
@@ -218,6 +219,7 @@ export const pingTabs = {
       srpGroup(),
       voiceGroup(),
       formupGroup(),
+      miniGroup(),
       // Pings que llegaron con la app cerrada (src/main/ping-recovery.js). Ambos activados por defecto.
       group(
         t("Pings que llegaron con la app cerrada"),
@@ -237,6 +239,21 @@ export const pingTabs = {
   },
 
 };
+
+// ---------- mini ventana para jugar (src/main/mini-window.js) ----------
+
+function miniGroup() {
+  const m = () => S.settings.mini || {};
+  const opacity = range(0.3, 1, 0.05, m().opacity ?? 0.85, (v) => setMini({ opacity: v }), (v) => `${Math.round(v * 100)}%`);
+  return group(
+    t("Mini ventana para jugar"),
+    h("p", { class: "muted small" }, t("Una ventanita siempre encima, también sobre EVE en «Ventana sin bordes», con el último ping (solo el título y el grupo), la cuenta atrás del próximo formup y los no leídos. No coge el foco ni parpadea. Muévela desde su barra de arriba y cámbiale el tamaño desde los bordes: recuerda dónde estaba en cada monitor. Pulsarla abre los pings de flota.")),
+    S.system.miniOnTop === false ? h("p", { class: "muted small" }, icon("triangle-alert"), t(" En Wayland el escritorio decide dónde van las ventanas: la mini ventana puede no quedarse encima del juego ni recordar su posición.")) : null,
+    toggle(!!m().enabled, (v) => setMini({ enabled: v }), t("Mostrar la mini ventana"), t("También desde la bandeja o con el botón de la vista de pings")),
+    field(t("Opacidad"), opacity),
+    toggle(!!m().clickThrough, (v) => setMini({ clickThrough: v }), t("Dejar pasar los clics al juego"), t("La mini ventana no se puede pulsar ni mover: los clics llegan a lo que haya debajo. Desactívalo aquí para volver a moverla.")),
+  );
+}
 
 // ---------- cuenta atrás del formup (Preferencias → Pings de flota) ----------
 

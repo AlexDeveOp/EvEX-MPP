@@ -22,7 +22,7 @@ const ICONS = [
   "keyboard", "wand-sparkles", "brush", "sticker", "import", "database", "clock", "calendar", "map-pin",
   "swords", "flag", "moon-star", "circle-dot", "circle-minus", "circle-slash", "message-circle", "inbox",
   "bookmark", "bookmark-plus", "list-filter", "cloud-download", "cloud-upload", "square-pen", "shield-check",
-  "hourglass", "sticky-note", "clipboard-copy",
+  "hourglass", "sticky-note", "clipboard-copy", "picture-in-picture-2",
 ];
 
 const icons = {};

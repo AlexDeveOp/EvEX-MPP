@@ -10,6 +10,7 @@ import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
+import { configureMini, applyMini, miniIpc, isMiniOpen } from "./mini-window.js";
 import { createTray, getTray, buildTrayMenu, refreshTray, setUnread } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
@@ -558,7 +559,7 @@ function registerIpc() {
       version: app.getVersion(),
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
+      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, miniOnTop: !systemPopups(), hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
     };
   });
 
@@ -798,6 +799,9 @@ function setLinuxAutostart(enabled) {
 function applySystemSettings(s) {
   scheduleUpdateChecks(!!s.behavior.checkUpdates);
   configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
+  // Mini ventana para jugar: al abrirla o cerrarla, la casilla de la bandeja cambia.
+  configureMini({ preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: () => getTray()?.setContextMenu(buildTrayMenu()) });
+  applyMini(s);
   refreshTray();
   try {
     // El portable se descomprime en una carpeta temporal: hay que registrar el .exe original.
@@ -853,6 +857,7 @@ app.whenReady().then(async () => {
   registerProtocols();
   registerIpc();
   popupIpc(handle);
+  miniIpc(handle);
   applySystemSettings(store.get().settings);
   app.on("login", onLogin);
   await applyGlobalProxy().catch(() => {});
@@ -873,6 +878,9 @@ app.whenReady().then(async () => {
     accounts,
     showWindow,
     send,
+    miniOpen: isMiniOpen,
+    // La ventana principal cambia el ajuste (así Preferencias y el botón de la vista de pings lo ven).
+    toggleMini: () => send("mini-toggle"),
     quit: () => {
       quitting = true;
       app.quit();

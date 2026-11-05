@@ -9,6 +9,7 @@ import { ingestMessage, openConv, closeConv, activate, getConv, systemMessage, m
 import { topicErrorText, topicChangedText, selfRightsText } from "./room-admin.js";
 import { showRecoveredPings } from "./ping-recovery.js";
 import { startFormupWatch } from "./formup.js";
+import { initMiniFeed } from "./mini-feed.js";
 import { windowFocused as ttsWindowFocused } from "./tts.js";
 import { openSettings } from "./settings.js";
 import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount, promptProxyPassword } from "./accounts.js";
@@ -72,6 +73,7 @@ async function boot() {
   window.addEventListener("online", () => api("network:online").catch(() => {}));
   pingsConv();
   startFormupWatch();
+  initMiniFeed();
   document.getElementById("app").classList.remove("booting");
   setTimeout(() => offerPidginRepair().catch(console.error), 1500);
   // Proxy general con usuario y sin contraseña (Linux sin llavero, tras reiniciar): sin ella, la app no sale a Internet.
