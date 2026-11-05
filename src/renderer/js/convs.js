@@ -11,12 +11,13 @@ import { replaceShortcodes } from "./emoji.js";
 
 import { t } from "./i18n.js";
 import { speakPing } from "./tts.js";
-import { effectiveLevel, dndState, shouldAlert, badgeCount } from "./notify-rules.js";
+import { effectiveLevel, shouldAlert, badgeCount } from "./notify-rules.js";
+import { dndNow } from "./dnd.js";
 export function getConv(accountId, conv, type) {
   const key = convKey(accountId, conv);
   let c = S.convs.get(key);
   if (!c) {
-    c = { key, accountId, conv, type: type || "chat", messages: [], keys: new Set(), unread: 0, mentions: 0, loaded: false, typing: new Map(), draft: "", firstUnreadKey: null, exhausted: false };
+    c = { key, accountId, conv, type: type || "chat", messages: [], keys: new Set(), unread: 0, mentions: 0, mentionHits: 0, loaded: false, typing: new Map(), draft: "", firstUnreadKey: null, exhausted: false };
     S.convs.set(key, c);
   }
   if (type && c.type !== type && type !== "headline") c.type = type;
@@ -194,9 +195,10 @@ export function markRead(key) {
   if (!c) return;
   // Lo que ya has visto en la sala deja de estar pendiente en la bandeja de menciones.
   if (c.type === "groupchat") markRoomMentionsSeen(c.accountId, c.conv);
-  if (c.unread || c.mentions) {
+  if (c.unread || c.mentions || c.mentionHits) {
     c.unread = 0;
     c.mentions = 0;
+    c.mentionHits = 0;
     emit("sidebar");
     emit("tabs");
     updateBadge();
@@ -210,17 +212,16 @@ export function totalUnread() {
   return n;
 }
 
-// Número de la pestaña y de la barra lateral: { count, mention, level }.
-// En los chats privados, c.mentions cuenta todos los mensajes; para «solo menciones» se cuentan los que mencionan de
-// verdad entre los no leídos.
+// Número de la pestaña y de la barra lateral: { count, mention, level }. mention: se pinta en rojo.
+// En los chats privados c.mentions cuenta todos los mensajes (cada privado es como una mención); para «solo menciones»
+// se usa c.mentionHits, las menciones reales sin leer (tu nombre, una palabra clave o una regla).
 export function convBadge(c) {
   const level = notifyMode(c);
-  const mentions = c.type === "chat" && level === "mentions" ? c.messages.slice(-c.unread).filter((m) => m.mention && !m.out && !m.sys).length : c.mentions;
-  return { count: badgeCount(level, { unread: c.unread, mentions }), mention: mentions > 0 && level !== "none", level };
+  const isChat = c.type === "chat";
+  const mentions = isChat && level === "mentions" ? c.mentionHits || 0 : c.mentions;
+  const count = badgeCount(level, { unread: c.unread, mentions });
+  return { count, mention: level !== "none" && count > 0 && (isChat || mentions > 0), level };
 }
-
-// «No molestar» ahora mismo (manual o por horario): { active, manual, scheduled, until }.
-export const dndNow = () => dndState(S.settings.notifications);
 
 export function updateBadge() {
   api("window:unread", totalUnread(), pingsConv().unread).catch(() => {});
@@ -348,6 +349,8 @@ export function ingestMessage(ev) {
     if (!c.unread) c.firstUnreadKey = key;
     c.unread++;
     if (msg.mention || type === "chat") c.mentions++;
+    // Menciones reales sin leer: también las de una regla por palabra clave en un chat privado.
+    if (msg.mention || (rule && rule.notify !== "never")) c.mentionHits = (c.mentionHits || 0) + 1;
     emit("sidebar");
     emit("tabs");
     updateBadge();

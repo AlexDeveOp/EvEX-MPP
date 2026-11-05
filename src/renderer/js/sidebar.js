@@ -264,8 +264,9 @@ function roomItem(acc, room) {
   const c = S.convs.get(key);
   const r = roomState(acc.id, room.jid);
   const mode = rowLevel(key, "groupchat", room);
-  const badge = c ? convBadge(c).count : 0;
-  const dim = c && !c.mentions && c.unread && mode !== "all";
+  const b = c ? convBadge(c) : null;
+  const badge = b ? b.count : 0;
+  const dim = c && !b.mention && c.unread && mode !== "all";
   return h(
     "div",
     {
@@ -282,7 +283,7 @@ function roomItem(acc, room) {
     h("span", { class: "sb-name" }, room.name || room.jid.split("@")[0]),
     mutedMark(mode),
     r.joined ? h("span", { class: "sb-meta" }, r.occupants.size) : null,
-    badge ? h("span", { class: `badge ${c.mentions ? "mention" : ""}` }, badge > 99 ? "99+" : badge) : null,
+    badge ? h("span", { class: `badge ${b.mention ? "mention" : ""}` }, badge > 99 ? "99+" : badge) : null,
     h(
       "span",
       { class: "sb-quick" },
@@ -407,7 +408,7 @@ function contactItem(acc, c, p) {
     "div",
     {
       "data-key": key,
-      class: `sb-item contact ${p.show} ${S.active === key ? "active" : ""} ${conv?.unread ? "unread" : ""}`,
+      class: `sb-item contact ${p.show} ${S.active === key ? "active" : ""} ${conv?.unread && level !== "none" ? "unread" : ""}`,
       title: `${c.jid}${p.status ? `\n${p.status}` : ""}`,
       onclick: () => openConv(acc.id, c.jid, "chat"),
       oncontextmenu: (e) => {

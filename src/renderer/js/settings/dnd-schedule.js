@@ -3,7 +3,7 @@ import { S } from "../state.js";
 import { h, toggle, field } from "../dom.js";
 import { t, tk } from "../i18n.js";
 import { full, group } from "./common.js";
-import { dndNow, dndLabel } from "../dnd.js";
+import { dndNow, dndLabel, toggleDndNow } from "../dnd.js";
 import { DEFAULT_SCHEDULE, parseHM } from "../notify-rules.js";
 
 // Lunes primero; los valores son los de Date.getDay() (0 = domingo).
@@ -23,9 +23,12 @@ export function dndGroup() {
   const save = (fn) => full((x) => fn(x.notifications));
   const setSched = (patch) => save((x) => (x.dndSchedule = { ...DEFAULT_SCHEDULE, ...(x.dndSchedule || {}), ...patch }));
   const status = h("p", { class: "muted small dnd-status" });
+  // El interruptor refleja «activo ahora» (manual o por horario), como la barra de título, la bandeja y el menú de estado.
+  let nowInput = null;
   const paint = () => {
     const st = dndNow();
     status.textContent = st.active ? `${dndLabel(st)}.` : t("Ahora no está activo.");
+    if (nowInput) nowInput.checked = st.active;
   };
   paint();
 
@@ -68,9 +71,14 @@ export function dndGroup() {
     ),
   );
 
+  // Con el horario activo, apagarlo lo salta hasta el final del tramo (toggleDnd), igual que en los demás sitios.
+  const nowToggle = toggle(dndNow().active, (v) => (v !== dndNow().active && toggleDndNow(), setTimeout(paint)), t("No molestar ahora"), t("También desde el menú de tu estado, la bandeja del sistema o el aviso de la barra de título. No cambia tu estado XMPP."));
+  nowInput = nowToggle.querySelector("input");
+  paint();
+
   return group(
     t("No molestar"),
-    toggle(n.dnd, (v) => (save((x) => (x.dnd = v)), setTimeout(paint)), t("No molestar ahora"), t("También desde el menú de tu estado, la bandeja del sistema o el aviso de la barra de título. No cambia tu estado XMPP.")),
+    nowToggle,
     toggle(sched.enabled, (v) => (setSched({ enabled: v }), setTimeout(paint)), t("Con horario"), t("Se activa solo cada día elegido, de una hora a otra (puede pasar de medianoche: 23:00–07:00).")),
     field(t("Horario"), h("div", { class: "row dnd-range" }, time("from"), h("span", { class: "muted" }, "–"), time("to"))),
     field(t("Días"), days),

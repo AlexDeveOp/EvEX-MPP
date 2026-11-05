@@ -1284,6 +1284,7 @@ export default {
   // Avisos por sala y por chat, y «No molestar» con horario (notify-rules.js, dnd.js, settings/dnd-schedule.js)
   "solo menciones": "mentions only",
   "todo": "everything",
+  "sin avisos": "no alerts",
   "Avisos": "Alerts",
   "Como el ajuste general ({x})": "Use the general setting ({x})",
   "Todo": "Everything",

@@ -74,8 +74,11 @@ export function shouldAlert({ type, level, mention = false, rule = null, n = {},
   if (!n.enabled) return false;
   const forced = !!rule && rule.notify !== "never";
   // Una regla «avisar siempre» manda sobre el nivel de la sala; con «aunque esté en No molestar», también sobre eso.
-  const quiet = dnd.active || presenceDnd;
-  if (quiet && !(forced && rule.dnd) && !(n.dndAllowMentions && (mention || forced) && level !== "none")) return false;
+  const ruleThrough = forced && rule.dnd;
+  // Estado XMPP «No molestar»: calla todo, como siempre (solo pasan las reglas con «aunque esté en No molestar»).
+  if (presenceDnd && !ruleThrough) return false;
+  // «No molestar» de la app (manual o por horario): con «dejar pasar las menciones», avisan las menciones.
+  if (dnd.active && !ruleThrough && !(n.dndAllowMentions && (mention || forced) && level !== "none")) return false;
   if (forced && rule.notify === "always") return true;
   if (level === "none") return false;
   if (level === "mentions") return mention || forced ? (type === "chat" ? true : !!(n.mentions || forced)) : false;

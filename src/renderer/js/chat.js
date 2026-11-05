@@ -105,11 +105,12 @@ function renderTabs() {
     const c = S.convs.get(key);
     if (!c) return;
     const r = c.type === "groupchat" ? roomState(c.accountId, c.conv) : null;
-    const badge = convBadge(c).count;
+    const b = convBadge(c);
+    const badge = b.count;
     const tab = h(
       "div",
       {
-        class: `tab ${S.active === key ? "active" : ""} ${c.unread ? "unread" : ""} ${c.mentions ? "mentioned" : ""} ${r && !r.joined ? "inactive" : ""}`,
+        class: `tab ${S.active === key ? "active" : ""} ${c.unread && b.level !== "none" ? "unread" : ""} ${b.mention ? "mentioned" : ""} ${r && !r.joined ? "inactive" : ""}`,
         draggable: "true",
         title: convTitle(c),
         onclick: () => activate(key),
@@ -128,7 +129,7 @@ function renderTabs() {
       },
       tabIcon(c),
       h("span", { class: "tab-title" }, convTitle(c)),
-      badge ? h("span", { class: `badge ${c.mentions ? "mention" : ""}` }, badge > 99 ? "99+" : badge) : null,
+      badge ? h("span", { class: `badge ${b.mention ? "mention" : ""}` }, badge > 99 ? "99+" : badge) : null,
       h(
         "button",
         {
@@ -216,7 +217,9 @@ async function rejoin(c) {
 // Nivel de aviso de una sala o un chat (clave de la conversación): «Como el ajuste general», «Todo», «Solo menciones y
 // palabras clave» o «Nada». Lo usan el menú ⋮, la campana de la cabecera y el clic derecho de la barra lateral.
 export function notifyItems(key, type) {
-  const general = type === "groupchat" && !S.settings.notifications.allRoomMessages ? t("solo menciones") : t("todo");
+  const n = S.settings.notifications;
+  // En los chats, el ajuste general es «Mensajes privados» (Preferencias → Notificaciones): si está apagado, no avisan.
+  const general = type === "groupchat" ? (n.allRoomMessages ? t("todo") : t("solo menciones")) : n.privateMessages ? t("todo") : t("sin avisos");
   const cur = S.settings.notifications.roomModes[key] || "default";
   return [
     { header: t("Avisos") },
@@ -234,8 +237,7 @@ export function setConvNotify(key, v) {
     if (v === "default") delete s.notifications.roomModes[key];
     else s.notifications.roomModes[key] = v;
   });
-  emit("sidebar");
-  emit("tabs");
+  // updateSettings ya repinta pestañas y barra lateral (evento «settings»); falta el número de la barra de tareas.
   updateBadge();
 }
 

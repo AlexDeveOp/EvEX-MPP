@@ -3,7 +3,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { app, Tray } from "electron";
-import { createTray, getTray, buildTrayMenu, refreshTray, setUnread } from "../../src/main/tray.js";
+import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd } from "../../src/main/tray.js";
 import * as store from "../../src/main/store.js";
 import { tempDir } from "./helpers.mjs";
 
@@ -47,9 +47,24 @@ test("createTray pone el icono reducido a 16 px, el nombre de la app y el menú"
   assert.deepEqual(tray.image.size, { width: 16, height: 16, quality: "best" });
   assert.deepEqual(
     tray.menu.items.filter((i) => i.label).map((i) => i.label),
-    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "Desconectar todo", "Salir"],
+    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "No molestar en la app (silenciar avisos)", "Desconectar todo", "Salir"],
   );
-  assert.equal(tray.menu.items.filter((i) => i.type === "separator").length, 2);
+  assert.equal(tray.menu.items.filter((i) => i.type === "separator").length, 3);
+});
+
+test("la casilla «No molestar en la app» refleja el estado de la ventana y al pulsarla se lo pide a la ventana", (t) => {
+  const tray = setup(t);
+  const off = item(buildTrayMenu(), "No molestar en la app (silenciar avisos)");
+  assert.equal(off.type, "checkbox");
+  assert.equal(off.checked, false);
+  setTrayDnd({ active: true, label: "No molestar hasta las 08:00 (horario)" });
+  const on = item(tray.menu, "No molestar hasta las 08:00 (horario)");
+  assert.ok(on, "el menú de la bandeja se rehace con la etiqueta del estado");
+  assert.equal(on.checked, true);
+  on.click();
+  assert.deepEqual(calls.sent, ["dnd-toggle"]);
+  setTrayDnd({ active: false });
+  assert.equal(item(tray.menu, "No molestar en la app (silenciar avisos)").checked, false);
 });
 
 test("el menú de la bandeja muestra la ventana, cambia de cuenta, de estado, desconecta y sale", (t) => {
