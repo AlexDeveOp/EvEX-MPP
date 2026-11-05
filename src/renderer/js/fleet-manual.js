@@ -1,6 +1,6 @@
 // Calendario de flotas: añadir o editar una flota a mano («＋ Añadir flota») y «Añadir al calendario» desde un ping o un
 // mensaje de sala. El almacén es fleets.js (Sesión A): se conecta con useFleets() para poder probar esto sin él.
-import { h, icon, modal, field, toast } from "./dom.js";
+import { h, icon, modal, field, toast, clear } from "./dom.js";
 import { fmtDateTime } from "./format.js";
 import { t } from "./i18n.js";
 import { titleFromText, connectSuggestions } from "./fleet-suggest.js";
@@ -12,7 +12,7 @@ let parseTime = null; // parseFleetTime(text, msgTs) de formup.js
 export function useFleets(api, { parseFleetTime } = {}) {
   fleets = api || null;
   parseTime = parseFleetTime || null;
-  connectSuggestions(api && parseFleetTime ? { parseFleetTime, addFleet: api.addFleet, isDismissed: api.isDismissed, allFleets: api.allFleets } : null);
+  connectSuggestions(api && parseFleetTime ? { parseFleetTime, addFleet: api.addFleet, updateFleet: api.updateFleet, isDismissed: api.isDismissed, allFleets: api.allFleets, onChange: api.onChange } : null);
 }
 export const fleetsReady = () => !!fleets;
 
@@ -57,13 +57,15 @@ export function validateFleet({ at, title }, now = Date.now()) {
 
 // Datos iniciales para «Añadir al calendario» desde un mensaje de sala: la hora que se lea en el texto (si hay) y la
 // primera línea como título. Entra como flota normal (la ha añadido el usuario), con la clave del mensaje.
-export function prefillFromMessage(m, roomName, parse = parseTime) {
+// origin: { accountId, room (JID), nick } para que la agenda diga de dónde viene y tenga «Ver mensaje».
+export function prefillFromMessage(m, roomName, parse = parseTime, origin = null) {
   return {
     at: parse?.(m.body, m.ts) ?? null,
     title: titleFromText(m.body),
     note: t("De {nick} en {room}", { nick: m.nick || "?", room: roomName }),
     msgKey: m.key,
     source: "manual",
+    ...(origin?.room ? { origin } : {}),
   };
 }
 
@@ -117,7 +119,7 @@ export function openAddFleet(prefill = {}, { groups = [], onSaved } = {}) {
     const pending = !editing && pendingFor(prefill.msgKey);
     if (editing) fleets.updateFleet(prefill.id, data);
     else if (pending) fleets.updateFleet(pending.id, { ...data, status: "active" });
-    else fleets.addFleet({ ...data, link: prefill.link || "", source: prefill.source || "manual", ...(prefill.pingKeys?.length ? { pingKeys: prefill.pingKeys } : {}), ...(prefill.msgKey ? { msgKey: prefill.msgKey } : {}) });
+    else fleets.addFleet({ ...data, link: prefill.link || "", source: prefill.source || "manual", ...(prefill.pingKeys?.length ? { pingKeys: prefill.pingKeys } : {}), ...(prefill.msgKey ? { msgKey: prefill.msgKey } : {}), ...(prefill.origin ? { origin: prefill.origin } : {}) });
     close();
     onSaved?.();
     toast(editing ? t("Flota guardada") : t("Flota añadida al calendario"), { kind: "ok" });
@@ -151,9 +153,53 @@ export function openAddFleet(prefill = {}, { groups = [], onSaved } = {}) {
 
 // Botones en la vista del calendario (fleet-view.js de la Sesión A): «＋ Añadir flota» en la cabecera y «Editar» en cada
 // flota (las sugeridas ya llevan «Añadir» y «Descartar»). view: { addFleetHeaderAction, addFleetRowAction }.
+// view también puede traer addPingCardAction (pings.js) y showMessage(origin, msgKey) (abrir el mensaje en su sala).
 export function registerFleetActions(view) {
   view.addFleetHeaderAction(() => h("button", { class: "btn small primary fleet-add", type: "button", disabled: !fleets, onclick: () => openAddFleet() }, icon("plus"), t("Añadir flota")));
   view.addFleetRowAction((f, { refresh } = {}) => (f.status === "pending" ? null : h("button", { class: "btn small ghost", type: "button", onclick: () => openAddFleet({ ...f }, { onSaved: refresh }) }, t("Editar"))));
+  if (view.showMessage) view.addFleetRowAction((f) => (f.origin?.room && f.msgKey ? h("button", { class: "btn small ghost", type: "button", title: t("Abrir el mensaje en su sala"), onclick: () => view.showMessage(f.origin, f.msgKey) }, t("Ver mensaje")) : null));
+  if (view.addPingCardAction) {
+    view.addPingCardAction((m) => pingFleetButton(m));
+    fleets?.onChange?.(repaintPingButtons);
+  }
+}
+
+// ---------- botón del calendario en cada tarjeta de ping ----------
+
+// La flota del calendario que ya incluye este ping (fleets.js agrupa los pings con hora), o null.
+export function fleetForPing(key) {
+  return (key && fleets?.allFleets?.().find((f) => (f.pingKeys || []).includes(key))) || null;
+}
+
+// Estado del botón: icono, texto (title y aria-label) y si ya está en el calendario.
+export function pingButtonState(key) {
+  const inCal = !!fleetForPing(key);
+  return inCal ? { inCal, icon: "calendar-check", label: t("En el calendario: editar") } : { inCal, icon: "calendar-plus", label: t("Añadir al calendario") };
+}
+
+const pingByKey = new Map(); // clave del ping → ping, para repintar los botones al cambiar las flotas
+
+function paintPingButton(b) {
+  const st = pingButtonState(b.dataset.key);
+  clear(b).append(icon(st.icon));
+  b.title = st.label;
+  b.setAttribute("aria-label", st.label);
+  b.classList.toggle("in-cal", st.inCal);
+}
+
+function pingFleetButton(m) {
+  if (!fleets || !m?.key) return null;
+  if (pingByKey.size > 2000) pingByKey.clear();
+  pingByKey.set(m.key, m);
+  const b = h("button", { class: "btn small ghost ping-fleet-btn", type: "button", dataset: { key: m.key }, onclick: () => openAddFleet(prefillFromPing(pingByKey.get(b.dataset.key) || m)) });
+  paintPingButton(b);
+  return b;
+}
+
+// Solo los botones que se ven; las tarjetas no se repintan.
+function repaintPingButtons() {
+  if (typeof document === "undefined") return;
+  for (const b of document.querySelectorAll(".ping-fleet-btn")) paintPingButton(b);
 }
 
 // Elemento de menú «Añadir al calendario» (clic derecho en un mensaje de sala o un ping). Si lo que se va a abrir ya es

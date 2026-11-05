@@ -70,7 +70,7 @@ export function demoRoomHistory(now = Date.now()) {
   const m = (minsAgo, nick, body) => ({ ts: now - minsAgo * 60e3, nick, body });
   return {
     general: [m(300, "alice", "morning all o7"), m(240, "bob", "anyone up for a roam later?"), m(200, "carol", "the market in the trade hub is crazy today"), m(120, "dave", "who has spare ammo?"), m(30, "alice", "back in 10")],
-    capitales: [m(400, "bob", "dreads, check your fuel"), m(180, "fc_bob", `big op on ${day} at 21:00, be there`), m(90, "erin", "carriers ready"), m(60, "frank", "dinner at 21:00 tomorrow, so I'll be late")],
+    capitales: [m(400, "bob", "dreads, check your fuel"), m(180, "fc_bob", `big op on ${day} at 21:00, be there`), m(90, "erin", "carriers ready"), m(60, "frank", "dinner at 21:00 tomorrow, so I'll be late"), m(50, "fc_bob", "caps timer tomorrow at 19:00, same as the ping"), m(40, "erin", "subcaps fleet tomorrow at 19:00 too, separate op")],
     logistica: [m(500, "erin", "freighter leaving at downtime"), m(150, "carol", "need 20k units of fuel"), m(70, "erin", "contract is up")],
   };
 }

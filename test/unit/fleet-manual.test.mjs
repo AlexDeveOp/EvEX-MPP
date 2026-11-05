@@ -131,7 +131,7 @@ test("las sugeridas: solo mensajes de flota con hora futura, una vez por mensaje
   const msg = (over) => ({ key: `k${Math.random()}`, ts: NOW - 60e3, nick: "fc_bob", body: "big op at 21:00, be there", ...over });
 
   const first = consider("a1", "capitales@conference.x", msg({ key: "m1" }), { roomName: "capitales" });
-  assert.deepEqual(first, { id: "f1", at: Date.UTC(2026, 10, 5, 21, 0), title: "«big op at 21:00, be there»", group: "", note: "Sugerida: hora encontrada en un mensaje de fc_bob en capitales", source: "message", msgKey: "m1" });
+  assert.deepEqual(first, { id: "f1", at: Date.UTC(2026, 10, 5, 21, 0), title: "«big op at 21:00, be there»", group: "", note: "Sugerida: hora encontrada en un mensaje de fc_bob en capitales", source: "message", msgKey: "m1", origin: { accountId: "a1", room: "capitales@conference.x", nick: "fc_bob" } });
   // El mismo mensaje otra vez (historial y directo) no se repite.
   assert.equal(consider("a1", "capitales@conference.x", msg({ key: "m1" })), null);
   // Ya en el calendario desde otra sesión de la app.

@@ -239,7 +239,16 @@ function clean(f) {
   };
 }
 
-export function addFleet({ at, title = "", group = "", note = "", link = "", source = "manual", pingKeys = [], msgKey = "", status } = {}) {
+// De qué sala y de quién viene una flota sacada de un mensaje: { accountId, room (JID de la sala), nick }. El nombre
+// visible de la sala no se guarda: se saca al pintar (puede cambiar si se renombra el marcador). null si no hay sala.
+function cleanOrigin(o) {
+  if (!o || typeof o !== "object") return null;
+  const room = String(o.room ?? "").slice(0, 300);
+  if (!room) return null;
+  return { accountId: String(o.accountId ?? "").slice(0, 100), room, nick: String(o.nick ?? "").slice(0, 100) };
+}
+
+export function addFleet({ at, title = "", group = "", note = "", link = "", source = "manual", pingKeys = [], msgKey = "", status, origin = null } = {}) {
   const st = ready();
   if (!SOURCES.includes(source)) source = "manual";
   const f = {
@@ -251,6 +260,8 @@ export function addFleet({ at, title = "", group = "", note = "", link = "", sou
     status: STATUSES.includes(status) ? status : source === "message" ? "pending" : "active",
     announcedAt: Date.now(),
   };
+  const from = cleanOrigin(origin);
+  if (from) f.origin = from;
   st.items[f.id] = f;
   saveSettings();
   changed();

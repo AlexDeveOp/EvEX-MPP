@@ -444,10 +444,17 @@ export function focusComposer() {
   if (c) panes.get(c.key)?.composer?.focus();
 }
 
-// Bandeja de menciones: abre la sala y lleva al mensaje, cargando historial antiguo si hace falta.
-async function openMention(it) {
-  const c = await openConv(it.accountId, it.room, "groupchat");
-  if (!(await revealMessage(c, it.key))) toast(t("Ese mensaje ya no está en el historial guardado de la sala."));
+// Abre una sala y lleva a un mensaje, cargando historial antiguo si hace falta (bandeja de menciones, «Ver mensaje»
+// de las flotas sacadas de una sala). Si ya no está en el historial guardado, lo dice.
+export async function showRoomMessage(accountId, room, key) {
+  const c = await openConv(accountId, room, "groupchat");
+  const found = await revealMessage(c, key);
+  if (!found) toast(t("Ese mensaje ya no está en el historial guardado de la sala."));
+  return found;
+}
+
+function openMention(it) {
+  return showRoomMessage(it.accountId, it.room, it.key);
 }
 
 // Desplaza la conversación hasta un mensaje y lo resalta un momento. Carga hasta unos miles de mensajes antiguos.
@@ -1025,7 +1032,7 @@ function messageMenu(c, m) {
     c.type === "groupchat" && !m.out ? { label: t("Mencionar a {nick}", { nick: m.nick }), icon: "at-sign", action: () => insertMention(c, m.nick) } : null,
     c.type === "groupchat" && !m.out ? { label: t("Mensaje privado"), icon: "message-square", action: () => openConv(c.accountId, `${c.conv}/${m.nick}`, "chat") } : null,
     m.out && m.id ? { label: t("Corregir mensaje"), icon: "pencil", action: () => startEdit(c, m) } : null,
-    c.type === "groupchat" && !m.sys ? calendarMenuItem(() => prefillFromMessage(m, convTitle(c))) : null,
+    c.type === "groupchat" && !m.sys ? calendarMenuItem(() => prefillFromMessage(m, convTitle(c), undefined, { accountId: c.accountId, room: c.conv, nick: m.nick })) : null,
     "-",
     { label: t("Local: {dateTime}", { dateTime: fmtDateTime(m.ts) }), icon: "clock", disabled: true },
     { label: t("EVE: {eve} (UTC)", { eve: fmtEve(m.ts, true) }), icon: "globe", disabled: true },
