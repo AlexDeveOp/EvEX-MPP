@@ -9,6 +9,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ### Added
 - **Mentions inbox:** a *Mentions* entry under *Fleet pings* in the sidebar gathers the room messages that mention you (your nickname, alias, username or room nickname, and the mention words in *Preferences → Notifications*) or match one of your keyword rules.
+  - The entry only appears when there are mentions you haven't seen, and stays while its tab is open; after you see them and leave the inbox, it hides again. *Always show the mentions inbox* (*Preferences → Notifications*) keeps it visible, and Ctrl+K opens it at any time. Mentions are gathered either way.
   - Each entry shows the room, who wrote it, how long ago, local and EVE time, and the text with the mention highlighted. Click it (or press Enter) to open the room at that message, loading older history if needed; the message is highlighted for a moment.
   - Filter by text or by room. The counter shows the ones you haven't seen. They count as seen when you leave the inbox, with *Mark all as seen*, or when you read them in their room.
   - It is filled from the local history when the app starts (rooms active in the last 30 days, the last 1,000 messages of each), so mentions from before you opened the app are there too, and new ones arrive live. Large rooms are read from the end of the file, not in full.

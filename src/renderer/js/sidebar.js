@@ -1,6 +1,6 @@
 // Barra lateral: cuentas y estado, pings, salas (favoritas / abiertas) y contactos.
 import { S, api, on, conn, rosterOf, roomState, bestPresence, convKey, PINGS_KEY, MENTIONS_KEY, SHOW_LABEL, updateSettings, saveRooms, avatarUrl } from "./state.js";
-import { mentionsConv } from "./mentions.js";
+import { mentionsConv, showMentionsEntry } from "./mentions.js";
 import { h, icon, iconButton, $, showMenu, menuFor, prompt, confirmDialog, toast, rafThrottle, keepHover, morphChildren } from "./dom.js";
 import { openConv, closeConv, notifyMode, pingsConv, convBadge } from "./convs.js";
 import { toggleFavorite, toggleAutojoin, avatarEl, notifyItems } from "./chat.js";
@@ -95,9 +95,10 @@ function renderSidebar() {
       pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,
     ),
   );
-  // Bandeja de menciones: los mensajes de las salas que te mencionan o coinciden con tus palabras clave.
+  // Bandeja de menciones: los mensajes de las salas que te mencionan o coinciden con tus palabras clave. Solo sale
+  // cuando hay algo sin ver o su pestaña está abierta (o con «Mostrar siempre…»); Ctrl+K la abre siempre.
   const mc = mentionsConv();
-  root.append(
+  if (showMentionsEntry()) root.append(
     h(
       "div",
       {
