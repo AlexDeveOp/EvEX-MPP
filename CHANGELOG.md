@@ -7,6 +7,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **Microsoft Store version** (MSIX), signed by Microsoft, so Windows trusts it without the SmartScreen warning. The GitHub installer and portable stay as they are. In the Store version:
+  - the Store keeps the app up to date, so it doesn't check GitHub for new versions;
+  - *Start with Windows* is turned on in Windows *Settings → Apps → Startup* (Preferences opens it); the app then starts in the tray;
+  - *Open data folder* opens the package's own folder, where Windows keeps its data.
+- `npm run dist:store` builds the package, and the release workflow keeps it as a workflow artifact for uploading to Partner Center.
+
 ### Changed
 - **New app icon:** a cynosural beacon (a column of light with its ring) with the fleet arriving, instead of the generic chat bubble. The tray, the taskbar and other small sizes (48 px and below) show just the cyno, thicker, so it still reads at 16 px. The unread dot and the Do not disturb badge work as before, and the fleet ping siren is unchanged.
 
