@@ -1,6 +1,6 @@
 // Calendario de flotas: añadir o editar una flota a mano («＋ Añadir flota») y «Añadir al calendario» desde un ping o un
 // mensaje de sala. El almacén es fleets.js (Sesión A): se conecta con useFleets() para poder probar esto sin él.
-import { h, modal, field, toast } from "./dom.js";
+import { h, icon, modal, field, toast } from "./dom.js";
 import { fmtDateTime } from "./format.js";
 import { t } from "./i18n.js";
 import { titleFromText, connectSuggestions } from "./fleet-suggest.js";
@@ -79,8 +79,9 @@ export function pendingFor(msgKey) {
 
 // ---------- formulario ----------
 
-// prefill: { id?, at, title, group, note, link, pingKeys, msgKey, source }. groups: sugerencias para el campo «Grupo».
-export function openAddFleet(prefill = {}, { groups = [] } = {}) {
+// prefill: { id?, at, title, group, note, link, pingKeys, msgKey, source }. groups: sugerencias para el campo «Grupo»
+// (se añaden los grupos de las flotas que ya hay). onSaved: tras guardar o borrar (p. ej. repintar la agenda).
+export function openAddFleet(prefill = {}, { groups = [], onSaved } = {}) {
   if (!fleets) return toast(t("El calendario de flotas aún no está disponible."), { kind: "warn" });
   const editing = !!prefill.id;
   const start = eveParts(Number.isFinite(prefill.at) ? prefill.at : nextHour());
@@ -89,7 +90,8 @@ export function openAddFleet(prefill = {}, { groups = [] } = {}) {
   const title = h("input", { class: "input", value: prefill.title || "", placeholder: t("p. ej. Roam con la corp"), maxlength: 140, autofocus: true });
   const listId = `fleet-groups-${Date.now().toString(36)}`;
   const group = h("input", { class: "input", value: prefill.group || "", placeholder: t("p. ej. all, caps (opcional)"), maxlength: 60, list: listId });
-  const groupList = h("datalist", { id: listId }, [...new Set(groups.filter(Boolean))].map((g) => h("option", { value: g })));
+  const known = (fleets.allFleets?.() || []).map((f) => f.group);
+  const groupList = h("datalist", { id: listId }, [...new Set([...groups, ...known].filter(Boolean))].map((g) => h("option", { value: g })));
   const note = h("textarea", { class: "input", rows: 2, placeholder: t("Opcional: doctrina, qué llevar…"), maxlength: 500 });
   note.value = prefill.note || "";
   const local = h("div", { class: "fleet-local muted" });
@@ -113,10 +115,11 @@ export function openAddFleet(prefill = {}, { groups = [] } = {}) {
     else if (pending) fleets.updateFleet(pending.id, { ...data, status: "active" });
     else fleets.addFleet({ ...data, link: prefill.link || "", source: prefill.source || "manual", ...(prefill.pingKeys?.length ? { pingKeys: prefill.pingKeys } : {}), ...(prefill.msgKey ? { msgKey: prefill.msgKey } : {}) });
     close();
-    toast(editing ? t("Flota guardada") : t("Flota añadida al calendario"), { kind: "success" });
+    onSaved?.();
+    toast(editing ? t("Flota guardada") : t("Flota añadida al calendario"), { kind: "ok" });
   };
   const actions = [
-    editing ? { label: t("Borrar"), icon: "trash-2", danger: true, action: (close) => (fleets.removeFleet(prefill.id), close()) } : null,
+    editing ? { label: t("Borrar"), icon: "trash-2", danger: true, action: (close) => (fleets.removeFleet(prefill.id), close(), onSaved?.()) } : null,
     "spacer",
     { label: t("Cancelar"), action: (close) => close() },
     { label: editing ? t("Guardar") : t("Añadir"), icon: "calendar", primary: true, action: save },
@@ -140,6 +143,13 @@ export function openAddFleet(prefill = {}, { groups = [] } = {}) {
     actions,
   });
   return m;
+}
+
+// Botones en la vista del calendario (fleet-view.js de la Sesión A): «＋ Añadir flota» en la cabecera y «Editar» en cada
+// flota (las sugeridas ya llevan «Añadir» y «Descartar»). view: { addFleetHeaderAction, addFleetRowAction }.
+export function registerFleetActions(view) {
+  view.addFleetHeaderAction(() => h("button", { class: "btn small primary fleet-add", type: "button", disabled: !fleets, onclick: () => openAddFleet() }, icon("plus"), t("Añadir flota")));
+  view.addFleetRowAction((f, { refresh } = {}) => (f.status === "pending" ? null : h("button", { class: "btn small ghost", type: "button", onclick: () => openAddFleet({ ...f }, { onSaved: refresh }) }, t("Editar"))));
 }
 
 // Elemento de menú «Añadir al calendario» (clic derecho en un mensaje de sala o un ping). Si lo que se va a abrir ya es
