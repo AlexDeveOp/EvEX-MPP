@@ -1,0 +1,4 @@
+
+        <desktop:Extension Category="windows.startupTask" Executable="app\EvEX-MPP.exe" EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--hidden">
+          <desktop:StartupTask TaskId="EvEXMPPStartup" Enabled="false" DisplayName="EvEX-MPP" />
+        </desktop:Extension>

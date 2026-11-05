@@ -8,6 +8,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Added
+- **Microsoft Store version** (MSIX), signed by Microsoft, so Windows trusts it without the SmartScreen warning. The GitHub installer and portable stay as they are. In the Store version:
+  - the Store keeps the app up to date, so it doesn't check GitHub for new versions;
+  - *Start with Windows* is turned on in Windows *Settings → Apps → Startup* (Preferences opens it); the app then starts in the tray;
+  - *Open data folder* opens the package's own folder, where Windows keeps its data.
+- `npm run dist:store` builds the package, and the release workflow keeps it as a workflow artifact for uploading to Partner Center.
 - **About** tab in *Preferences*: version and where it was installed from (GitHub or Microsoft Store), who makes it, and links to the repository, the changelog, the user guide, bug reports and suggestions, private security reports, the privacy policy, the license and the third-party components. Links open in your browser.
 
 ### Changed

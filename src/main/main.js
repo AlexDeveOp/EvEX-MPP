@@ -18,7 +18,7 @@ import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
 import { userData, mediaDir, avatarDir } from "./paths.js";
 import { createConnLog } from "./conn-log.js";
-import { autostartFile, autostartExec, desktopEntry } from "./platform.js";
+import { autostartFile, autostartExec, desktopEntry, storeUserDataDir } from "./platform.js";
 import { checkForUpdates, repoFromUrl } from "./updates.js";
 import { isProviderUrl } from "./gifs.js";
 import { startBridge, testProxy, normalizeProxy, openTunnel } from "./proxy.js";
@@ -73,6 +73,10 @@ function send(channel, payload) {
 // ---------- aviso de versión nueva (opcional, desactivado por defecto) ----------
 // Solo consulta la última release de GitHub y avisa; no descarga ni instala nada.
 const UPDATE_EVERY = 24 * 3600e3;
+// Versión de la Microsoft Store (MSIX): la Store la actualiza y Windows gestiona el inicio automático (tarea de inicio
+// del paquete, en Configuración → Aplicaciones → Inicio), así que no se consulta GitHub ni se usan los login items.
+const STORE = process.windowsStore === true;
+
 const REPO = (() => {
   try {
     return repoFromUrl(JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).repository?.url);
@@ -587,7 +591,7 @@ function registerIpc() {
       repo: REPO,
       platform: process.platform,
       focused: !!win?.isFocused(),
-      system: { platform: process.platform, secretStorage: await store.secretStorageSoon(), trayAvailable, miniOnTop: miniOnTop(), hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
+      system: { platform: process.platform, store: STORE, secretStorage: await store.secretStorageSoon(), trayAvailable, miniOnTop: miniOnTop(), hasProxyPassword: hasProxyPassword(store.GLOBAL_PROXY), globalProxyNeedsPassword: globalNeedsPassword() },
     };
   });
 
@@ -611,7 +615,7 @@ function registerIpc() {
   handle("pings:sync", () => syncPings({ notify: false }));
 
   // Comprobación pedida a mano (botón «Comprobar ahora»): la interfaz muestra el resultado.
-  handle("updates:check", () => checkLatest());
+  handle("updates:check", () => (STORE ? { store: true } : checkLatest()));
 
   handle("settings:set", async (settings) => {
     const before = currentLang();
@@ -795,7 +799,12 @@ function registerIpc() {
   handle("window:close", () => win?.close());
   handle("window:focus", () => showWindow());
   handle("shell:open", (url) => openExternal(url));
-  handle("shell:openUserData", () => shell.openPath(userData()));
+  // En la versión de la Store, la carpeta que ve el Explorador es la redirigida del paquete (si existe).
+  handle("shell:openUserData", () => {
+    const real = STORE ? storeUserDataDir({ execPath: process.execPath, localAppData: process.env.LOCALAPPDATA, userData: userData() }) : null;
+    return shell.openPath(real && fs.existsSync(real) ? real : userData());
+  });
+  handle("shell:startupSettings", () => (STORE ? shell.openExternal("ms-settings:startupapps") : undefined));
   handle("app:quit", () => {
     quitting = true;
     app.quit();
@@ -848,7 +857,7 @@ function setLinuxAutostart(enabled) {
 }
 
 function applySystemSettings(s) {
-  scheduleUpdateChecks(!!s.behavior.checkUpdates);
+  scheduleUpdateChecks(!STORE && !!s.behavior.checkUpdates);
   configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, display: s.notifications.popupDisplay, displayHint: s.notifications.popupDisplayHint, getWin: () => win, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
   // Mini ventana para jugar: al abrirla o cerrarla, la casilla de la bandeja cambia.
   configureMini({ preload: path.join(ROOT, "src", "preload-mini.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: refreshTrayMenu });
@@ -858,7 +867,7 @@ function applySystemSettings(s) {
     // El portable se descomprime en una carpeta temporal: hay que registrar el .exe original.
     const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
     if (app.isPackaged && process.platform === "linux") setLinuxAutostart(!!s.behavior.startWithWindows);
-    else if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: !!s.behavior.startWithWindows, path: exe, args: ["--hidden"] });
+    else if (app.isPackaged && !STORE) app.setLoginItemSettings({ openAtLogin: !!s.behavior.startWithWindows, path: exe, args: ["--hidden"] });
   } catch {}
   try {
     const langs = s.behavior.spellcheck ? s.behavior.spellLanguages.filter((l) => session.defaultSession.availableSpellCheckerLanguages.includes(l)) : [];

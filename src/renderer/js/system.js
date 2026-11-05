@@ -9,6 +9,8 @@ export const isLinux = () => S.system.platform === "linux";
 // Sin llavero, Electron solo podría guardar las contraseñas casi en claro: entonces no se guardan.
 export const noKeyring = () => isLinux() && S.system.secretStorage === "basic_text";
 export const trayAvailable = () => S.system.trayAvailable !== false;
+// Instalada desde la Microsoft Store (MSIX): la Store la actualiza y el inicio automático se activa desde Windows.
+export const isStore = () => S.system.store === true;
 
 // Texto para Windows o para el resto (cada variante con su propio t() para que la comprobación de traducciones lo vea).
 export const onWindows = (win, other) => (isWindows() ? win : other);
