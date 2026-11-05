@@ -232,7 +232,9 @@ export function popupIpc(handle) {
   handle("popup:test", (choice, colors) => {
     if (!isValidChoice(choice, screen.getAllDisplays())) throw new Error("popup:test: invalid display");
     if (systemPopups()) return false;
-    chooseStack(choice).pinned = true;
+    // Sin ninguna pantalla (no debería pasar) no hay pila que fijar: la burbuja elegirá al abrirse.
+    const s = chooseStack(choice);
+    if (s) s.pinned = true;
     layout();
     showPopup({ kind: "msg", title: t("Pantalla de las burbujas"), text: t("Las burbujas saldrán en esta pantalla."), colors: colors && typeof colors === "object" ? colors : undefined });
     return true;
