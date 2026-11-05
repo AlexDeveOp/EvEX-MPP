@@ -1995,3 +1995,53 @@ select.input {
     box-shadow: 0 0 0 2px transparent;
   }
 }
+
+/* Preferencias → Acerca de */
+.about-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.about-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.about-logo {
+  width: 64px;
+  height: 64px;
+  flex: none;
+}
+.about-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+.about-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 4px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.about-link:hover,
+.about-link:focus-visible {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.about-link-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.about-link > svg:last-child {
+  opacity: 0.6;
+}

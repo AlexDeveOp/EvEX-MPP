@@ -9,6 +9,7 @@ import { pingTabs } from "./settings/pings.js";
 import { dataTabs } from "./settings/data.js";
 import { networkTabs } from "./settings/network.js";
 import { avatarTabs, setAvatarFocus } from "./settings/avatar.js";
+import { aboutTabs } from "./settings/about.js";
 
 export { openBackgroundEditor } from "./settings/backgrounds.js";
 
@@ -24,6 +25,7 @@ const TABS = [
   ["behavior", t("Comportamiento"), "sliders-horizontal"],
   ["network", t("Red y proxy"), "globe"],
   ["data", t("Cuentas y datos"), "database"],
+  ["about", t("Acerca de"), "info"],
 ];
 
 export function openSettings(tab = "appearance") {
@@ -48,4 +50,4 @@ export function openAvatarSettings(accountId) {
   openSettings("avatar");
 }
 
-const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...avatarTabs };
+const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...avatarTabs, ...aboutTabs };

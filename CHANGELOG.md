@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **About** tab in *Preferences*: version and where it was installed from (GitHub or Microsoft Store), who makes it, and links to the repository, the changelog, the user guide, bug reports and suggestions, private security reports, the privacy policy, the license and the third-party components. Links open in your browser.
+
 ## [0.9.0] - 2026-11-05
 
 ### Added
