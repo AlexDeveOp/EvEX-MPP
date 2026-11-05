@@ -32,7 +32,12 @@ export function fleetHeaderActions() {
   for (const build of headerActions) {
     try {
       const el = build();
-      if (el) box.append(el);
+      if (!el) continue;
+      // Con la cabecera estrecha los botones se quedan en icono: el texto pasa al título y a la etiqueta accesible.
+      const text = el.textContent.trim();
+      if (text && !el.getAttribute("title")) el.setAttribute("title", text);
+      if (text && !el.getAttribute("aria-label")) el.setAttribute("aria-label", text);
+      box.append(el);
     } catch (e) {
       console.error(e);
     }
