@@ -1,15 +1,15 @@
 // npm run demo: abre EvEX-MPP con datos de ejemplo para revisar toda la interfaz, sin tocar tu perfil ni conectarse a
 // ningún servidor real.
-// - Crea un perfil nuevo en la carpeta temporal del sistema (evex-demo-<fecha>) con test/demo/profile.mjs. Con
-//   «npm run demo -- --keep» reutiliza el último. Se guardan como mucho los 3 últimos; solo se borran carpetas
-//   evex-demo-* de la carpeta temporal.
+// - Crea un perfil nuevo en .demo/ (dentro del proyecto, ignorada por git y fuera del paquete) con
+//   test/demo/profile.mjs. Cada perfil se crea con mkdtemp (nombre aleatorio, solo para tu usuario): no se usa la
+//   carpeta temporal compartida del sistema. Con «npm run demo -- --keep» reutiliza el último. Se guardan como mucho
+//   los 3 últimos; solo se borran carpetas evex-demo-* de .demo/.
 // - Arranca el servidor simulado (test/mock-xmpp.mjs con MOCK_DEMO=1, solo en 127.0.0.1) en un puerto libre.
 // - Lanza la app con EVEX_USERDATA apuntando al perfil (como scripts/start.mjs, sin ELECTRON_RUN_AS_NODE).
 // - Al cerrar la app (o con Ctrl+C) cierra el servidor simulado que lanzó, y nada más.
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import electron from "electron";
@@ -17,10 +17,11 @@ import { writeDemoProfile, DEMO_ACCOUNT, DEMO_PASSWORD } from "../test/demo/prof
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const PREFIX = "evex-demo-";
+export const PROFILES_DIR = path.join(root, ".demo");
 const KEEP_PROFILES = 3;
 
 // Perfiles de demo de la carpeta temporal, del más reciente al más antiguo. Solo carpetas de verdad (no enlaces).
-export function demoProfiles(base = os.tmpdir()) {
+export function demoProfiles(base = PROFILES_DIR) {
   let names;
   try {
     names = fs.readdirSync(base);
@@ -41,7 +42,7 @@ export function demoProfiles(base = os.tmpdir()) {
 }
 
 // Deja los `keep` perfiles de demo más recientes y borra los demás. Nunca toca nada sin el prefijo ni fuera de base.
-export function pruneDemoProfiles(base = os.tmpdir(), keep = KEEP_PROFILES, current = "") {
+export function pruneDemoProfiles(base = PROFILES_DIR, keep = KEEP_PROFILES, current = "") {
   const removed = [];
   const others = demoProfiles(base).filter((p) => p !== current);
   for (const p of others.slice(Math.max(0, keep - (current ? 1 : 0)))) {
@@ -70,7 +71,8 @@ function run(cmd, args, opts) {
 
 async function main() {
   const keep = process.argv.includes("--keep");
-  const base = os.tmpdir();
+  const base = PROFILES_DIR;
+  fs.mkdirSync(base, { recursive: true, mode: 0o700 });
   const port = await freePort();
   let profile = keep ? demoProfiles(base)[0] : null;
   if (profile) {
@@ -81,7 +83,7 @@ async function main() {
     fs.writeFileSync(file, JSON.stringify(cfg, null, 2));
   } else {
     const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
-    profile = path.join(base, `${PREFIX}${stamp}`);
+    profile = fs.mkdtempSync(path.join(base, `${PREFIX}${stamp}-`));
     writeDemoProfile(profile, { port });
   }
   pruneDemoProfiles(base, KEEP_PROFILES, profile);
