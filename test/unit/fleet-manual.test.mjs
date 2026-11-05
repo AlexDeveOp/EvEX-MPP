@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { S } from "../../src/renderer/js/state.js";
-import { eveParts, fromEveParts, nextHour, validateFleet, prefillFromMessage, prefillFromPing, pendingFor, useFleets, fleetsReady, calendarMenuItem } from "../../src/renderer/js/fleet-manual.js";
+import { eveParts, fromEveParts, nextHour, validateFleet, trimSpaces, prefillFromMessage, prefillFromPing, pendingFor, useFleets, fleetsReady, calendarMenuItem } from "../../src/renderer/js/fleet-manual.js";
 import { createFleetSuggester, looksLikeFleet, titleFromText, considerRoomMessage } from "../../src/renderer/js/fleet-suggest.js";
 import { TEST_SETTINGS } from "./helpers.mjs";
 
@@ -46,6 +46,9 @@ test("eveParts y fromEveParts van y vuelven en hora EVE (UTC), sin depender de l
 test("validateFleet pide título y una hora válida que no haya pasado", () => {
   assert.equal(validateFleet({ at: NOW + 3600e3, title: "Roam" }, NOW), "");
   assert.match(validateFleet({ at: NOW, title: "  " }, NOW), /título/);
+  assert.match(validateFleet({ at: NOW, title: String.fromCharCode(0x200b, 0xfeff) }, NOW), /título/, "solo invisibles");
+  const BOM = String.fromCharCode(0xfeff);
+  assert.equal(trimSpaces(`  ${BOM}Roam${BOM} 	`), `${BOM}Roam${BOM}`, "trimSpaces no quita U+FEFF");
   assert.match(validateFleet({ at: null, title: "Roam" }, NOW), /no son válidas/);
   assert.match(validateFleet({ at: NOW - 13 * 3600e3, title: "Roam" }, NOW), /ya ha pasado/);
   // Un formup de hace poco aún se puede apuntar (p. ej. para el SRP).
@@ -54,7 +57,7 @@ test("validateFleet pide título y una hora válida que no haya pasado", () => {
 
 test("prefillFromMessage toma la hora del texto, la primera línea como título y la clave del mensaje", () => {
   const m = { key: "k1", ts: NOW, nick: "fc_bob", body: "\u200BBig op at 21:00, be there\nbring caps" };
-  assert.deepEqual(prefillFromMessage(m, "capitales", fakeParse), { at: Date.UTC(2026, 10, 5, 21, 0), title: "Big op at 21:00, be there", note: "De fc_bob en capitales", msgKey: "k1", source: "manual" });
+  assert.deepEqual(prefillFromMessage(m, "capitales", fakeParse), { at: Date.UTC(2026, 10, 5, 21, 0), title: `${String.fromCharCode(0x200b)}Big op at 21:00, be there`, note: "De fc_bob en capitales", msgKey: "k1", source: "manual" });
   // Sin hora en el texto, el formulario propone la siguiente hora en punto.
   assert.equal(prefillFromMessage({ ...m, body: "roam later" }, "x", fakeParse).at, null);
 });
@@ -101,6 +104,25 @@ test("looksLikeFleet y titleFromText", () => {
   for (const s of ["dinner at 21:00", "operator error", "shops open at 9:00", "topology"]) assert.ok(!looksLikeFleet(s), s);
   assert.equal(titleFromText("\n\n  hola mundo  \nsegunda"), "hola mundo");
   assert.equal(titleFromText("x".repeat(100), 10), `${"x".repeat(9)}…`);
+});
+
+test("titleFromText deja los caracteres invisibles tal cual (marcas de agua) y no parte un emoji al recortar", () => {
+  const [ZW, ZNJ, WJ, BOM] = [0x200b, 0x200c, 0x2060, 0xfeff].map((c) => String.fromCharCode(c));
+  const marked = `${BOM}Capital${ZW} fleet${ZNJ} up${WJ}${BOM}`;
+  assert.equal(titleFromText(`  ${marked}  \nFC: Bob`), marked, "con todos sus invisibles, también U+FEFF en los bordes");
+  // Una línea que solo tiene invisibles cuenta como vacía, pero no se quita de la siguiente.
+  assert.equal(titleFromText(`${ZW}${WJ}\n${ZW}Roam now`), `${ZW}Roam now`);
+  const rocket = String.fromCodePoint(0x1f680);
+  const long = `${"a".repeat(8)}${rocket}${"b".repeat(20)}`;
+  const cut = titleFromText(long, 10);
+  assert.equal(cut, `${"a".repeat(8)}${rocket}…`);
+  assert.equal(Array.from(cut).length, 10);
+  assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(cut), "sin mitades de emoji");
+  // Las sugeridas también guardan el título tal cual.
+  const f = fakeFleets();
+  const consider = createFleetSuggester({ parseFleetTime: fakeParse, addFleet: f.addFleet, isDismissed: f.isDismissed, allFleets: f.allFleets }, { now: () => NOW });
+  const s = consider("a1", "r", { key: "w1", ts: NOW, nick: "bob", body: `big${ZW} op at 21:00` });
+  assert.equal(s.title, `«big${ZW} op at 21:00»`);
 });
 
 test("las sugeridas: solo mensajes de flota con hora futura, una vez por mensaje, sin las descartadas ni las ya añadidas", () => {

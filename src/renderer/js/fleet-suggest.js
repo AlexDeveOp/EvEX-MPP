@@ -12,15 +12,19 @@ export function looksLikeFleet(text) {
   return FLEET_WORDS.test(String(text || "").replace(INVISIBLE, ""));
 }
 
-// Primera línea con texto, sin caracteres invisibles y recortada (para el título de la flota).
+// Primera línea con texto, recortada (para el título de la flota). El texto va TAL CUAL, con sus caracteres
+// invisibles: algunas alianzas los usan como marca de agua y la app nunca los quita de lo que guarda o enseña. Solo se
+// ignoran para decidir si una línea está vacía. El recorte cuenta puntos de código, para no partir un emoji.
+// (trim() no vale: también quita U+FEFF, que es uno de esos invisibles.)
+const SPACES = /^[ \t\r\f\v]+|[ \t\r\f\v]+$/g;
 export function titleFromText(text, max = 80) {
   const line =
     String(text || "")
-      .replace(INVISIBLE, "")
       .split("\n")
-      .map((l) => l.trim())
-      .find(Boolean) || "";
-  return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
+      .map((l) => l.replace(SPACES, ""))
+      .find((l) => l.replace(INVISIBLE, "").trim()) || "";
+  const chars = Array.from(line);
+  return chars.length > max ? `${chars.slice(0, max - 1).join("").replace(SPACES, "")}…` : line;
 }
 
 // deps: { parseFleetTime(text, msgTs) → ms | null, addFleet(f), isDismissed(msgKey), allFleets() }.

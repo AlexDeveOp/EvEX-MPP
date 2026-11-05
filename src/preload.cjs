@@ -12,7 +12,7 @@ const CHANNELS = [
   "roster:add", "roster:remove", "roster:update", "roster:answer",
   "logs:tail", "logs:search", "logs:list",
   "pidgin:scan", "pidgin:import", "pidgin:repairLogs", "pidgin:repairStatus", "pidgin:repairOffered", "sounds:pidginScan", "sounds:pidginImport", "gifs:search", "gifs:save", "gifs:remove",
-  "file:pick", "image:importPath", "image:importBytes", "image:importUrl", "emoji:import", "theme:export", "theme:import", "avatar:publish", "avatar:remove", "fonts:list",
+  "file:pick", "image:importPath", "image:importBytes", "image:importUrl", "emoji:import", "theme:export", "fleets:saveIcs", "theme:import", "avatar:publish", "avatar:remove", "fonts:list",
   "notify", "notify:test", "popup:get", "popup:size", "popup:click", "popup:close", "popup:hover",
   "popup:displays", "popup:test", "mini:update",
   "window:unread", "dnd:state", "window:minimize", "window:maximize", "window:close", "window:focus", "shell:open", "shell:openUserData", "updates:check", "pings:sync", "app:quit",

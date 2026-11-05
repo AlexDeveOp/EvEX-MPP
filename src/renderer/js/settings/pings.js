@@ -11,6 +11,7 @@ import { isWindows, isLinux, onWindows } from "../system.js";
 import { VOICE_DEFAULTS, TEMPLATE_FIELDS, voiceSettings, listVoices, pingSpeech, speak, stopSpeaking, speechAvailable } from "../tts.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
 import { setMini } from "../mini-feed.js";
+import { fleetIcsGroup } from "./fleet-ics.js";
 
 // «Pings de flota» → SRP: marcar pings para pedir el reembolso de naves perdidas (killmail, nota, estado y plazo).
 // Desactivado por defecto: quien no lo use no ve ni la bandera ni el filtro.
@@ -220,6 +221,7 @@ export const pingTabs = {
       voiceGroup(),
       formupGroup(),
       miniGroup(),
+      fleetIcsGroup(),
       // Pings que llegaron con la app cerrada (src/main/ping-recovery.js). Ambos activados por defecto.
       group(
         t("Pings que llegaron con la app cerrada"),
