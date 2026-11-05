@@ -44,7 +44,17 @@ test("createTray pone el icono reducido a 16 px, el nombre de la app y el menú"
   assert.ok(tray instanceof Tray);
   assert.equal(getTray(), tray);
   assert.equal(tray.tooltip, "EvEX-MPP");
-  assert.deepEqual(tray.image.size, { width: 16, height: 16, quality: "best" });
+  // Tres escalas (100 %, 150 % y 200 %), cada una dibujada a su tamaño: un PNG cuadrado de 16, 24 y 32 px.
+  assert.deepEqual(tray.image.getScaleFactors(), [1, 1.5, 2]);
+  for (const rep of tray.image.representations) {
+    assert.equal(rep.width, rep.height);
+    assert.equal(rep.buffer.readUInt32BE(16), rep.width, "ancho del PNG");
+    assert.equal(rep.buffer.readUInt32BE(20), rep.height, "alto del PNG");
+  }
+  assert.deepEqual(
+    tray.image.representations.map((r) => r.width),
+    [16, 24, 32],
+  );
   assert.deepEqual(
     tray.menu.items.filter((i) => i.label).map((i) => i.label),
     ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "No molestar en la app (silenciar avisos)", "Desconectar todo", "Mini ventana para jugar", "Salir"],
@@ -233,6 +243,18 @@ test("trayLook: icono, insignias y texto según sin leer, pings y «No molestar�
   const all = trayLook({ unread: 2, pings: 1, dnd: { active: true, label: "No molestar hasta las 08:00 (horario)" } });
   assert.deepEqual(all, { kind: "alert", badge: true, muted: true, tooltip: "¡1 ping de flota sin leer! · No molestar hasta las 08:00 (horario)" });
   assert.equal(trayLook({ dnd: { active: true } }).tooltip, "EvEX-MPP · No molestar", "sin etiqueta, el texto genérico");
+});
+
+test("el icono de pings y el de «No molestar» también van en las tres escalas", (t) => {
+  const tray = setup(t);
+  setTrayDnd({ active: true, label: "No molestar activado" });
+  assert.deepEqual(tray.image.getScaleFactors(), [1, 1.5, 2]);
+  setUnread(0, 1);
+  assert.deepEqual(tray.image.getScaleFactors(), [1, 1.5, 2], "sirena de pings");
+  assert.deepEqual(tray.image.representations.map((r) => r.buffer.readUInt32BE(16)), [16, 24, 32]);
+  setUnread(0, 0);
+  t.mock.timers.tick(500);
+  setTrayDnd({ active: false });
 });
 
 test("setTrayDnd cambia el icono de la bandeja y su texto, y vuelve al quitarlo", (t) => {

@@ -37,8 +37,20 @@ export class Notification {
     this.handlers.close?.();
   }
 }
-// Las imágenes recuerdan de qué bytes salen y a qué tamaño se pidieron (la bandeja las reduce a 16 px).
-export const nativeImage = { createFromBuffer: (buffer) => ({ buffer, resize: (size) => ({ buffer, size }) }) };
+// Las imágenes recuerdan de qué bytes salen y a qué tamaño se pidieron; las de varias escalas (la bandeja) guardan
+// cada representación que se les añade.
+export const nativeImage = {
+  createFromBuffer: (buffer) => ({ buffer, resize: (size) => ({ buffer, size }) }),
+  createEmpty: () => ({
+    representations: [],
+    addRepresentation(rep) {
+      this.representations.push(rep);
+    },
+    getScaleFactors() {
+      return this.representations.map((r) => r.scaleFactor);
+    },
+  }),
+};
 // Bandeja: guarda lo que se le pide (Tray.created) y deja disparar sus eventos con emit().
 export class Tray {
   static created = [];
