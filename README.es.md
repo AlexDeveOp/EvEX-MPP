@@ -71,9 +71,9 @@ Solo da el visto bueno si el archivo lo compiló un workflow de GitHub Actions d
 
 | Versión | Instalador | Portable |
 |---|---|---|
-| 0.6.0 | [0/67](https://www.virustotal.com/gui/file/73c6d029cd613e649813136a0f6f1f5deaadcc8e87250ef349b02fc042556cb4) | [0/60](https://www.virustotal.com/gui/file/1164e5e2f11ee938d31d706c0d848505102279aaf65477cbf4b2eace555c59a0) ¹ |
+| 0.10.0 | [0/67](https://www.virustotal.com/gui/file/356d06138033030d567b3a9eea52a02af669afc55ce079cad78b13f3790e4fea) | [0/64](https://www.virustotal.com/gui/file/18e03bd1fe60b679182492f16f6fb6254e71e1993938b85aec42721a9bfd80e4) |
 
-¹ Al principio McAfee marcaba el portable de la 0.6.0 (1/65) con una detección genérica por reputación (`Ti!` seguido del principio del hash del archivo), habitual en ejecutables nuevos y sin firmar. Se le notificó como falso positivo y lo añadió a su lista blanca el 4 de noviembre de 2026; un análisis nuevo da 0/60. Si algún antivirus marca una versión, notifícaselo a ese fabricante como falso positivo.
+McAfee a veces marca un portable nuevo y sin firmar con una detección genérica por reputación (`Ti!` seguido del principio del hash del archivo) hasta que lo conoce. Pasó con la 0.6.0, que se le notificó como falso positivo y añadió a su lista blanca el 4 de noviembre de 2026. Si algún antivirus marca una versión, notifícaselo a ese fabricante como falso positivo.
 
 Para avisar de un fallo de seguridad, consulta [SECURITY.md](SECURITY.md) (en inglés).
 

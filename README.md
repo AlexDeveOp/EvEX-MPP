@@ -71,9 +71,9 @@ It succeeds only if the file was built by a GitHub Actions workflow of this repo
 
 | Version | Installer | Portable |
 |---|---|---|
-| 0.6.0 | [0/67](https://www.virustotal.com/gui/file/73c6d029cd613e649813136a0f6f1f5deaadcc8e87250ef349b02fc042556cb4) | [0/60](https://www.virustotal.com/gui/file/1164e5e2f11ee938d31d706c0d848505102279aaf65477cbf4b2eace555c59a0) ¹ |
+| 0.10.0 | [0/67](https://www.virustotal.com/gui/file/356d06138033030d567b3a9eea52a02af669afc55ce079cad78b13f3790e4fea) | [0/64](https://www.virustotal.com/gui/file/18e03bd1fe60b679182492f16f6fb6254e71e1993938b85aec42721a9bfd80e4) |
 
-¹ At first McAfee flagged the 0.6.0 portable (1/65) with a generic reputation detection (`Ti!` followed by the start of the file's hash), which is common for new, unsigned executables. It was reported to McAfee as a false positive and whitelisted on 2026-11-04; a new scan gives 0/60. If an engine flags a release, report it to that vendor as a false positive.
+McAfee sometimes flags a new, unsigned portable with a generic reputation detection (`Ti!` followed by the start of the file's hash) until it has seen it. It happened with 0.6.0, which was reported as a false positive and whitelisted on 2026-11-04. If an engine flags a release, report it to that vendor as a false positive.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
