@@ -72,6 +72,9 @@ export const DEFAULT_SETTINGS = {
     pingRepeat: { enabled: false, interval: 30, times: 5 }, // repetir el sonido del ping hasta mirar la ventana
     popupStyle: "custom",
     popupCorner: "bottom-left",
+    // Pantalla de las burbujas: "primary", "cursor", "window" o "display:<id>" (ver popup-display.js).
+    popupDisplay: "primary",
+    popupDisplayHint: null,
     popupDuration: 8,
     pingSticky: true,
     trayBlink: true,

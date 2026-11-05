@@ -15,6 +15,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - The count does not add to the taskbar badge, which already counts the room's mentions.
 
 ### Changed
+- **Pop-ups now appear on the main screen by default.** Before, they appeared on the screen where the mouse was, so with two monitors a ping could show up on the secondary one. New option *Pop-up screen* (*Preferences → Notifications*, next to the corner): *Main screen* (the default), *Where the mouse is* (the old behavior), *Screen with the EvEX-MPP window*, or a specific monitor by number and resolution. Picking one shows a test pop-up there.
+  - The screen is chosen when the first pop-up of a stack opens and stays while any is open, so a ping that stays on screen does not jump to another monitor when you move the mouse.
+  - If the chosen monitor is disconnected, pop-ups move to the main screen (no alert is lost) and go back to it when it is connected again, even if the system gives it a new id. Open pop-ups are moved when a monitor is added, removed or changes resolution.
+  - On Wayland, where alerts are system notifications, the option is disabled and says why.
 - **Formup reminder, more flexible** (*Preferences → Fleet pings → Formup countdown*). The alert before a ping's formup time now has more options:
   - Several reminders at once: 5, 10, 15, 30 minutes and 1 hour before (plus the alert at the exact time, as before). The single "alert in advance" setting from earlier versions is kept.
   - Only for some target groups of the ping footer (e.g. `all, caps`), like the voice reading.
