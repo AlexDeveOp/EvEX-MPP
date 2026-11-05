@@ -1,19 +1,20 @@
 // «Exportar .ics»: una flota o todas las próximas a un fichero de calendario que el usuario guarda donde quiera
 // (diálogo Guardar del proceso principal, «fleets:saveIcs»). Nunca se envía a ningún servicio.
-// infoOf(fleet) → { fc, formup, doctrine }: fleetDetails de fleets.js (solo se usa con «Incluir los detalles»).
+// FC/formup/doctrina salen de fleetDetails (fleets.js) y solo se usan con «Incluir los detalles».
 import { api } from "./state.js";
 import { toast } from "./dom.js";
 import { t } from "./i18n.js";
 import { fleetsCalendar, exportableFleets, suggestedFileName } from "./ics.js";
 import { fleetIcsSettings } from "./settings/fleet-ics.js";
+import { fleetDetails, getFleet, upcoming } from "./fleets.js";
 
 // Opciones del .ics según Preferencias → Pings de flota → «Exportar calendario».
-export function icsOptions(cfg = fleetIcsSettings(), infoOf = () => ({})) {
+export function icsOptions(cfg = fleetIcsSettings(), infoOf = fleetDetails) {
   return { details: !!cfg.details, includeLink: !!cfg.includeLink, alarmMinutes: cfg.alarm ? Number(cfg.alarm) : null, infoOf };
 }
 
 // Devuelve el nombre del fichero guardado, o null si no había nada que exportar o se canceló.
-export async function exportFleetsIcs(fleets, { infoOf } = {}) {
+export async function exportFleetsIcs(fleets, { infoOf = fleetDetails } = {}) {
   const list = exportableFleets(fleets);
   if (!list.length) {
     toast(t("No hay flotas activas que exportar."), { kind: "warn" });
@@ -29,3 +30,7 @@ export async function exportFleetsIcs(fleets, { infoOf } = {}) {
     return null;
   }
 }
+
+// Botones de la vista de flotas: una flota (por su id) o todas las próximas activas.
+export const exportFleetIcs = (id) => exportFleetsIcs([getFleet(id)].filter(Boolean));
+export const exportUpcomingIcs = (now = Date.now()) => exportFleetsIcs(upcoming({ now, includePending: false }));
