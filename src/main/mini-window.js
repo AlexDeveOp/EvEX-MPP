@@ -90,12 +90,18 @@ function open() {
     win = null;
     options.onChange(false);
   });
-  w.loadURL("app://evex/mini.html");
-  w.once("ready-to-show", () => {
-    if (w.isDestroyed()) return;
+  // En Wayland (GNOME) «ready-to-show» puede no llegar nunca en una ventana oculta (como en main.js): se muestra
+  // con lo primero que llegue, ese evento o la página ya cargada.
+  let revealed = false;
+  const reveal = () => {
+    if (revealed || w.isDestroyed() || win !== w) return;
+    revealed = true;
     applyLook(w);
     w.showInactive();
-  });
+  };
+  w.once("ready-to-show", reveal);
+  w.webContents.once?.("did-finish-load", () => setTimeout(reveal, 250));
+  w.loadURL("app://evex/mini.html");
   options.onChange(true);
 }
 
