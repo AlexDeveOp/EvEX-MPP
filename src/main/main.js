@@ -26,6 +26,7 @@ import { globalProxy, accountProxy } from "./proxy-settings.js";
 import { createNetFetch } from "./net-fetch.js";
 
 import { t, setLanguage, currentLang } from "./i18n.js";
+import { pruneHistory, cutoffFor, DAY_MS } from "./retention.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const RENDERER = path.join(ROOT, "src", "renderer");
 const NODE_MODULES = path.join(ROOT, "node_modules");
@@ -763,6 +764,11 @@ function registerIpc() {
   handle("logs:tail", (id, conv, limit, beforeTs) => logs.tail(id, conv, limit, beforeTs));
   handle("logs:search", (id, opts) => logs.search(id, opts));
   handle("logs:list", (id) => logs.listConversations(id));
+  // ---- caducidad del historial (retention.js; Preferencias → Privacidad) ----
+  // preview: cuánto borrarían unos plazos (la ventana lo enseña para que el usuario confirme antes de guardarlos).
+  handle("retention:preview", (retention) => pruneHistory(logs, store.get().accounts, store.get().settings, { dryRun: true, retention }));
+  // apply: poda ya con los plazos guardados (solo se guardan después de confirmar).
+  handle("retention:apply", () => runRetention("ajustes"));
 
   registerMediaIpc(handle, { getWin: () => win, getConn, fetchImpl: netFetch });
   registerPidginIpc(handle, { logs, send, publicAccount });
@@ -897,6 +903,18 @@ function startIdleWatcher() {
   }, 15000);
 }
 
+// Poda del historial con los plazos guardados. Nunca para la app: un fallo se apunta y el fichero queda como estaba.
+function runRetention(why) {
+  try {
+    const r = pruneHistory(logs, store.get().accounts, store.get().settings);
+    if (r.files) console.log(`[caducidad:${why}] borrados ${r.messages} mensajes y ${r.pings} pings en ${r.files} ficheros`);
+    return r;
+  } catch (e) {
+    console.error(`[caducidad:${why}]`, e);
+    return { messages: 0, pings: 0, files: 0, error: String(e?.message || e) };
+  }
+}
+
 // ---------- arranque ----------
 
 app.on("second-instance", showWindow);
@@ -905,6 +923,10 @@ app.whenReady().then(async () => {
   store.load();
   setLanguage(store.get().settings.language);
   logs = new Logs(path.join(userData(), "logs"));
+  // Lo que ya ha caducado no se vuelve a guardar; la poda se hace al iniciar (al minuto) y una vez al día.
+  logs.setRetention(cutoffFor(() => store.get().settings, (id) => store.getAccount(id)));
+  setTimeout(() => runRetention("inicio"), 60e3).unref?.();
+  setInterval(() => runRetention("diaria"), DAY_MS).unref?.();
   configurePingSync({
     accounts,
     logs,

@@ -16,6 +16,8 @@ Everything is stored only on your PC, in `%APPDATA%\EvEX-MPP` (portable version:
 
 **Only the passwords are encrypted.** The message history (fleet pings included), `config.json` (settings, the fleet calendar, SRP marks), the connection log and the avatars are plain files that anyone with access to your Windows user can read. If that matters to you, protect your Windows account and use disk encryption (BitLocker).
 
+By default nothing is deleted from the history. In *Preferences → Privacy → Local history* you can have room and chat messages, fleet pings (separately) and the fleet calendar deleted after 30, 90, 180 or 365 days; the calendar keeps 90 days by default. Before a shorter limit is saved, the app tells you how much will be deleted. Pings flagged for SRP are kept while they have the flag, and Pidgin's logs are never touched.
+
 Uninstalling the app does not delete this folder, so your history is kept. Delete it by hand to remove all data.
 
 ## Network connections
@@ -73,6 +75,8 @@ Todo se guarda solo en tu PC, en `%APPDATA%\EvEX-MPP` (versión portable: en la 
 - **Imágenes y sonidos que añades** (fondos, emojis personalizados, sonidos) y avatares de los contactos: copias en `media\` (los avatares en `media\avatars\`). *Mis GIFs* guarda solo los enlaces (las versiones anteriores también guardaban una miniatura en `media\gifs\`).
 
 **Solo las contraseñas van cifradas.** El historial de mensajes (pings de flota incluidos), `config.json` (ajustes, calendario de flotas, marcas de SRP), el registro de conexión y los avatares son ficheros normales que puede leer cualquiera con acceso a tu usuario de Windows. Si te importa, protege tu cuenta de Windows y cifra el disco (BitLocker).
+
+De serie no se borra nada del historial. En *Preferencias → Privacidad → Historial local* puedes hacer que se borren los mensajes de salas y chats, los pings de flota (aparte) y el calendario de flotas pasados 30, 90, 180 o 365 días; el calendario guarda 90 días de serie. Antes de guardar un plazo más corto, la app te dice cuánto se va a borrar. Los pings marcados para SRP se conservan mientras tengan la marca, y los registros de Pidgin nunca se tocan.
 
 Al desinstalar la app, esta carpeta no se borra, así que conservas el historial. Bórrala a mano para eliminar todos los datos.
 

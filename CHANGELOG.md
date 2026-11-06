@@ -7,6 +7,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **Local history that expires** (*Preferences → Privacy → Local history*): room and chat messages, fleet pings and the fleet calendar can be deleted after 30, 90, 180 or 365 days. Messages and pings default to *Never*, so nothing is deleted unless you choose it; the calendar keeps its 90 days.
+  - Before a shorter limit is saved, the app says how much will be deleted and asks for confirmation. It then prunes once at startup and once a day, only with limits you confirmed.
+  - Pings have their own limit so they are not lost by accident, and pings flagged for SRP are kept while they have the flag. The mentions inbox follows its rooms.
+  - What the server sends again from before the limit (room history, message archive) and pings recovered from Pidgin are not saved again. Pidgin's own logs are never touched.
+  - Safe by design: with *Never* no file is even opened; lines the app does not understand are kept as they are; files are rewritten through a temporary file, so a failure leaves the original intact.
+
 ### Changed
 - **Privacy policy: complete list of network connections.** [PRIVACY.md](PRIVACY.md) now also lists the proxy, says that the Microsoft Store version never checks GitHub, that avatars, rooms and other room servers go only through your own XMPP server, that no fonts or scripts are loaded from the Internet, that the alliance calendar link is never opened and that the .ics export only writes a local file. It also says plainly that only the passwords are encrypted. A new test fails if the code points to a web address that the policy does not list, in English and in Spanish.
 

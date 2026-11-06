@@ -45,6 +45,17 @@ export class Logs {
   constructor(baseDir) {
     this.baseDir = baseDir;
     this.recent = new Map(); // ruta -> Set de claves recientes (deduplicación del historial MUC)
+    // Caducidad (retention.js): (accountId, conv) → fecha de corte o null. Lo más antiguo no se vuelve a guardar.
+    this.cutoffOf = () => null;
+  }
+
+  setRetention(cutoffOf) {
+    this.cutoffOf = typeof cutoffOf === "function" ? cutoffOf : () => null;
+  }
+
+  expired(accountId, conv, ts) {
+    const cut = this.cutoffOf(accountId, conv);
+    return cut != null && ts < cut;
   }
 
   file(accountId, conv) {
@@ -83,6 +94,8 @@ export class Logs {
       ...(entry.kind ? { kind: entry.kind } : {}),
     };
     e.key = Logs.key(e);
+    // Más antiguo que el plazo de caducidad (p. ej. historial de una sala al volver a entrar): no se guarda.
+    if (this.expired(accountId, conv, e.ts)) return null;
     const idx = this.recentIndex(file);
     if (idx.keys.has(e.key)) return null;
     if (entry.delayed && nearDuplicate(idx, e)) return null;
@@ -102,6 +115,8 @@ export class Logs {
     let added = 0;
     // Mismo autor y texto con menos de 2 min de diferencia en otro fichero = copia del historial de la sala.
     for (const entry of [...entries].sort((a, b) => a.ts - b.ts)) {
+      // Lo caducado no se importa (Pidgin, archivo del servidor): volvería a aparecer tras borrarlo.
+      if (this.expired(accountId, conv, entry.ts)) continue;
       const { src, ...e } = entry;
       e.key = Logs.key(e);
       if (idx.keys.has(e.key) || nearDuplicate(idx, e, src)) continue;

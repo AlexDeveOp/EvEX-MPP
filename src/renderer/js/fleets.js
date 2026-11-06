@@ -27,16 +27,34 @@ function store() {
   return S.settings.fleets;
 }
 
+// Cuánto se guardan: Preferencias → Privacidad (settings.retention.fleetsDays; 90 de serie, 0 = nunca se borran).
+export function fleetsKeepMs(days = S.settings?.retention?.fleetsDays) {
+  if (days === 0) return Infinity;
+  return [30, 90, 180, 365].includes(days) ? days * 86400e3 : KEEP_MS;
+}
+
+// Lo que caducaría con ese plazo: [[«items»|«overrides»|«dismissed», clave], …].
+function oldFleetEntries(st, now, keepMs) {
+  if (keepMs === Infinity) return [];
+  const cut = now - keepMs;
+  return [
+    ...Object.entries(st.items).filter(([, f]) => !(f.at >= cut)).map(([id]) => ["items", id]),
+    ...Object.entries(st.overrides).filter(([, o]) => !(o._at >= cut)).map(([id]) => ["overrides", id]),
+    ...Object.entries(st.dismissed).filter(([, ts]) => !(ts >= cut)).map(([k]) => ["dismissed", k]),
+  ];
+}
+
+// Para confirmar antes de acortar el plazo: cuántas cosas guardadas se borrarían.
+export const countOldFleets = (days, now = Date.now()) => oldFleetEntries(store(), now, fleetsKeepMs(days)).length;
+
 let pruned = false;
-// Borra lo viejo una vez por sesión (al primer uso): flotas guardadas, retoques y descartadas de hace más de 90 días.
+// Borra lo viejo una vez por sesión (al primer uso) y al cambiar el plazo: flotas guardadas, retoques y descartadas.
 export function pruneFleets(now = Date.now()) {
   const st = store();
-  let changed = false;
-  for (const [id, f] of Object.entries(st.items)) if (!(f.at >= now - KEEP_MS)) (delete st.items[id], (changed = true));
-  for (const [id, o] of Object.entries(st.overrides)) if (!(o._at >= now - KEEP_MS)) (delete st.overrides[id], (changed = true));
-  for (const [k, ts] of Object.entries(st.dismissed)) if (!(ts >= now - KEEP_MS)) (delete st.dismissed[k], (changed = true));
-  if (changed) saveSettings();
-  return changed;
+  const old = oldFleetEntries(st, now, fleetsKeepMs());
+  for (const [bucket, k] of old) delete st[bucket][k];
+  if (old.length) saveSettings();
+  return old.length > 0;
 }
 function ready() {
   if (!pruned && S.settings) {

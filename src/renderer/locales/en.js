@@ -1487,4 +1487,18 @@ export default {
   // Preferencias → Privacidad (settings/privacy.js)
   "Privacidad": "Privacy",
   "Opciones para que no se vea en pantalla ni salga de tu equipo más de lo necesario.": "Options so that no more than necessary is shown on screen or leaves your PC.",
+  // Caducidad del historial local (settings/retention.js)
+  "{n} días": "{n} days",
+  "{n} mensajes de salas y chats": "{n} room and chat messages",
+  "{n} pings de flota": "{n} fleet pings",
+  "{n} flotas guardadas": "{n} saved fleets",
+  "Borrar historial antiguo": "Delete old history",
+  "Con un plazo de {days} se borrarán ahora {what} de este equipo, y a partir de hoy, cada día, lo que pase de ese plazo. No se puede deshacer.": "With a limit of {days}, {what} will be deleted from this computer now, and from today on, every day, whatever goes past that limit. This cannot be undone.",
+  "Historial antiguo borrado": "Old history deleted",
+  "Historial local": "Local history",
+  "Cuánto tiempo se guarda en este equipo lo que recibes. Lo más antiguo se borra solo, cada día. Los registros de Pidgin nunca se tocan.": "How long what you receive is kept on this computer. Anything older is deleted automatically, every day. Pidgin's logs are never touched.",
+  "Mensajes de salas y chats": "Room and chat messages",
+  "La bandeja de menciones sigue a sus salas.": "The mentions inbox follows its rooms.",
+  "Los pings marcados para SRP no se borran mientras tengan la marca.": "Pings flagged for SRP are not deleted while they keep the flag.",
+  "Calendario de flotas": "Fleet calendar",
 };
