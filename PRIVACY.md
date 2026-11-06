@@ -18,7 +18,11 @@ Everything is stored only on your PC, in `%APPDATA%\EvEX-MPP` (portable version:
 
 By default nothing is deleted from the history. In *Preferences → Privacy → Local history* you can have room and chat messages, fleet pings (separately) and the fleet calendar deleted after 30, 90, 180 or 365 days; the calendar keeps 90 days by default. Before a shorter limit is saved, the app tells you how much will be deleted. Pings flagged for SRP are kept while they have the flag, and Pidgin's logs are never touched.
 
-Uninstalling the app does not delete this folder, so your history is kept. Delete it by hand to remove all data.
+To delete one account and everything the app keeps about it, use *Accounts → Delete with its data…* and type its address to confirm. It deletes its history (also in the *Repair history* backups), its saved passwords and its proxy password, its settings, its SRP marks and calendar fleets (except those from pings another account also has), its lines in the connection log and its own avatar. Contacts' avatars stay, because they are shared between accounts. It does not touch Pidgin's logs, files you saved yourself or anything on the server. It is a normal file deletion, not a secure wipe: on an SSD or with system backups the data may still be recoverable.
+
+If the server starts rejecting an account (password rejected twice in a row, account disabled or credentials expired, which is what happens when access is revoked), the app stops retrying and asks what to do: change the password, stop connecting at startup or delete the local data. It changes nothing without asking.
+
+Uninstalling the app does not delete this folder, so your history is kept. To remove all data, delete the folder by hand.
 
 ## Network connections
 
@@ -78,7 +82,11 @@ Todo se guarda solo en tu PC, en `%APPDATA%\EvEX-MPP` (versión portable: en la 
 
 De serie no se borra nada del historial. En *Preferencias → Privacidad → Historial local* puedes hacer que se borren los mensajes de salas y chats, los pings de flota (aparte) y el calendario de flotas pasados 30, 90, 180 o 365 días; el calendario guarda 90 días de serie. Antes de guardar un plazo más corto, la app te dice cuánto se va a borrar. Los pings marcados para SRP se conservan mientras tengan la marca, y los registros de Pidgin nunca se tocan.
 
-Al desinstalar la app, esta carpeta no se borra, así que conservas el historial. Bórrala a mano para eliminar todos los datos.
+Para borrar una cuenta y todo lo que la app guarda de ella, usa *Cuentas → Borrar con sus datos…* y escribe su dirección para confirmar. Se borra su historial (también el de las copias de *Reparar historial*), sus contraseñas guardadas y la de su proxy, sus ajustes, sus marcas de SRP y flotas del calendario (salvo las de pings que también tenga otra cuenta), sus líneas del registro de conexión y su avatar propio. Los avatares de los contactos se quedan, porque son comunes a todas las cuentas. No se tocan los registros de Pidgin, los archivos que hayas guardado tú ni nada del servidor. Es un borrado normal de ficheros, no un borrado seguro: en un SSD o con copias de seguridad del sistema los datos pueden seguir siendo recuperables.
+
+Si el servidor empieza a rechazar una cuenta (la contraseña dos veces seguidas, o la cuenta desactivada o con las credenciales caducadas, que es lo que pasa cuando te retiran el acceso), la app deja de reintentar y te pregunta qué hacer: cambiar la contraseña, no conectar al iniciar o borrar los datos locales. No cambia nada sin preguntar.
+
+Al desinstalar la app, esta carpeta no se borra, así que conservas el historial. Para eliminar todos los datos, bórrala a mano.
 
 ## Conexiones de red
 

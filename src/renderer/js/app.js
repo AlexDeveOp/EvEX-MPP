@@ -28,6 +28,7 @@ import { playSound, stopPingRepeat } from "./sounds.js";
 import { initDnd } from "./dnd.js";
 import { initFleetExport } from "./fleet-export.js";
 import { initRetentionSettings } from "./settings/retention.js";
+import { showAuthRejected } from "./account-wipe.js";
 
 import { t, locale, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
@@ -155,6 +156,10 @@ function handleEvent(ev) {
 }
 
 const HANDLERS = {
+  // El servidor ha rechazado la cuenta (posible revocación): aviso con opciones, sin cambiar nada solo (account-wipe.js).
+  "auth-rejected"(id, ev) {
+    showAuthRejected(id, ev, { openAccounts });
+  },
   // Qué ofrece el servidor: copias entre clientes (XEP-0280) y archivo de mensajes (XEP-0313).
   "server-info"(id, ev) {
     conn(id).server = { carbons: !!ev.carbons, mam: !!ev.mam };
