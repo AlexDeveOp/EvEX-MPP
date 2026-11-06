@@ -13,6 +13,11 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
   - In the window, ping cards, the fleet calendar, mentions, messages, link previews and the names of rooms, contacts and the account are blurred. A click reveals one; it blurs again after 10 s or when the mouse leaves. The first click on a ping or message only reveals it.
   - The original text is never changed or stored differently: it is only covered when drawn.
   - Optional global shortcut (`Ctrl+Shift+H`, off by default). On Linux/Wayland it goes through the GlobalShortcuts desktop portal; GNOME asks once to add it ("Add Keyboard Shortcuts") and it can be changed in Settings → Apps. As a fallback, `evex-mpp --toggle-capture` toggles the running app without showing it, to bind to a desktop shortcut.
+- **Local history that expires** (*Preferences → Privacy → Local history*): room and chat messages, fleet pings and the fleet calendar can be deleted after 30, 90, 180 or 365 days. Messages and pings default to *Never*, so nothing is deleted unless you choose it; the calendar keeps its 90 days.
+  - Before a shorter limit is saved, the app says how much will be deleted and asks for confirmation. It then prunes once at startup and once a day, only with limits you confirmed.
+  - Pings have their own limit so they are not lost by accident, and pings flagged for SRP are kept while they have the flag. The mentions inbox follows its rooms.
+  - What the server sends again from before the limit (room history, message archive) and pings recovered from Pidgin are not saved again. Pidgin's own logs are never touched.
+  - Safe by design: with *Never* no file is even opened; lines the app does not understand are kept as they are; files are rewritten through a temporary file, so a failure leaves the original intact.
 
 ### Changed
 - **Ping text is shown exactly as received, invisible characters included.** Some alliances mark each copy of a ping with invisible characters; the ping card, the ping pop-up, the formup alert and the calendar's fleet details used to drop them when showing the text, which changed what you see and capture. Now they keep them (only normal spaces are trimmed), and *Copy for SRP* copies the ping as is too. They are still ignored internally to recognise fields, the footer and times, to search, to detect duplicates and to read pings aloud.

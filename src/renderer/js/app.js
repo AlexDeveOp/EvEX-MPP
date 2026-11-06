@@ -27,6 +27,7 @@ import { offerPidginRepair } from "./pidgin-repair.js";
 import { playSound, stopPingRepeat } from "./sounds.js";
 import { initDnd } from "./dnd.js";
 import { initFleetExport } from "./fleet-export.js";
+import { initRetentionSettings } from "./settings/retention.js";
 
 import { t, locale, setLanguagePreference, translateStatic } from "./i18n.js";
 async function boot() {
@@ -94,6 +95,7 @@ async function boot() {
   initMiniFeed();
   initFleetExport();
   previewModeNotice();
+  initRetentionSettings();
   document.getElementById("app").classList.remove("booting");
   setTimeout(() => offerPidginRepair().catch(console.error), 1500);
   // Proxy general con usuario y sin contraseña (Linux sin llavero, tras reiniciar): sin ella, la app no sale a Internet.
