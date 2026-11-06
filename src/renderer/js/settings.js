@@ -8,6 +8,7 @@ import { notificationTabs } from "./settings/notifications.js";
 import { pingTabs } from "./settings/pings.js";
 import { dataTabs } from "./settings/data.js";
 import { networkTabs } from "./settings/network.js";
+import { privacyTabs } from "./settings/privacy.js";
 import { avatarTabs, setAvatarFocus } from "./settings/avatar.js";
 import { aboutTabs } from "./settings/about.js";
 
@@ -24,6 +25,7 @@ const TABS = [
   ["pings", t("Pings de flota"), "siren"],
   ["behavior", t("Comportamiento"), "sliders-horizontal"],
   ["network", t("Red y proxy"), "globe"],
+  ["privacy", t("Privacidad"), "shield"],
   ["data", t("Cuentas y datos"), "database"],
   ["about", t("Acerca de"), "info"],
 ];
@@ -50,4 +52,4 @@ export function openAvatarSettings(accountId) {
   openSettings("avatar");
 }
 
-const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...avatarTabs, ...aboutTabs };
+const RENDER = { ...appearanceTabs, ...backgroundTabs, ...emojiTabs, ...notificationTabs, ...pingTabs, ...dataTabs, ...networkTabs, ...privacyTabs, ...avatarTabs, ...aboutTabs };

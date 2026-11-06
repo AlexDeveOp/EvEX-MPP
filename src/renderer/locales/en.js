@@ -1484,4 +1484,7 @@ export default {
   "Hora de la flota no válida": "Invalid fleet time",
   "Fecha no válida en el calendario": "Invalid date in the calendar",
   "Falta el identificador (UID) de un evento del calendario": "A calendar event is missing its identifier (UID)",
+  // Preferencias → Privacidad (settings/privacy.js)
+  "Privacidad": "Privacy",
+  "Opciones para que no se vea en pantalla ni salga de tu equipo más de lo necesario.": "Options so that no more than necessary is shown on screen or leaves your PC.",
 };
