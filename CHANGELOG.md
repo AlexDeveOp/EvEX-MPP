@@ -7,6 +7,10 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Changed
+- **Link previews load only when you click them** (opsec). Image and YouTube previews used to load as soon as a message was shown, so the website hosting the image saw your IP; anyone could post an image in a room to learn it. *Preferences → Messages → Content → Preview images and YouTube videos* now offers *When clicked* (new default: a box with just the domain, nothing is requested until you click), *Always, when the message is shown* and *Never*. If you had previews turned off they stay off; everyone else moves to *When clicked* and sees a one-time notice explaining how to switch back.
+- **Privacy policy: complete list of network connections.** [PRIVACY.md](PRIVACY.md) now also lists the proxy, says that the Microsoft Store version never checks GitHub, that avatars, rooms and other room servers go only through your own XMPP server, that no fonts or scripts are loaded from the Internet, that the alliance calendar link is never opened and that the .ics export only writes a local file. It also says plainly that only the passwords are encrypted. A new test fails if the code points to a web address that the policy does not list, in English and in Spanish.
+
 ### Fixed
 - **Disconnecting no longer leaves a ping timer running.** If the account was disconnected while it was still finishing logging in (roster, presence), the keep-alive ping timer was created afterwards and never stopped. In the app it ran with nothing to do; in the tests it kept the process alive, which made the CI hang now and then after the reconnection tests.
 - **Closing the app with the network down takes 3 s at most.** Saying goodbye to the server (the "unavailable" presence and closing the stream) now has a single 3 s limit; before, sending the presence could wait forever on a half-dead connection.

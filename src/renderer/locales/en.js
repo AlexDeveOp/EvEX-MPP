@@ -1483,6 +1483,9 @@ export default {
   "Hora de la flota no válida": "Invalid fleet time",
   "Fecha no válida en el calendario": "Invalid date in the calendar",
   "Falta el identificador (UID) de un evento del calendario": "A calendar event is missing its identifier (UID)",
+  // Preferencias → Privacidad (settings/privacy.js)
+  "Privacidad": "Privacy",
+  "Opciones para que no se vea en pantalla ni salga de tu equipo más de lo necesario.": "Options so that no more than necessary is shown on screen or leaves your PC.",
   // Vistas previas al hacer clic (format.js, settings/appearance.js, aviso de app.js)
   "Las vistas previas de imágenes y YouTube ahora se cargan al hacer clic, para que nadie pueda saber tu IP pegando una imagen. Puedes volver a cargarlas solas en Preferencias → Mensajes.": "Image and YouTube previews now load when you click them, so nobody can learn your IP by posting an image. You can make them load on their own again in Preferences → Messages.",
   "Cambiar": "Change",
