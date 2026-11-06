@@ -541,6 +541,31 @@
   justify-content: center;
   font-size: 18px;
 }
+/* «Clic para cargar» (vistas previas en modo «al hacer clic», el de serie): no pide nada a la red hasta pulsarlo. */
+.preview-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(420px, 100%);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+  text-align: left;
+}
+.preview-pending:hover,
+.preview-pending:focus-visible {
+  color: var(--text);
+  border-color: var(--accent);
+  outline: none;
+}
+.preview-pending-icon {
+  flex: none;
+}
 
 .msg-actions {
   position: absolute;
