@@ -48,7 +48,10 @@ const ui = {
   }),
 };
 const bar = el("div", "bar");
-bar.append(el("span", "name", "EvEX-MPP"), ui.pings, ui.mentions, ui.unread);
+// Modo captura: solo los contadores y esta etiqueta (los datos llegan ya sin ping ni flotas).
+ui.capture = el("span", "capture-tag", t("Captura"));
+ui.capture.hidden = true;
+bar.append(el("span", "name", "EvEX-MPP"), ui.capture, ui.pings, ui.mentions, ui.unread);
 const meta = el("div", "meta");
 meta.append(ui.group, ui.ago);
 const body = el("div", "body");
@@ -105,7 +108,8 @@ function update(s) {
   body.title = s.clickThrough ? t("Los clics pasan al juego. Cámbialo en Preferencias → Pings de flota.") : t("Abrir los pings de flota");
   ui.title.hidden = meta.hidden = !s.ping;
   ui.empty.hidden = !!s.ping;
-  ui.empty.textContent = t("Sin pings todavía");
+  ui.capture.hidden = !s.capture;
+  ui.empty.textContent = s.capture ? t("Modo captura: sin detalles") : t("Sin pings todavía");
   if (s.ping) {
     ui.title.textContent = s.ping.title || t("(ping sin título)");
     ui.group.hidden = !s.ping.group;

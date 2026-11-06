@@ -16,6 +16,7 @@ import { topicErrorText, topicChangedText, selfRightsText } from "./room-admin.j
 import { showRecoveredPings } from "./ping-recovery.js";
 import { startFormupWatch } from "./formup.js";
 import { initMiniFeed } from "./mini-feed.js";
+import { initCapture } from "./capture.js";
 import { windowFocused as ttsWindowFocused } from "./tts.js";
 import { openSettings } from "./settings.js";
 import { openAccounts, openPidginImport, connectWithPrompt, openSwitchAccount, promptProxyPassword } from "./accounts.js";
@@ -74,6 +75,7 @@ async function boot() {
   initDnd();
   initOccupants();
   bindTitlebar();
+  initCapture();
   renderWelcome();
   on("accounts", renderWelcome);
   on("imported", renderWelcome);

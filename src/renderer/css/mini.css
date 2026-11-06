@@ -180,3 +180,12 @@ body.through .grip {
 .body {
   overflow: hidden;
 }
+/* Modo captura: etiqueta roja en la barra. */
+.capture-tag {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--danger, #f85149);
+}

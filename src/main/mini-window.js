@@ -15,7 +15,8 @@ import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, wayland
 let win = null;
 let lastState = null;
 let current = { enabled: false, opacity: 0.85, clickThrough: false };
-let options = { preload: "", onClick: () => {}, onShow: () => {}, onChange: () => {} };
+// filter(state) → lo que se manda a la página (p. ej. el modo captura quita el ping y las flotas).
+let options = { preload: "", onClick: () => {}, onShow: () => {}, onChange: () => {}, filter: (s) => s };
 let saveTimer = null;
 let watchingDisplays = false;
 let stopKeepOnTop = () => {};
@@ -143,12 +144,17 @@ export function applyMini(settings) {
   else applyLook();
 }
 
+// Vuelve a mandar los últimos datos (p. ej. al activar o quitar el modo captura, que cambia el filtro).
+export function resendMini() {
+  if (isMiniOpen() && lastState) win.webContents.send("mini-state", options.filter(lastState));
+}
+
 export function miniIpc(handle) {
   handle("mini:update", (state) => {
     lastState = state;
-    if (isMiniOpen()) win.webContents.send("mini-state", state);
+    if (isMiniOpen()) win.webContents.send("mini-state", options.filter(state));
   });
-  handle("mini:get", () => lastState);
+  handle("mini:get", () => options.filter(lastState));
   // Sin marco y sin foco, Windows no da bordes para cambiar el tamaño: la página tiene un asa en la esquina.
   handle("mini:resize", (size) => {
     if (!isMiniOpen() || current.clickThrough) return;

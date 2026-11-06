@@ -168,6 +168,8 @@ export function stopSpeaking() {
 // Ping recién llegado: se lee tras el sonido, si los ajustes lo permiten.
 export function speakPing(m) {
   const cfg = voiceSettings();
+  // Modo captura: la retransmisión también graba el audio, así que el ping no se lee (el sonido sí suena).
+  if (S.settings?.capture?.enabled) return false;
   if (!shouldSpeak(m.body, cfg)) return false;
   const text = pingSpeech(m.body, cfg);
   const id = setTimeout(() => {
