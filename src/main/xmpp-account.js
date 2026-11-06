@@ -90,6 +90,14 @@ const MUC_ERRORS = {
 export const JOIN_TIMEOUT = 30000;
 // Los cambios de presencia en las salas se mandan a la interfaz en lotes cada este tiempo.
 export const OCCUPANT_BATCH_MS = 120;
+// Tiempo máximo para despedirse al desconectar (presencia «unavailable» + cierre del flujo).
+export const DISCONNECT_MS = 3000;
+
+// Espera a una promesa como mucho hasta `deadline` (ms de Date.now()); su rechazo se ignora y el temporizador se quita.
+function withDeadline(promise, deadline) {
+  let timer;
+  return Promise.race([Promise.resolve(promise).catch(() => {}), new Promise((r) => (timer = setTimeout(r, Math.max(0, deadline - Date.now()))))]).finally(() => clearTimeout(timer));
+}
 
 // Reconexión. Cuando se cae la red, el socket muchas veces NO se cierra (Wi-Fi que se va, router que reinicia, NAT
 // que olvida la conexión): sin estas comprobaciones la app se quedaba «conectada» o «conectando» para siempre.
@@ -505,13 +513,14 @@ export class XmppAccount extends EventEmitter {
     this.xmpp = null;
     if (!xmpp) return;
     xmpp.reconnect.stop();
+    // Como mucho 3 s en total para despedirse: con la red caída (socket medio muerto) ni el envío de la presencia
+    // «unavailable» ni el cierre del flujo llegan a terminar, y la app no debe quedarse esperando al cerrar.
+    const deadline = Date.now() + DISCONNECT_MS;
     try {
-      if (xmpp.status === "online") {
-        await xmpp.send(xml("presence", { type: "unavailable" }));
-      }
-      // Si el servidor no contesta, se deja de esperar a los 3 s; el stop() que sigue pendiente puede fallar después
-      // (p. ej. ECONNRESET), y ese rechazo se recoge aquí para que no quede sin capturar.
-      await Promise.race([xmpp.stop().catch(() => {}), new Promise((r) => setTimeout(r, 3000))]);
+      if (xmpp.status === "online") await withDeadline(xmpp.send(xml("presence", { type: "unavailable" })), deadline);
+      // El stop() que sigue pendiente puede fallar después (p. ej. ECONNRESET): ese rechazo se recoge aquí para que no
+      // quede sin capturar.
+      await withDeadline(xmpp.stop(), deadline);
     } catch {}
     xmpp.removeAllListeners();
     // El stop() puede seguir pendiente (servidor que no contesta): si luego llega un error del socket, un emisor sin
@@ -531,12 +540,16 @@ export class XmppAccount extends EventEmitter {
   }
 
   async onOnline(address) {
+    const x = this.xmpp;
     this.ownJid = address.toString();
     this.setState("online");
     this.event("self", { jid: this.ownJid });
 
     await this.fetchRoster().catch((e) => this.event("error", { message: t("Roster: {message}", { message: e.message }) }));
     await this.sendPresence();
+    // Si mientras tanto se desconectó (o empezó otra conexión), no se sigue: el intervalo del ping de abajo quedaría
+    // sin nadie que lo pare (disconnect() ya pasó) y mantendría el proceso vivo para siempre (se colgaba la CI).
+    if (this.xmpp !== x || !this.wantOnline) return;
     this.discoverServer().catch(() => {});
     this.loadOwnAvatar().catch(() => {});
 

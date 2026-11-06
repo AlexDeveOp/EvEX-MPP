@@ -17,7 +17,7 @@
     "demo": "node scripts/demo.mjs",
     "i18n": "node scripts/i18n-check.mjs",
     "check": "node scripts/check.mjs",
-    "test": "node --import ./test/unit/setup.mjs --test \"test/unit/*.test.mjs\" \"test/unit/*.test.js\"",
+    "test": "node --import ./test/unit/setup.mjs --test --test-timeout=120000 \"test/unit/*.test.mjs\" \"test/unit/*.test.js\"",
     "coverage": "node --import ./test/unit/setup.mjs --test --experimental-test-coverage --test-coverage-include=\"src/**\" \"test/unit/*.test.mjs\" \"test/unit/*.test.js\"",
     "lint": "eslint .",
     "assets:emoji": "node scripts/build-anim-emoji.mjs",
