@@ -23,11 +23,21 @@ function profile(t) {
   return { base, logs, file: (conv) => logs.file(ACC.id, conv) };
 }
 const lines = (file) => fs.readFileSync(file, "utf8").split("\n").filter(Boolean);
+// Contenido y fecha de cada fichero. Se abre una sola vez y todo sale del mismo descriptor (sin comprobar la ruta y
+// leerla después: el fichero podría cambiar en medio).
 const snapshot = (dir) => {
   const out = {};
   for (const f of fs.readdirSync(dir, { recursive: true })) {
-    const p = path.join(dir, String(f));
-    if (fs.statSync(p).isFile()) out[String(f)] = { text: fs.readFileSync(p, "utf8"), mtime: fs.statSync(p).mtimeMs };
+    let fd;
+    try {
+      fd = fs.openSync(path.join(dir, String(f)), "r");
+      const st = fs.fstatSync(fd);
+      if (st.isFile()) out[String(f)] = { text: fs.readFileSync(fd, "utf8"), mtime: st.mtimeMs };
+    } catch {
+      // Carpeta (en Windows no se abre como fichero): no cuenta.
+    } finally {
+      if (fd !== undefined) fs.closeSync(fd);
+    }
   }
   return out;
 };
