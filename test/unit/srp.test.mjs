@@ -68,14 +68,13 @@ test("plazo para pedir el SRP: sin plazo, quedan días, menos de un día y venci
   assert.match(late.text, /vencido/);
 });
 
-test("texto para el SRP: el ping sin caracteres invisibles, la hora EVE, el killmail y la nota", () => {
+test("texto para el SRP: el ping tal cual (con sus caracteres invisibles), la hora EVE, el killmail y la nota", () => {
   S.settings.srp = { enabled: true, deadlineDays: 0, marks: {} };
   const a = ping("a", Date.UTC(2026, 10, 2, 12, 5));
   toggleMark(a);
   updateMark("a", { killmail: " https://zkillboard.com/kill/1/ ", note: "Perdí un Typhoon" });
   const text = srpText(a);
-  assert.ok(!text.includes(ZW), "sin caracteres invisibles");
-  assert.ok(text.startsWith("Fleet up\nFC Name: Bob FC"));
+  assert.ok(text.startsWith(`Fleet up${ZW}\nFC Name: Bob FC`), "con su marca invisible, tal cual");
   assert.match(text, /Ping: 2026-11-02 12:05 EVE/);
   assert.match(text, /Killmail: https:\/\/zkillboard\.com\/kill\/1\/$/m);
   assert.match(text, /Nota: Perdí un Typhoon/);
@@ -87,6 +86,15 @@ test("texto para el SRP: el ping sin caracteres invisibles, la hora EVE, el kill
   const all = srpTextAll([a, b, ping("c", 5)]);
   assert.ok(all.indexOf("2026-11-01 09:00") < all.indexOf("2026-11-02 12:05"));
   assert.equal(all.split("----------").length, 2);
+  assert.ok(all.includes(`Fleet up${ZW}`), "«Copiar todos» también tal cual");
+});
+
+test("texto para el SRP: solo se quitan espacios normales; un U+FEFF en el borde se queda", () => {
+  S.settings.srp = { enabled: true, deadlineDays: 0, marks: {} };
+  const BOM = String.fromCharCode(0xfeff);
+  const m = ping("z", Date.UTC(2026, 10, 2, 12, 0), `  ${BOM}Op${ZW} now${BOM}  `);
+  toggleMark(m);
+  assert.ok(srpText(m).startsWith(`${BOM}Op${ZW} now${BOM}\n`));
 });
 
 test("enlace de killmail: vacío o http(s)", () => {
