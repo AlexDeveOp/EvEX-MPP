@@ -10,6 +10,7 @@ import { themeColors } from "./themes.js";
 import { fmtTime, fmtEve, fmtEveDateTime } from "./format.js";
 import { countdownText as baseCountdown } from "./countdown.js";
 import { INVISIBLE, TIME_KEY, parseFormup, parseFleetTime } from "./fleet-time.js";
+import { normDuration } from "./popup-duration.js";
 import { allFleets, fleetsFromPings } from "./fleets.js";
 
 export { parseFormup, parseFleetTime };
@@ -20,13 +21,16 @@ import { t } from "./i18n.js";
 // del ping, separados por comas (vacío = todos). speak: leer el aviso en voz alta con la voz de la lectura de pings.
 export const COUNTDOWN_DEFAULTS = { enabled: true, alert: true, befores: [5], atTime: true, sticky: true, groups: "", speak: false, sound: { preset: "radar", file: "", volume: 1 } };
 export const BEFORE_CHOICES = [5, 10, 15, 30, 60];
+// duration: cuánto se queda el aviso ("sticky", "message" o segundos; ver popup-duration.js). Sin guardar, sale del
+// interruptor viejo «sticky».
 export function countdownSettings(s = S.settings) {
   const c = s?.pingCountdown || {};
   // Hasta la 0.8.0 había un solo «before» (0 = solo a la hora).
   const raw = Array.isArray(c.befores) ? c.befores : c.before !== undefined ? [c.before] : COUNTDOWN_DEFAULTS.befores;
   const befores = [...new Set(raw.map(Number).filter((n) => Number.isInteger(n) && n > 0 && n <= 24 * 60))].sort((a, b) => b - a);
   const { before: _old, ...rest } = c;
-  return { ...COUNTDOWN_DEFAULTS, ...rest, befores, sound: { ...COUNTDOWN_DEFAULTS.sound, ...(c.sound || {}) } };
+  const duration = normDuration(c.duration, c.sticky ?? COUNTDOWN_DEFAULTS.sticky);
+  return { ...COUNTDOWN_DEFAULTS, ...rest, befores, duration, sticky: duration === "sticky", sound: { ...COUNTDOWN_DEFAULTS.sound, ...(c.sound || {}) } };
 }
 
 // Grupos de destino elegidos («all, caps»), en minúsculas. Vacío = todos.
@@ -161,7 +165,8 @@ function notifyFormup({ fleet, at, minutes }, cfg) {
       .slice(0, 6)
       .map((f) => ({ key: f.key, value: clean(f.value).slice(0, 140) })),
     footer: t("Formup a las {time} EVE", { time: fmtEve(at) }),
-    sticky: cfg.sticky,
+    sticky: cfg.duration === "sticky",
+    duration: cfg.duration,
     reminder: true,
     accountId: null,
     conv: "*",

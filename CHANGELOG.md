@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Changed
+- **You choose how long the formup alert and the ping alert stay on screen.** Both have the same option, *How long the alert stays*: *Until closed* (the default, as before), *Like messages* (the message alert duration), 10 s, 30 s, 1 min or 5 min. The formup one is in *Preferences → Fleet pings → Formup countdown*; the ping one in *Preferences → Fleet pings* and *Notifications*. Before, the formup alert could only stay until closed or last like messages, so it stayed on screen while playing. Your current choice is kept: the old "stays until closed" switches become *Until closed* or *Like messages*. Hovering over an alert still pauses it, and clicking closes it.
+
 ### Fixed
 - **Disconnecting no longer leaves a ping timer running.** If the account was disconnected while it was still finishing logging in (roster, presence), the keep-alive ping timer was created afterwards and never stopped. In the app it ran with nothing to do; in the tests it kept the process alive, which made the CI hang now and then after the reconnection tests.
 - **Closing the app with the network down takes 3 s at most.** Saying goodbye to the server (the "unavailable" presence and closing the stream) now has a single 3 s limit; before, sending the presence could wait forever on a half-dead connection.
