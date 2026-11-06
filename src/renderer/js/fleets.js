@@ -12,6 +12,7 @@ import { S, saveSettings, on } from "./state.js";
 import { pingsConv } from "./convs.js";
 import { parsePing } from "./pings.js";
 import { parseFormup, INVISIBLE, TIME_KEY } from "./fleet-time.js";
+import { trimSpaces } from "./invisible.js";
 import { t } from "./i18n.js";
 
 export const SAME_OP_MS = 15 * 60e3;
@@ -190,7 +191,7 @@ export function fleetDetails(fleet) {
     if (i <= 0) continue;
     const k = line.slice(0, i).replace(INVISIBLE, "").trim();
     if (!k || TIME_KEY.test(k)) continue;
-    for (const [name, re] of Object.entries(DETAIL_KEYS)) if (!out[name] && re.test(k)) out[name] = line.slice(i + 1).trim();
+    for (const [name, re] of Object.entries(DETAIL_KEYS)) if (!out[name] && re.test(k)) out[name] = trimSpaces(line.slice(i + 1));
   }
   return out;
 }

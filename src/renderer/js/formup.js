@@ -10,6 +10,7 @@ import { themeColors } from "./themes.js";
 import { fmtTime, fmtEve, fmtEveDateTime } from "./format.js";
 import { countdownText as baseCountdown } from "./countdown.js";
 import { INVISIBLE, TIME_KEY, parseFormup, parseFleetTime } from "./fleet-time.js";
+import { trimSpaces, cutChars } from "./invisible.js";
 import { allFleets, fleetsFromPings } from "./fleets.js";
 
 export { parseFormup, parseFleetTime };
@@ -145,6 +146,7 @@ export function alertContent(fleet) {
 
 function notifyFormup({ fleet, at, minutes }, cfg) {
   const p = alertContent(fleet);
+  // Para la voz, sin invisibles; lo que se ve en el aviso va tal cual (con sus marcas de agua), solo sin espacios.
   const clean = (s) => String(s || "").replace(INVISIBLE, "").trim();
   playRuleSound({ id: "formup", sound: cfg.sound, dnd: true }, "ping");
   if (cfg.speak && speechAvailable()) {
@@ -155,11 +157,11 @@ function notifyFormup({ fleet, at, minutes }, cfg) {
   api("notify", {
     kind: "ping",
     title: minutes ? t("Formup en {n} min", { n: minutes }) : t("¡Hora del formup!"),
-    text: clean(p.title).slice(0, 120),
+    text: cutChars(trimSpaces(p.title), 120),
     fields: p.fields
       .filter((f) => !TIME_KEY.test(f.key.trim()))
       .slice(0, 6)
-      .map((f) => ({ key: f.key, value: clean(f.value).slice(0, 140) })),
+      .map((f) => ({ key: f.key, value: cutChars(trimSpaces(f.value), 140) })),
     footer: t("Formup a las {time} EVE", { time: fmtEve(at) }),
     sticky: cfg.sticky,
     reminder: true,

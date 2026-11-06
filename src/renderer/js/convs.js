@@ -2,6 +2,7 @@
 import { S, api, emit, convKey, account, roomState, displayName, saveSettings, PINGS_KEY, MENTIONS_KEY, conn } from "./state.js";
 import { mentionsConv, loadMentions, addMention, markMentionsSeen, markRoomMentionsSeen } from "./mentions.js";
 import { considerRoomMessage } from "./fleet-suggest.js";
+import { trimSpaces, hasVisible, cutChars } from "./invisible.js";
 import { mentionRegex, fmtTime, fmtEve } from "./format.js";
 import { playSound, playRuleSound, startPingRepeat } from "./sounds.js";
 import { matchRule, ruleLabel } from "./keywords.js";
@@ -241,8 +242,6 @@ function popupTime(ts, seconds) {
   return local || eve ? { local, eve } : null;
 }
 
-const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
-
 // Nivel de aviso de una sala o un chat: "all", "mentions" o "none" (notify-rules.js). Se elige por conversación en
 // roomModes (clave de la conversación; vale también para los chats privados) o, en las salas, en su marcador.
 export function notifyMode(c) {
@@ -418,14 +417,15 @@ function notifyPing(m, rule) {
   else playSound("ping");
   startPingRepeat();
   // La burbuja muestra el ping ya desglosado: título, campos (FC, formup, doctrina…) y quién lo envía.
+  // El texto va tal cual, con sus caracteres invisibles (marcas de agua de algunas alianzas): solo se quitan espacios.
   const p = parsePing(m.body);
-  const clean = (s) => s.replace(INVISIBLE, "").trim();
+  const title = trimSpaces(p.title);
   api("notify", {
     ...ruleExtras(rule),
     kind: "ping",
-    title: clean(p.title).slice(0, 120) || t("Ping de flota"),
-    text: p.fields.length ? clean(p.extra.join("\n")).slice(0, 300) : clean(m.body).slice(0, 400),
-    fields: p.fields.slice(0, 8).map((f) => ({ key: f.key, value: clean(f.value).slice(0, 140) })),
+    title: hasVisible(title) ? cutChars(title, 120) : t("Ping de flota"),
+    text: p.fields.length ? cutChars(trimSpaces(p.extra.join("\n")), 300) : cutChars(trimSpaces(m.body), 400),
+    fields: p.fields.slice(0, 8).map((f) => ({ key: f.key, value: cutChars(trimSpaces(f.value), 140) })),
     footer: p.footer ? t("de {from} → {to}", { from: p.footer.from, to: p.footer.to }) : m.nick,
     accountId: null,
     conv: "*",
