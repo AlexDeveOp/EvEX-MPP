@@ -151,7 +151,8 @@ function notifyFormup({ fleet, at, minutes }, cfg) {
   playRuleSound({ id: "formup", sound: cfg.sound, dnd: true }, "ping");
   if (cfg.speak && speechAvailable()) {
     const voice = voiceSettings();
-    if (voice.dnd || !dndState(S.settings.notifications).active) setTimeout(() => speak(reminderSpeech(minutes, clean(p.title)), { ...voice, repeat: 1 }), 1500);
+    // En modo captura no se lee (la retransmisión graba el audio); la burbuja ya va sin detalles.
+    if (!S.settings.capture?.enabled && (voice.dnd || !dndState(S.settings.notifications).active)) setTimeout(() => speak(reminderSpeech(minutes, clean(p.title)), { ...voice, repeat: 1 }), 1500);
   }
   const c = themeColors();
   api("notify", {

@@ -14,10 +14,10 @@ const CHANNELS = [
   "pidgin:scan", "pidgin:import", "pidgin:repairLogs", "pidgin:repairStatus", "pidgin:repairOffered", "sounds:pidginScan", "sounds:pidginImport", "gifs:search", "gifs:save", "gifs:remove",
   "file:pick", "image:importPath", "image:importBytes", "image:importUrl", "emoji:import", "theme:export", "fleets:saveIcs", "theme:import", "avatar:publish", "avatar:remove", "fonts:list",
   "notify", "notify:test", "popup:get", "popup:size", "popup:click", "popup:close", "popup:hover",
-  "popup:displays", "popup:test", "mini:update",
+  "popup:displays", "popup:test", "mini:update", "capture:toggle", "capture:set",
   "window:unread", "dnd:state", "window:minimize", "window:maximize", "window:close", "window:focus", "shell:open", "shell:openUserData", "updates:check", "pings:sync", "app:quit",
 ];
-const EVENTS = ["xmpp", "accounts", "nav", "window-focus", "window-maximized", "import-progress", "switch-account", "popup-close", "update-available", "gif-save", "pings-recovered", "dnd-toggle", "mini-changed"];
+const EVENTS = ["xmpp", "accounts", "nav", "window-focus", "window-maximized", "import-progress", "switch-account", "popup-close", "update-available", "gif-save", "pings-recovered", "dnd-toggle", "mini-changed", "capture-changed"];
 
 contextBridge.exposeInMainWorld("evex", {
   // Ruta de un archivo arrastrado desde el Explorador (para importarlo como imagen de fondo).

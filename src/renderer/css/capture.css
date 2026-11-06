@@ -1,0 +1,52 @@
+/* Modo captura (renderer/js/capture.js): se difuminan los pings, los mensajes y los nombres de salas, contactos y
+   cuenta. Un clic destapa uno (.capture-revealed) durante 10 s. El texto no cambia: solo se tapa al pintarlo.
+   Las listas de selectores son las mismas que CONTENT_SEL y NAMES_SEL de capture.js. */
+body.capture-mode :is(.ping-card, .fleet-row, .fleet-pill, .mention-card, .msg-body, .link-preview, .occ-item),
+body.capture-mode :is(.sb-name, .tab-title, .conv-title h1, .conv-sub, .account-name, .status-text, .msg-nick, .switcher-item .sw-label) {
+  filter: blur(7px);
+  user-select: none;
+  transition: filter 0.15s;
+}
+/* Los nombres, algo menos: se distingue que hay una sala, pero no cuál. */
+body.capture-mode :is(.sb-name, .tab-title, .conv-title h1, .conv-sub, .account-name, .status-text, .msg-nick, .switcher-item .sw-label) {
+  filter: blur(5px);
+}
+body.capture-mode .capture-revealed {
+  filter: none !important;
+  user-select: text;
+}
+/* El primer clic sobre una tarjeta o un mensaje solo lo destapa: se nota en el cursor. */
+body.capture-mode :is(.ping-card, .fleet-row, .fleet-pill, .mention-card, .msg-body, .link-preview, .occ-item):not(.capture-revealed) {
+  cursor: zoom-in;
+}
+
+/* Pastilla «● Captura» en la barra de título, al lado del reloj EVE: siempre visible con el modo activo. */
+.tb-capture {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  margin-right: 6px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.tb-capture[hidden] {
+  display: none;
+}
+.tb-capture .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+.capture-shortcut-note:empty {
+  display: none;
+}

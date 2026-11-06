@@ -93,6 +93,13 @@ export function buildTrayMenu() {
       checked: !!options.miniOpen?.(),
       click: () => options.toggleMini?.(),
     },
+    {
+      // Modo captura: avisos sin detalles y ventana difuminada (para compartir pantalla o retransmitir).
+      label: t("Modo captura"),
+      type: "checkbox",
+      checked: !!options.captureOn?.(),
+      click: () => options.toggleCapture?.(),
+    },
     { type: "separator" },
     {
       label: t("Salir"),

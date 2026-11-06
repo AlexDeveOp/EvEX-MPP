@@ -7,6 +7,13 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **Capture mode** for sharing your screen or streaming (*Preferences → Privacy*, new tab; also from the tray, with `Ctrl+Shift+H`, or with the red "● Capture" pill next to the EVE clock, which shows while it is on).
+  - Outside the window nothing about the operation is shown: popups and system notifications only say "New fleet ping" or "New message" (no title, fields, sender, room, account or time), the mini window only shows the counters, and pings are not read aloud.
+  - In the window, ping cards, the fleet calendar, mentions, messages, link previews and the names of rooms, contacts and the account are blurred. A click reveals one; it blurs again after 10 s or when the mouse leaves. The first click on a ping or message only reveals it.
+  - The original text is never changed or stored differently: it is only covered when drawn.
+  - Optional global shortcut (`Ctrl+Shift+H`, off by default). On Linux/Wayland it goes through the GlobalShortcuts desktop portal; GNOME asks once to add it ("Add Keyboard Shortcuts") and it can be changed in Settings → Apps. As a fallback, `evex-mpp --toggle-capture` toggles the running app without showing it, to bind to a desktop shortcut.
+
 ### Changed
 - **Ping text is shown exactly as received, invisible characters included.** Some alliances mark each copy of a ping with invisible characters; the ping card, the ping pop-up, the formup alert and the calendar's fleet details used to drop them when showing the text, which changed what you see and capture. Now they keep them (only normal spaces are trimmed). They are still ignored internally to recognise fields, the footer and times, to search, to detect duplicates and to read pings aloud.
 - **Privacy policy: complete list of network connections.** [PRIVACY.md](PRIVACY.md) now also lists the proxy, says that the Microsoft Store version never checks GitHub, that avatars, rooms and other room servers go only through your own XMPP server, that no fonts or scripts are loaded from the Internet, that the alliance calendar link is never opened and that the .ics export only writes a local file. It also says plainly that only the passwords are encrypted. A new test fails if the code points to a web address that the policy does not list, in English and in Spanish.
