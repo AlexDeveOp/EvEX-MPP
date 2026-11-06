@@ -1,7 +1,7 @@
 // Vista de conversación: pestañas, cabecera, lista de mensajes, compositor y comandos.
 import { S, api, on, emit, account, roomState, contact, bestPresence, avatarUrl, nickColor, initials, updateSettings, saveRooms, conn, SHOW_LABEL, PINGS_KEY } from "./state.js";
 import { h, icon, iconButton, $, clear, showMenu, menuFor, toast, prompt, esc, debounce, rafThrottle } from "./dom.js";
-import { formatBody, previewHtml, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes } from "./format.js";
+import { formatBody, previewHtml, previewMode, loadPendingPreview, fmtTime, fmtDay, fmtDateTime, fmtEve, fmtTimes } from "./format.js";
 import { openPicker, shortcodeSuggestions, emojifyHtml } from "./emoji.js";
 import { playSound } from "./sounds.js";
 import { openGifPicker } from "./gifs.js";
@@ -960,7 +960,12 @@ function messageEl(c, m, cont) {
   );
   const previews = [...fb.previews];
   if (m.oob && !previews.some((x) => x.url === m.oob)) previews.push({ type: /\.(png|jpe?g|gif|webp)$/i.test(m.oob) ? "image" : "link", url: m.oob });
-  const prevEl = previews.length && S.settings.behavior.linkPreviews ? h("div", { class: "msg-previews", html: previews.map(previewHtml).join("") }) : null;
+  // Vistas previas: en «al hacer clic» (por defecto) solo un recuadro, y la imagen se pide al pulsarlo.
+  const mode = previewMode();
+  const prevEl =
+    previews.length && mode !== "off"
+      ? h("div", { class: "msg-previews", html: previews.map((p) => previewHtml(p, { pending: mode === "click" })).join(""), onclick: (e) => loadPendingPreview(e.target) && e.preventDefault() })
+      : null;
 
   return h(
     "div",

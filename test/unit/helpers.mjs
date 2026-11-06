@@ -11,7 +11,7 @@ export const TEST_SETTINGS = {
   customEmoji: [],
   showSeconds: false,
   timeFormat: "24",
-  behavior: { linkPreviews: true },
+  behavior: { linkPreviewMode: "auto" },
 };
 
 export function tempDir(t, prefix = "evex-test-") {

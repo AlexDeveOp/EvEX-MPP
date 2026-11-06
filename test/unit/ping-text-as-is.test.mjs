@@ -106,3 +106,13 @@ test("el aviso del formup y los datos de la flota llevan el texto tal cual", asy
   assert.equal(n.text, `Sub${ZW}cap fleet`);
   assert.ok(n.fields.some((f) => f.value === `Fer${ZW}ox${BOM}`), JSON.stringify(n.fields));
 });
+
+test("al pintar un campo, el espacio de detrás de los invisibles iniciales no deja hueco; el valor guardado no cambia", async () => {
+  const { spaceAfterLeadingInvisible } = await import("../../src/renderer/js/invisible.js");
+  assert.equal(spaceAfterLeadingInvisible(`${ZW}${ZNJ} Bob`), `${ZW}${ZNJ}Bob`);
+  assert.equal(spaceAfterLeadingInvisible(`${ZW}Bob ${ZW} FC`), `${ZW}Bob ${ZW} FC`, "solo al principio");
+  assert.equal(spaceAfterLeadingInvisible(" Bob"), " Bob", "sin invisibles delante, nada");
+  assert.equal(spaceAfterLeadingInvisible(`${BOM}\tBob`), `${BOM}Bob`);
+  const p = parsePing([`Op`, `FC Name:${ZW} Bob`].join(NL));
+  assert.equal(p.fields[0].value, `${ZW} Bob`, "lo guardado sigue tal cual");
+});

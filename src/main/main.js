@@ -1,5 +1,5 @@
 // Proceso principal de EvEX-MPP: ventanas, bandeja, protocolos internos, IPC y conexiones XMPP.
-import { app, BrowserWindow, ipcMain, protocol, net, shell, Menu, nativeImage, Notification, powerMonitor, session, clipboard } from "electron";
+import { app, BrowserWindow, ipcMain, protocol, net, shell, Menu, nativeImage, Notification, powerMonitor, session, clipboard, globalShortcut } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
@@ -10,7 +10,8 @@ import { XmppAccount } from "./xmpp-account.js";
 import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
-import { configureMini, applyMini, miniIpc, isMiniOpen, miniOnTop } from "./mini-window.js";
+import { configureMini, applyMini, miniIpc, isMiniOpen, miniOnTop, resendMini } from "./mini-window.js";
+import { captureNotification, captureMiniState, keepCapture } from "./capture.js";
 import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
@@ -44,6 +45,9 @@ if (!app.requestSingleInstanceLock()) app.quit();
 const connLog = createConnLog(path.join(userData(), "connection.log"));
 // Linux: Chromium solo usa las voces del sistema (speech-dispatcher) para «Leer en voz alta» si se le pide al arrancar.
 if (process.platform === "linux") app.commandLine.appendSwitch("enable-speech-dispatcher");
+// Atajo global del modo captura en Wayland: Chromium lo pide al portal GlobalShortcuts de xdg-desktop-portal (si el
+// escritorio no lo tiene, se usa la orden «evex-mpp --toggle-capture»; ver Preferencias → Privacidad).
+if (process.platform === "linux") app.commandLine.appendSwitch("enable-features", "GlobalShortcutsPortal");
 
 // Electron en Linux solo pide a logind el aviso de apagado (el que permite cerrar bien, ver «shutdown» más abajo) si
 // «shutdown» no es el primer oyente de powerMonitor: comprobado en Electron 45 con systemd-inhibit. Este oyente vacío,
@@ -621,7 +625,8 @@ function registerIpc() {
   handle("settings:set", async (settings) => {
     const before = currentLang();
     const proxyBefore = JSON.stringify(store.get().settings.proxy);
-    const s = store.setSettings(settings);
+    // El modo captura lo lleva el proceso principal: la copia de la ventana no lo deshace (ver keepCapture).
+    const s = store.setSettings(keepCapture(settings, store.get().settings));
     if (JSON.stringify(s.proxy) !== proxyBefore) {
       await applyGlobalProxy();
       reconnectWithNewProxy((acc) => acc.proxy?.mode === "global");
@@ -775,6 +780,8 @@ function registerIpc() {
 
   // Burbuja propia, notificación de Windows o ambas, según Preferencias → Notificaciones.
   handle("notify", (data) => {
+    // Modo captura: el aviso va sin contenido (ni texto del ping, ni formup, ni sala, ni cuenta, ni hora).
+    if (captureOn()) data = captureNotification(data);
     const n = store.get().settings.notifications;
     const style = n.popupStyle || "custom";
     if (style === "custom" || style === "both") showPopup(data);
@@ -797,6 +804,8 @@ function registerIpc() {
   });
 
   handle("window:unread", (count, pings) => setUnread(count, pings));
+  handle("capture:toggle", () => setCapture({ enabled: !captureOn() }));
+  handle("capture:set", (patch) => setCapture(patch));
   handle("dnd:state", (state) => setTrayDnd(state));
   // Botones propios de la ventana (la barra de título la dibuja la app). Cerrar pasa por win.on("close"):
   // con «cerrar a la bandeja» activado, la ventana solo se oculta.
@@ -842,6 +851,41 @@ function toggleMiniWindow() {
   send("mini-changed", s.mini);
 }
 
+// ---------- modo captura (src/main/capture.js, renderer/js/capture.js) ----------
+// El estado está en settings.capture y lo cambia el proceso principal: así vale también desde la bandeja, el atajo
+// global o la orden «--toggle-capture», aunque la ventana principal no esté abierta. Se avisa con «capture-changed».
+const CAPTURE_ACCELERATOR = "CommandOrControl+Shift+H";
+const captureOn = () => !!store.get().settings.capture?.enabled;
+let captureShortcut = { requested: false, registered: false, portal: false };
+
+function applyCaptureShortcut(s) {
+  const want = !!s.capture?.globalShortcut;
+  if (captureShortcut.registered) globalShortcut.unregister(CAPTURE_ACCELERATOR);
+  captureShortcut = { requested: want, registered: false, portal: false };
+  if (!want) return captureShortcut;
+  try {
+    captureShortcut.registered = globalShortcut.register(CAPTURE_ACCELERATOR, () => setCapture({ enabled: !captureOn() }));
+  } catch {
+    captureShortcut.registered = false;
+  }
+  captureShortcut.portal = captureShortcut.registered && process.platform === "linux" && !!process.env.WAYLAND_DISPLAY;
+  return captureShortcut;
+}
+
+function setCapture(patch = {}) {
+  const s = store.get().settings;
+  const before = s.capture || {};
+  s.capture = { ...before, ...Object.fromEntries(["enabled", "globalShortcut"].filter((k) => k in patch).map((k) => [k, !!patch[k]])) };
+  store.save();
+  if (s.capture.globalShortcut !== !!before.globalShortcut) applyCaptureShortcut(s);
+  if (s.capture.enabled !== !!before.enabled) {
+    resendMini();
+    refreshTrayMenu();
+  }
+  send("capture-changed", s.capture);
+  return { capture: s.capture, shortcut: captureShortcut };
+}
+
 // Si la ventana se acaba de crear (estaba cerrada), la página aún no escucha: el destino se manda al estar lista.
 let pendingNav = null;
 function openFromNotification(data) {
@@ -866,7 +910,7 @@ function applySystemSettings(s) {
   scheduleUpdateChecks(!STORE && !!s.behavior.checkUpdates);
   configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingDuration: s.notifications.pingDuration, pingSticky: s.notifications.pingSticky, display: s.notifications.popupDisplay, displayHint: s.notifications.popupDisplayHint, getWin: () => win, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
   // Mini ventana para jugar: al abrirla o cerrarla, la casilla de la bandeja cambia.
-  configureMini({ preload: path.join(ROOT, "src", "preload-mini.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: refreshTrayMenu });
+  configureMini({ preload: path.join(ROOT, "src", "preload-mini.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: refreshTrayMenu, filter: (st) => (captureOn() ? captureMiniState(st) : st) });
   applyMini(s);
   refreshTray();
   try {
@@ -917,7 +961,12 @@ function runRetention(why) {
 
 // ---------- arranque ----------
 
-app.on("second-instance", showWindow);
+// Otra instancia (doble clic, acceso directo…) trae la ventana. Con «--toggle-capture» solo cambia el modo captura, sin
+// mostrar nada: es la orden para asignar a un atajo del escritorio donde el atajo global no funciona (Wayland).
+app.on("second-instance", (_e, argv) => {
+  if (argv.includes("--toggle-capture")) setCapture({ enabled: !captureOn() });
+  else showWindow();
+});
 
 app.whenReady().then(async () => {
   store.load();
@@ -962,11 +1011,15 @@ app.whenReady().then(async () => {
     send,
     miniOpen: isMiniOpen,
     toggleMini: toggleMiniWindow,
+    captureOn,
+    toggleCapture: () => setCapture({ enabled: !captureOn() }),
     quit: () => {
       quitting = true;
       app.quit();
     },
   });
+  applyCaptureShortcut(store.get().settings);
+  if (process.argv.includes("--toggle-capture")) setCapture({ enabled: !captureOn() });
   startIdleWatcher();
   // Linux y macOS: al apagar o reiniciar, cerrar bien antes de que se cierre el escritorio. En Wayland, si el
   // compositor desaparece antes que la app, Chromium se cierra de golpe (SIGTRAP) y Ubuntu muestra «se ha cerrado
@@ -989,6 +1042,7 @@ app.on("before-quit", () => {
 
 app.on("will-quit", (e) => {
   bridge?.close();
+  globalShortcut.unregisterAll();
   if (accounts.size && !app.__disconnected) {
     e.preventDefault();
     app.__disconnected = true;

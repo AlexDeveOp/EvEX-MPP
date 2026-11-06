@@ -106,12 +106,16 @@ export const DEFAULT_SETTINGS = {
   fleetIcs: { details: false, includeLink: false, alarm: 0 },
   // Mini ventana para jugar (src/main/mini-window.js). La posición se guarda aparte, por monitor.
   mini: { enabled: false, opacity: 0.85, clickThrough: false },
+  // Modo captura (src/main/capture.js): avisos sin detalles y ventana difuminada. globalShortcut: Ctrl+Shift+H global.
+  capture: { enabled: false, globalShortcut: false },
   behavior: {
     enterToSend: true,
     sendTyping: true,
     showJoinLeave: false,
     mucHistory: 50,
-    linkPreviews: true,
+    // Vistas previas de imágenes y YouTube: "click" (se cargan al pulsar), "auto" (al mostrar el mensaje; la web que aloja
+    // la imagen ve tu IP) u "off". Antes era linkPreviews: true/false (ver migrateLinkPreviews).
+    linkPreviewMode: "click",
     spellcheck: true,
     checkUpdates: false, // consultar en GitHub si hay versión nueva (solo avisa)
     spellLanguages: ["es-ES", "en-US"],
@@ -157,13 +161,31 @@ function deepMerge(base, extra) {
   return out;
 }
 
+// Avisos de una sola vez pendientes de enseñar (la ventana los quita al mostrarlos).
+DEFAULT_SETTINGS.notices = {};
+
+// 0.11: las vistas previas pasan a «al hacer clic» por defecto (opsec: una imagen pegada en una sala no debe poder
+// saber tu IP sin que la pulses). config.json se guarda entero, así que linkPreviews: true no dice si se eligió a mano:
+// quien las tenía apagadas sigue sin ellas («off»); a los demás se les ponen «al hacer clic» y se les avisa una vez.
+export function migrateLinkPreviews(raw = {}) {
+  const b = raw.behavior;
+  if (!b || "linkPreviewMode" in b || !("linkPreviews" in b)) return raw;
+  const { linkPreviews, ...behavior } = b;
+  const off = linkPreviews === false;
+  return {
+    ...raw,
+    behavior: { ...behavior, linkPreviewMode: off ? "off" : "click" },
+    notices: { ...(raw.notices || {}), ...(off ? {} : { linkPreviewClick: true }) },
+  };
+}
+
 let config = null;
 
 export function load() {
   const raw = readJson(configFile(), {});
   config = {
     accounts: raw.accounts || [],
-    settings: deepMerge(DEFAULT_SETTINGS, raw.settings || {}),
+    settings: deepMerge(DEFAULT_SETTINGS, migrateLinkPreviews(raw.settings || {})),
     imported: raw.imported || {},
   };
   return config;
