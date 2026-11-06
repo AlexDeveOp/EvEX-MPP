@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Fixed
+- The "Invalid fleet time" error, and the two calendar export errors (invalid date, event without a UID), now follow the interface language instead of always showing in Spanish. They only appear with broken fleet data.
+
 ## [0.10.0] - 2026-11-05
 
 ### Added
