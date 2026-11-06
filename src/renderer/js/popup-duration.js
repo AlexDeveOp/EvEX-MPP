@@ -1,5 +1,6 @@
-// Cuánto se queda en pantalla un aviso (la burbuja de un ping o el aviso antes del formup). Lo comparten el proceso
-// principal (popups.js) y Preferencias; sin dependencias.
+// Cuánto se queda en pantalla un aviso (la burbuja de un ping o el aviso antes del formup).
+// OJO: lo importan los DOS lados, el proceso principal (src/main/popups.js) y la interfaz (Preferencias). Tiene que
+// seguir siendo puro: no puede importar nada (ni del DOM, ni de electron, ni otros módulos de la interfaz).
 // Valores: "sticky" (hasta cerrarlo), "message" (la duración de los avisos de mensajes) o segundos.
 export const DURATION_CHOICES = ["sticky", "message", 10, 30, 60, 300];
 const SECONDS = new Set([10, 30, 60, 300]);
