@@ -4,9 +4,17 @@
 
 Cliente XMPP (Jabber) de escritorio para Windows y Linux, pensado para comunidades y alianzas de EVE Online que se coordinan por Jabber. Es una alternativa moderna y muy personalizable a Pidgin: salas con autounión, pings de flota en tarjetas, avisos emergentes siempre visibles, hora EVE y temas. La interfaz está en español e inglés.
 
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6) ![Linux](https://img.shields.io/badge/Linux-AppImage%20%7C%20.deb-fcc624)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6) ![Linux](https://img.shields.io/badge/Linux-AppImage%20%7C%20.deb-fcc624) [![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-EvEX--MPP-0078d6)](https://apps.microsoft.com/detail/9P8R73JP3XTD)
 
 ## Descargar e instalar
+
+### Microsoft Store (Windows 10/11)
+
+<a href="https://apps.microsoft.com/detail/9P8R73JP3XTD?mode=direct"><img src="https://get.microsoft.com/images/es%20dark.svg" width="200" alt="Obtener de Microsoft"></a>
+
+Es lo más sencillo en Windows: la versión de la Store va firmada por Microsoft, así que SmartScreen no avisa, y la Store la mantiene actualizada. Es la misma app; solo que nunca busca versiones nuevas en GitHub, y el inicio con Windows se gestiona en *Aplicaciones de inicio* de Windows.
+
+### Instalador y portable
 
 En [Releases](../../releases) hay dos ejecutables:
 
@@ -171,7 +179,7 @@ Si usas Pidgin a la vez, los pings se entregan al cliente con **mayor prioridad*
 
 ## Política de firma de código (Code signing policy)
 
-**Los ejecutables aún no están firmados.** Solicitamos la firma de código gratuita que [SignPath Foundation](https://signpath.org) ofrece a proyectos de código abierto. La solicitud se denegó porque el proyecto todavía es nuevo y aún no tiene suficiente tracción pública (estrellas, forks, contribuidores y menciones externas); no fue un juicio sobre el código. La volveremos a solicitar cuando la app tenga más tracción y, mientras tanto, estamos explorando otras opciones, como la Microsoft Store. Hasta entonces, verifica la descarga como se explica en [Cómo verificar la descarga](#cómo-verificar-la-descarga).
+**Los ejecutables aún no están firmados.** Solicitamos la firma de código gratuita que [SignPath Foundation](https://signpath.org) ofrece a proyectos de código abierto. La solicitud se denegó porque el proyecto todavía es nuevo y aún no tiene suficiente tracción pública (estrellas, forks, contribuidores y menciones externas); no fue un juicio sobre el código. La volveremos a solicitar cuando la app tenga más tracción y, mientras tanto, la [versión de la Microsoft Store](#microsoft-store-windows-1011) va firmada por Microsoft. Para los ejecutables de Releases, verifica la descarga como se explica en [Cómo verificar la descarga](#cómo-verificar-la-descarga).
 
 Lo que ya se cumple en todas las versiones:
 
