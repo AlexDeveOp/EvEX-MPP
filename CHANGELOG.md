@@ -7,6 +7,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-06
+
 ### Added
 - **Capture mode** for sharing your screen or streaming (*Preferences → Privacy*, new tab; also from the tray, with `Ctrl+Shift+H`, or with the red "● Capture" pill next to the EVE clock, which shows while it is on).
   - Outside the window nothing about the operation is shown: popups and system notifications only say "New fleet ping" or "New message" (no title, fields, sender, room, account or time), the mini window only shows the counters, and pings are not read aloud.
@@ -392,7 +394,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.7.0...v0.8.0
