@@ -57,7 +57,7 @@ export const aboutTabs = {
         link("file-text", t("Licencia (MIT)"), blob("LICENSE")),
         link("file-text", t("Componentes de terceros"), blob("THIRD_PARTY_NOTICES.md"), t("Fuentes, iconos y emojis que incluye la app")),
       ),
-      h("p", { class: "muted small" }, t("EVE Online es una marca de CCP hf. EvEX-MPP no está afiliado a CCP Games.")),
+      h("p", { class: "muted small" }, t("EVE Online es una marca de Fenris Creations (antes CCP Games). EvEX-MPP no está afiliado a Fenris Creations.")),
     );
   },
 };
