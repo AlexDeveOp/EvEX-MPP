@@ -7,8 +7,10 @@ import { parseFormup, countdownText, countdownSettings, watchCountdowns } from "
 
 import { t } from "./i18n.js";
 import { srpEnabled, isMarked, flagButton, deadlineChip, srpPanel, statusChip } from "./srp.js";
-const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
-const FIELD_RE = /^([A-Za-z][\w ./()'&-]{1,32}?)\s*:[\s\u200B-\u200D\u2060\uFEFF]*(.+)$/;
+import { INVISIBLE, trimSpaces, withoutInvisible, removeCleanRange } from "./invisible.js";
+// \u00ABClave: valor\u00BB. El valor va tal cual, con sus caracteres invisibles (marcas de agua): solo se quitan los espacios de
+// despu\u00E9s de los dos puntos.
+const FIELD_RE = /^([A-Za-z][\w ./()'&-]{1,32}?)\s*:[ \t]*(.+)$/;
 // p. ej. "~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00 EVE ~~~"
 const FOOTER_RE = /~~~\s*This was an?\s+(?:[\w-]+\s+)?(?:broadcast|ping)\s+from\s+(\S+)\s+to\s+(\S+)\s+at\s+(.+?)\s*~~~/i;
 
@@ -31,28 +33,31 @@ function parsePingNow(body) {
   const free = [];
   let fieldsAt = -1; // posición en `free` donde empiezan los campos
   let footer = null;
+  // El texto (título, campos y demás) va TAL CUAL, con sus caracteres invisibles; para reconocer el pie y los campos
+  // se mira una copia sin ellos. Solo se quitan espacios normales (trim() quitaría también U+FEFF).
   for (const raw of body.split("\n")) {
-    let line = raw.trim();
+    let line = trimSpaces(raw);
     if (!line) {
       if (free.length && free[free.length - 1] !== "") free.push("");
       continue;
     }
     // El pie "~~~ This was a … broadcast ~~~" puede venir en su propia línea o al final de otra.
     const inline = line.match(FOOTER_RE);
-    const clean = line.replace(INVISIBLE, "");
+    const clean = withoutInvisible(line);
     const f = inline || clean.match(FOOTER_RE);
     if (f) {
       footer = { from: f[1], to: f[2], at: f[3] };
-      // Si el pie solo se reconoce sin los caracteres invisibles, lo que va delante se toma de la versión limpia.
-      line = inline ? line.replace(inline[0], "").trim() : clean.replace(f[0], "").trim();
+      // Si el pie solo se reconoce sin los invisibles, se quita del original el trozo que ocupa: lo demás de la línea
+      // sigue con sus invisibles.
+      line = trimSpaces(inline ? line.replace(inline[0], "") : removeCleanRange(line, f.index, f[0].length));
       if (!line) continue;
     }
     const m = line.match(FIELD_RE);
     // «Tomorrow at 17:15 we form…» no es un campo: los dos puntos son de una hora (dígito a cada lado).
-    const isTime = m && /\d$/.test(m[1]) && /^\d/.test(m[2]);
+    const isTime = m && /\d$/.test(m[1]) && /^\d/.test(withoutInvisible(m[2]).trimStart());
     if (m && !isTime && !/^https?$/i.test(m[1].trim())) {
       if (fieldsAt < 0) fieldsAt = free.length;
-      fields.push({ key: m[1].trim(), value: m[2].trim() });
+      fields.push({ key: m[1].trim(), value: trimSpaces(m[2]) });
     } else free.push(line);
   }
   // Con campos, lo de antes es el título y lo de después va debajo. Sin campos, el título es solo la primera

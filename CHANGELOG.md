@@ -8,6 +8,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Changed
+- **Ping text is shown exactly as received, invisible characters included.** Some alliances mark each copy of a ping with invisible characters; the ping card, the ping pop-up, the formup alert and the calendar's fleet details used to drop them when showing the text, which changed what you see and capture. Now they keep them (only normal spaces are trimmed). They are still ignored internally to recognise fields, the footer and times, to search, to detect duplicates and to read pings aloud.
 - **Privacy policy: complete list of network connections.** [PRIVACY.md](PRIVACY.md) now also lists the proxy, says that the Microsoft Store version never checks GitHub, that avatars, rooms and other room servers go only through your own XMPP server, that no fonts or scripts are loaded from the Internet, that the alliance calendar link is never opened and that the .ics export only writes a local file. It also says plainly that only the passwords are encrypted. A new test fails if the code points to a web address that the policy does not list, in English and in Spanish.
 
 ### Fixed
