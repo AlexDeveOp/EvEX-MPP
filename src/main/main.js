@@ -28,6 +28,7 @@ import { createNetFetch } from "./net-fetch.js";
 
 import { t, setLanguage, currentLang } from "./i18n.js";
 import { pruneHistory, cutoffFor, DAY_MS } from "./retention.js";
+import { wipeAccount, nextAuthFailures } from "./account-wipe.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const RENDERER = path.join(ROOT, "src", "renderer");
 const NODE_MODULES = path.join(ROOT, "node_modules");
@@ -487,6 +488,8 @@ function listAvatars() {
 }
 
 function getConn(id) {
+  // Mientras se borra una cuenta no se puede volver a conectar (ver account:wipe).
+  if (wipingAccounts.has(id)) throw new Error(t("Se están borrando los datos de esta cuenta."));
   let x = accounts.get(id);
   const acc = store.getAccount(id);
   if (!acc) throw new Error(t("Cuenta no encontrada"));
@@ -524,9 +527,27 @@ function onAccountEvent(x, ev) {
     for (const r of x.acc.rooms.filter((r) => r.autojoin)) joinRoom(x, r.jid).catch(() => {});
   }
   if (ev.type === "bookmarks") mergeBookmarks(x, ev.rooms);
+  if (ev.type === "status" || ev.type === "auth-rejected") countAuthFailures(accId, ev);
   sendXmpp(ev);
   // Con el servidor ya conocido, se piden al archivo los pings que llegaron mientras la app estaba cerrada.
   if (ev.type === "server-info") syncPings().catch(() => {});
+}
+
+// ---- rechazos del servidor al entrar (posible revocación) ----
+// Se cuentan solo los rechazos de la autenticación (SASL: contraseña, cuenta desactivada, credenciales caducadas), nunca
+// los errores de red, y se guardan para que cuenten también entre un arranque y otro. Al conectar bien vuelve a 0.
+// La interfaz avisa desde el segundo rechazo seguido, o desde el primero si el servidor dice que la cuenta está
+// desactivada o sus credenciales caducadas, y no cambia nada sin preguntar.
+const wipingAccounts = new Set();
+function countAuthFailures(accId, ev) {
+  const acc = store.getAccount(accId);
+  if (!acc) return;
+  const { count, notify } = nextAuthFailures(acc.authFailures, ev);
+  if (count !== (acc.authFailures || 0)) {
+    acc.authFailures = count;
+    store.save();
+  }
+  if (ev.type === "auth-rejected") Object.assign(ev, { count, notify });
 }
 
 // Solo pedimos a la sala el historial posterior al último mensaje guardado.
@@ -642,6 +663,8 @@ function registerIpc() {
     const prev = account.id ? store.getAccount(account.id) : null;
     const proxyBefore = JSON.stringify(prev?.proxy);
     const merged = prev ? { ...prev, ...account, rooms: account.rooms ? account.rooms.map((r) => ({ ...r, password: r.password ?? prev.rooms.find((p) => p.jid === r.jid)?.password })) : prev.rooms } : account;
+    // Con una contraseña nueva, los rechazos de la anterior ya no cuentan.
+    if (password) merged.authFailures = 0;
     const acc = store.upsertAccount(merged);
     let passwordNotSaved;
     try {
@@ -666,6 +689,50 @@ function registerIpc() {
     store.removeAccount(id);
     sessionProxyPasswords.delete(store.proxySecretKey(id));
     return true;
+  });
+
+  // Borrar la cuenta y todos sus datos locales (account-wipe.js). typedJid: el JID que ha escrito el usuario para confirmar.
+  // Primero se desconecta (sin reintentos ni temporizadores, y sin poder volver a conectar a medias); después se borra lo
+  // de la carpeta de datos. Si algún paso falla, la cuenta se queda en la lista y se dice qué faltó.
+  handle("account:wipe", async (id, typedJid) => {
+    const acc = store.getAccount(id);
+    if (!acc) throw new Error(t("Cuenta no encontrada"));
+    if (String(typedJid || "").trim().toLowerCase() !== acc.jid) throw new Error(t("El JID escrito no coincide con el de la cuenta."));
+    if (wipingAccounts.has(id)) throw new Error(t("Se están borrando los datos de esta cuenta."));
+    wipingAccounts.add(id);
+    try {
+      const x = accounts.get(id);
+      const ownAvatarHash = x?.avatarHash || "";
+      // Fuera del mapa antes de esperar al cierre: así nada (reconexión al volver la red, cambio de proxy) la encuentra.
+      accounts.delete(id);
+      await x?.disconnect();
+      const others = store.get().accounts.filter((a) => a.id !== id);
+      const result = await wipeAccount({
+        userData: userData(),
+        logs,
+        settings: store.get().settings,
+        imported: store.get().imported,
+        accountId: id,
+        jid: acc.jid,
+        otherIds: others.map((a) => a.id),
+        ownAvatarHash,
+        otherAvatarHashes: others.map((a) => accounts.get(a.id)?.avatarHash).filter(Boolean),
+        avatarDir: avatarDir(),
+        connLogFiles: [path.join(userData(), "connection.log"), path.join(userData(), "connection.old.log")],
+        removeSecrets: async () => {
+          await store.setPassword(id, null);
+          await store.setPassword(store.proxySecretKey(id), null);
+          sessionProxyPasswords.delete(store.proxySecretKey(id));
+        },
+        removeAccount: () => store.removeAccount(id),
+      });
+      store.save();
+      store.flush();
+      send("accounts", store.get().accounts.map(publicAccount));
+      return result;
+    } finally {
+      wipingAccounts.delete(id);
+    }
   });
 
   handle("account:connect", (id, password) => connectAccount(id, password));

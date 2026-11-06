@@ -103,6 +103,8 @@ const configForm = (r) =>
 const log = (...a) => console.log(`${new Date().toISOString().slice(11, 19)} ${a.map(String).join(" ")}`.replace(/\n|\r/g, ""));
 const MAM = "urn:xmpp:mam:2";
 // vCard y avatar XEP-0084 de cada usuario, en memoria mientras dure el servidor (para probar el avatar propio).
+// Cuentas a las que el servidor ya ha retirado el acceso (usuario de prueba «revocable»).
+const REVOKED = new Set();
 const VCARDS = new Map();
 const PEP = new Map();
 
@@ -189,7 +191,25 @@ net
     function onElement(st) {
       if (st.is("auth")) {
         const [, u, p] = Buffer.from(st.text(), "base64").toString().split("\0");
-        if (p !== "test") return send(`<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><not-authorized/></failure>`);
+        // Usuarios de prueba para una posible revocación: el servidor rechaza la cuenta aunque la contraseña sea buena.
+        // «revocable»: entra la primera vez, a los 1,5 s el servidor corta la conexión y desde entonces la rechaza
+        // (acceso revocado mientras estaba conectada: lo que se encuentra la reconexión automática).
+        if (u === "revocable" && !REVOKED.has(u)) {
+          REVOKED.add(u);
+          setTimeout(() => sock.destroy(), 1500);
+        } else if (u === "revocable") {
+          log("auth rechazada", u, "account-disabled");
+          return send(`<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><account-disabled/></failure>`);
+        }
+        const revoked = { desactivado: "account-disabled", caducado: "credentials-expired" }[u];
+        if (revoked) {
+          log("auth rechazada", u, revoked);
+          return send(`<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><${revoked}/></failure>`);
+        }
+        if (p !== "test") {
+          log("auth rechazada", u, "not-authorized");
+          return send(`<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><not-authorized/></failure>`);
+        }
         user = u;
         authed = true;
         send(`<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>`);

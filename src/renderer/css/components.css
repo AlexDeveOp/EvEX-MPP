@@ -1339,6 +1339,23 @@ select.input {
   gap: 8px;
   align-items: center;
   margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* Borrar la cuenta con sus datos (account-wipe.js) */
+.wipe-list {
+  margin: 6px 0 12px;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+.wipe-warning {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border));
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+.auth-rejected .modal-footer {
+  flex-wrap: wrap;
 }
 
 .import-acc {

@@ -238,6 +238,8 @@ export function normalizeAccount(a) {
     rooms: (a.rooms || []).map(normalizeRoom),
     // Salas quitadas a mano: no se vuelven a añadir aunque sigan en los marcadores del servidor.
     dismissedRooms: [...new Set((a.dismissedRooms || []).map((j) => String(j).toLowerCase()))],
+    // Rechazos seguidos del servidor al entrar (SASL): desde el segundo se avisa de una posible revocación (main.js).
+    authFailures: Math.max(0, Math.floor(Number(a.authFailures) || 0)),
   };
 }
 

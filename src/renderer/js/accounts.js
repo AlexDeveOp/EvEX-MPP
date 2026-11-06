@@ -8,6 +8,7 @@ import { proxyFields, PROXY_DEFAULTS, globalProxySummary, xmppTarget } from "./s
 import { t, locale } from "./i18n.js";
 import { avatarEl } from "./chat.js";
 import { openAvatarSettings } from "./settings.js";
+import { openWipeDialog } from "./account-wipe.js";
 // Pide la contraseña del proxy que falta (la de la cuenta o la del general) y la guarda: en el llavero, o solo en
 // memoria hasta cerrar la app si no hay llavero. Devuelve true si se ha escrito una.
 export function promptProxyPassword(accountId, global) {
@@ -403,6 +404,7 @@ export function openAccounts(focusId) {
           "div",
           { class: "acc-actions" },
           a ? h("button", { class: "btn danger ghost", onclick: () => remove(a) }, icon("trash-2"), t("Eliminar")) : null,
+          a ? h("button", { class: "btn danger ghost", title: t("Borra también su historial, contraseñas y ajustes de este equipo"), onclick: () => openWipeDialog(a) }, icon("database"), t("Borrar con sus datos…")) : null,
           h("span", { class: "spacer" }),
           a && conn(a.id).state === "online" ? h("button", { class: "btn", onclick: () => api("account:disconnect", a.id).then(renderList) }, icon("power"), t("Desconectar")) : null,
           h("button", { class: "btn", onclick: () => save(false) }, icon("check"), t("Guardar")),

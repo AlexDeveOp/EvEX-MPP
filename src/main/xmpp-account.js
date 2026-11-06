@@ -130,7 +130,18 @@ async function startClient(xmpp) {
 // Errores de red: con ellos se sigue reintentando, porque la red puede volver. Los demás (contraseña, TLS, falta de
 // mecanismo…) son definitivos.
 const NETWORK_CODES = new Set(["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ECONNRESET", "ECONNABORTED", "ETIMEDOUT", "EHOSTUNREACH", "ENETUNREACH", "ENETDOWN", "EPIPE", "PROXY_CONNECT", "PROXY_TIMEOUT", "PROXY_TARGET"]);
+// Rechazos de la autenticación (SASL, RFC 6120 §6.5) que no se arreglan reintentando y pueden ser una revocación:
+// contraseña cambiada, cuenta desactivada o credenciales caducadas. Solo cuentan los SASLError, nunca los de red.
+export const AUTH_REJECTED = new Set(["not-authorized", "account-disabled", "credentials-expired"]);
+export function authRejection(err) {
+  for (let e = err, i = 0; e && i < 5; e = e.cause, i++) {
+    if (e.name === "SASLError" && AUTH_REJECTED.has(e.condition)) return e.condition;
+  }
+  return null;
+}
+
 export function isNetworkError(err) {
+  if (authRejection(err)) return false;
   for (let e = err, i = 0; e && i < 5; e = e.cause, i++) {
     if (e.fatal || e.condition === "not-authorized") return false;
     if (NETWORK_CODES.has(e.code) || e.name === "TimeoutError") return true;
@@ -437,14 +448,18 @@ export class XmppAccount extends EventEmitter {
     xmpp.on("error", (err) => {
       this.trace(`error ${describeForLog(err)}`);
       const msg = this.describeError(err);
-      // Errores que no se arreglan reintentando: contraseña, falta de TLS o de mecanismo de autenticación.
-      if (err?.condition === "not-authorized" || err?.fatal) {
+      // Errores que no se arreglan reintentando: contraseña, cuenta desactivada o credenciales caducadas (también
+      // en una reconexión: si no, seguiría probando para siempre), falta de TLS o de mecanismo de autenticación.
+      const rejected = authRejection(err);
+      if (rejected || err?.condition === "not-authorized" || err?.fatal) {
         failStart(err);
         this.wantOnline = false;
         clearInterval(this.supervisor);
         xmpp.reconnect.stop();
         xmpp.stop().catch(() => {});
         this.setState("error", msg);
+        // El proceso principal cuenta los rechazos seguidos para avisar de una posible revocación.
+        if (rejected) this.event("auth-rejected", { condition: rejected });
       } else {
         this.event("error", { message: msg });
       }
@@ -496,6 +511,8 @@ export class XmppAccount extends EventEmitter {
   describeError(err) {
     if (!err) return t("Error desconocido");
     if (err.condition === "not-authorized") return t("Usuario o contraseña incorrectos.");
+    if (err.condition === "account-disabled") return t("El servidor ha desactivado esta cuenta.");
+    if (err.condition === "credentials-expired") return t("Las credenciales de esta cuenta han caducado: cambia la contraseña.");
     if (err.code === "ENOTFOUND") return t("No se encuentra el servidor ({x}).", { x: err.hostname || "" });
     if (err.code === "ECONNREFUSED") return t("El servidor rechazó la conexión.");
     if (err.code === "ETIMEDOUT" || err.name === "TimeoutError") return t("Tiempo de espera agotado al conectar.");
