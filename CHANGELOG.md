@@ -8,6 +8,8 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Fixed
+- **Disconnecting no longer leaves a ping timer running.** If the account was disconnected while it was still finishing logging in (roster, presence), the keep-alive ping timer was created afterwards and never stopped. In the app it ran with nothing to do; in the tests it kept the process alive, which made the CI hang now and then after the reconnection tests.
+- **Closing the app with the network down takes 3 s at most.** Saying goodbye to the server (the "unavailable" presence and closing the stream) now has a single 3 s limit; before, sending the presence could wait forever on a half-dead connection.
 - **The mini window (and the pop-ups) could end up behind other windows** on Windows. Windows sometimes takes "always on top" away from a window (for example after resuming, unlocking or a display change), and another always-on-top window opened later stays above. They now put themselves back on top when that happens and, just in case, every 10 seconds while they are visible. This never takes the focus or flashes the taskbar, so it does not pull you out of a game.
 - The "Invalid fleet time" error, and the two calendar export errors (invalid date, event without a UID), now follow the interface language instead of always showing in Spanish. They only appear with broken fleet data.
 

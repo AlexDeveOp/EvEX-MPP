@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import net from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { XmppAccount, RECONNECT, NEGOTIATION_GRACE, isNetworkError } from "../../src/main/xmpp-account.js";
+import { XmppAccount, RECONNECT, NEGOTIATION_GRACE, DISCONNECT_MS, isNetworkError } from "../../src/main/xmpp-account.js";
 import { tempDir } from "./helpers.mjs";
 
 const MOCK = 18299 + Math.floor(Math.random() * 500);
@@ -252,4 +252,62 @@ test("con TLS directo se corta el socket de verdad, que va dentro del envoltorio
   acc.restartConnection();
   assert.equal(destroyed, 2);
   acc.xmpp = null;
+});
+
+// Al cerrar la app con la red caída, despedirse no debe colgarla: presencia y cierre, como mucho DISCONNECT_MS en total.
+function fakeClient({ hang }) {
+  const sent = [];
+  const never = () => new Promise(() => {});
+  return {
+    sent,
+    status: "online",
+    reconnect: { stop() {} },
+    send: (st) => (sent.push(st), hang ? never() : Promise.resolve()),
+    stop: () => (hang ? never() : Promise.resolve()),
+    removeAllListeners() {},
+    on() {},
+  };
+}
+
+test("desconectar con la red caída (nada contesta) termina en DISCONNECT_MS, sin quedarse esperando", async () => {
+  const acc = new XmppAccount({ id: "rd", jid: "u@ejemplo.com" }, { avatarDir: ".", version: "1" });
+  const x = fakeClient({ hang: true });
+  acc.xmpp = x;
+  const t0 = Date.now();
+  await acc.disconnect(true);
+  const took = Date.now() - t0;
+  assert.ok(took >= DISCONNECT_MS - 50 && took < DISCONNECT_MS + 1000, `tardó ${took} ms`);
+  assert.equal(x.sent.length, 1, "se intentó mandar la presencia «unavailable»");
+});
+
+test("desconectar con red normal manda la presencia «unavailable» y no espera de más", async () => {
+  const acc = new XmppAccount({ id: "re", jid: "u@ejemplo.com" }, { avatarDir: ".", version: "1" });
+  const x = fakeClient({ hang: false });
+  acc.xmpp = x;
+  const t0 = Date.now();
+  await acc.disconnect(true);
+  assert.ok(Date.now() - t0 < 500);
+  assert.equal(x.sent[0]?.name, "presence");
+  assert.equal(x.sent[0]?.attrs.type, "unavailable");
+});
+
+// La causa de la CI colgada (reconnect.test.mjs terminaba sus pruebas y el proceso no acababa nunca): una prueba se
+// desconecta justo al quedar «online», mientras onOnline() aún espera al roster; al seguir, onOnline() creaba el
+// intervalo del ping DESPUÉS de disconnect(), sin nadie que lo parase.
+test("desconectar mientras onOnline() espera al roster no deja el intervalo del ping vivo", async () => {
+  const acc = new XmppAccount({ id: "ro", jid: "u@ejemplo.com" }, { avatarDir: ".", version: "1" });
+  let releaseRoster;
+  acc.fetchRoster = () => new Promise((r) => (releaseRoster = r));
+  acc.sendPresence = async () => {};
+  acc.discoverServer = async () => {};
+  acc.loadOwnAvatar = async () => {};
+  acc.xmpp = fakeClient({ hang: false });
+  acc.wantOnline = true;
+  const online = acc.onOnline({ toString: () => "u@ejemplo.com/EvEX-MPP" });
+  await acc.disconnect(true);
+  releaseRoster();
+  await online;
+  const leaked = acc.pingTimer;
+  clearInterval(leaked); // por si falla: que no cuelgue también esta prueba
+  assert.equal(leaked ?? null, null, "no queda un intervalo del ping sin parar");
 });

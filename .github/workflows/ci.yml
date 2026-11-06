@@ -35,6 +35,9 @@ jobs:
         run: npm run lint
 
       - name: Tests (incluye integración con el servidor XMPP simulado)
+        # Si una prueba se queda colgada, que falle en minutos y diga cuál (--test-timeout en el script) en vez de
+        # esperar al límite del job.
+        timeout-minutes: 10
         run: npm test
 
       - name: Comprobar traducciones
