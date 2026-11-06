@@ -374,7 +374,6 @@ export default {
   "Reloj EVE en la barra de título": "EVE clock in the title bar",
   "Contenido": "Content",
   "Vista previa de imágenes y vídeos de YouTube": "Preview images and YouTube videos",
-  "Carga la imagen directamente desde el enlace": "Loads the image straight from the link",
   "Mostrar entradas y salidas en las salas": "Show joins and leaves in rooms",
   "Mensajes de historial al entrar en una sala": "History messages when joining a room",
   "Solo se piden los posteriores al último mensaje guardado": "Only messages newer than the last saved one are requested",
@@ -1507,4 +1506,12 @@ export default {
   " También puedes cambiarlo desde fuera con la orden: ": " You can also toggle it from outside with the command: ",
   "Modo captura: sin detalles": "Capture mode: no details",
   "Nuevo ping de flota": "New fleet ping",
+  // Vistas previas al hacer clic (format.js, settings/appearance.js, aviso de app.js)
+  "Las vistas previas de imágenes y YouTube ahora se cargan al hacer clic, para que nadie pueda saber tu IP pegando una imagen. Puedes volver a cargarlas solas en Preferencias → Mensajes.": "Image and YouTube previews now load when you click them, so nobody can learn your IP by posting an image. You can make them load on their own again in Preferences → Messages.",
+  "Cambiar": "Change",
+  "Vídeo de YouTube · clic para cargar": "YouTube video · click to load",
+  "Imagen de {host} · clic para cargar": "Image from {host} · click to load",
+  "Al hacer clic (recomendado)": "When clicked (recommended)",
+  "Siempre, al mostrar el mensaje": "Always, when the message is shown",
+  "Con «Siempre», la imagen se pide a la web que la aloja en cuanto ves el mensaje, y esa web ve tu IP (alguien podría pegar una imagen para saberla). «Al hacer clic» no pide nada hasta que lo pulsas.": "With “Always”, the image is requested from the website that hosts it as soon as you see the message, and that website sees your IP (someone could post an image to find it out). “When clicked” requests nothing until you click.",
 };

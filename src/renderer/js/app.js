@@ -1,5 +1,5 @@
 // Arranque de la interfaz y traducción de eventos XMPP al estado local.
-import { S, api, onMain, emit, on, conn, account, contact, rosterOf, roomState, convKey, displayName, PINGS_KEY } from "./state.js";
+import { S, api, onMain, emit, on, conn, account, contact, rosterOf, roomState, convKey, displayName, PINGS_KEY, updateSettings } from "./state.js";
 import { loadMentions, mentionsTitlebarState } from "./mentions.js";
 import * as fleetsApi from "./fleets.js";
 import { parseFleetTime } from "./fleet-time.js";
@@ -93,6 +93,7 @@ async function boot() {
   startFormupWatch();
   initMiniFeed();
   initFleetExport();
+  previewModeNotice();
   document.getElementById("app").classList.remove("booting");
   setTimeout(() => offerPidginRepair().catch(console.error), 1500);
   // Proxy general con usuario y sin contraseña (Linux sin llavero, tras reiniciar): sin ella, la app no sale a Internet.
@@ -612,3 +613,15 @@ boot().catch((e) => {
 });
 
 export { PINGS_KEY, updateBadge, connectWithPrompt };
+
+// Aviso de una sola vez (0.11): las vistas previas pasan a «al hacer clic» por defecto (store.js, migrateLinkPreviews).
+function previewModeNotice() {
+  if (!S.settings.notices?.linkPreviewClick) return;
+  toast(t("Las vistas previas de imágenes y YouTube ahora se cargan al hacer clic, para que nadie pueda saber tu IP pegando una imagen. Puedes volver a cargarlas solas en Preferencias → Mensajes."), {
+    timeout: 20000,
+    actions: [{ label: t("Cambiar"), action: () => openSettings("messages") }],
+  });
+  updateSettings((x) => {
+    delete x.notices.linkPreviewClick;
+  });
+}

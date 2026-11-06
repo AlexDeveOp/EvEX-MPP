@@ -184,7 +184,19 @@ export const appearanceTabs = {
       ),
       group(
         t("Contenido"),
-        toggle(s.behavior.linkPreviews, (v) => full((x) => (x.behavior.linkPreviews = v)), t("Vista previa de imágenes y vídeos de YouTube"), t("Carga la imagen directamente desde el enlace")),
+        field(
+          t("Vista previa de imágenes y vídeos de YouTube"),
+          select(
+            [
+              ["click", t("Al hacer clic (recomendado)")],
+              ["auto", t("Siempre, al mostrar el mensaje")],
+              ["off", t("Nunca")],
+            ],
+            s.behavior.linkPreviewMode || "click",
+            (v) => full((x) => (x.behavior.linkPreviewMode = v)),
+          ),
+          t("Con «Siempre», la imagen se pide a la web que la aloja en cuanto ves el mensaje, y esa web ve tu IP (alguien podría pegar una imagen para saberla). «Al hacer clic» no pide nada hasta que lo pulsas."),
+        ),
         toggle(s.behavior.showJoinLeave, (v) => full((x) => (x.behavior.showJoinLeave = v)), t("Mostrar entradas y salidas en las salas")),
         field(t("Mensajes de historial al entrar en una sala"), range(0, 200, 10, s.behavior.mucHistory, (v) => look((x) => (x.behavior.mucHistory = v)), (v) => `${v}`), t("Solo se piden los posteriores al último mensaje guardado")),
       ),

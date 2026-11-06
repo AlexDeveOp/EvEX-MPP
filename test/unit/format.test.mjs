@@ -47,7 +47,7 @@ test("formatBody convierte enlaces y genera vistas previas de imágenes y YouTub
 });
 
 test("formatBody sin vistas previas si están desactivadas", () => {
-  S.settings.behavior.linkPreviews = false;
+  S.settings.behavior.linkPreviewMode = "off";
   assert.equal(formatBody("https://example.com/foto.png").previews.length, 0);
 });
 

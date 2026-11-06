@@ -78,7 +78,7 @@ export function formatBody(body, { mentionWords = [], rules = [] } = {}) {
       const raw = m[3];
       const href = raw.startsWith("www.") ? `https://${raw}` : raw;
       html += `<a class="link" href="${esc(href)}" title="${esc(href)}">${esc(shortUrl(raw))}</a>`;
-      if (S.settings.behavior.linkPreviews && /^https?:/.test(href)) {
+      if (previewMode() !== "off" && /^https?:/.test(href)) {
         let pathname = "";
         try {
           pathname = new URL(href).pathname;
@@ -100,11 +100,45 @@ export function formatBody(body, { mentionWords = [], rules = [] } = {}) {
   return { html, previews, mention, jumbo };
 }
 
-export function previewHtml(p) {
-  if (p.type === "image") return `<a class="preview image" href="${esc(p.url)}"><img src="${esc(p.url)}" loading="lazy" alt="" referrerpolicy="no-referrer"></a>`;
+// Vistas previas: "click" (por defecto: un recuadro que no pide nada hasta pulsarlo), "auto" u "off".
+export const previewMode = () => {
+  const m = S.settings?.behavior?.linkPreviewMode;
+  return m === "auto" || m === "off" ? m : "click";
+};
+
+const hostOf = (url) => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
+};
+
+// Todas llevan .link-preview (clase estable para otras partes de la app, p. ej. el modo captura).
+// pending: el recuadro «clic para cargar», sin ninguna petición a la red hasta que se pulse (loadPendingPreview).
+export function previewHtml(p, { pending = false } = {}) {
+  if (pending && (p.type === "image" || p.type === "youtube")) {
+    const label = p.type === "youtube" ? t("Vídeo de YouTube · clic para cargar") : t("Imagen de {host} · clic para cargar", { host: hostOf(p.url) });
+    return `<button type="button" class="link-preview preview-pending ${p.type}" data-preview="${esc(JSON.stringify(p))}" title="${esc(p.url)}"><span class="preview-pending-icon">${p.type === "youtube" ? "▶" : "🖼"}</span>${esc(label)}</button>`;
+  }
+  if (p.type === "image") return `<a class="link-preview preview image" href="${esc(p.url)}"><img src="${esc(p.url)}" loading="lazy" alt="" referrerpolicy="no-referrer"></a>`;
   if (p.type === "youtube")
-    return `<a class="preview youtube" href="${esc(p.url)}"><img src="https://i.ytimg.com/vi/${esc(p.id)}/hqdefault.jpg" loading="lazy" alt="" referrerpolicy="no-referrer"><span class="play">▶</span></a>`;
+    return `<a class="link-preview preview youtube" href="${esc(p.url)}"><img src="https://i.ytimg.com/vi/${esc(p.id)}/hqdefault.jpg" loading="lazy" alt="" referrerpolicy="no-referrer"><span class="play">▶</span></a>`;
   return "";
+}
+
+// Clic en un recuadro «clic para cargar»: se cambia por la vista previa de verdad (solo ahí se pide la imagen).
+// Devuelve true si el clic era en un recuadro.
+export function loadPendingPreview(target) {
+  const btn = target?.closest?.(".preview-pending");
+  if (!btn) return false;
+  let p = null;
+  try {
+    p = JSON.parse(btn.dataset.preview || "null");
+  } catch {}
+  if (!p || !/^https?:/i.test(String(p.url || "")) || (p.type === "youtube" && !/^[\w-]{6,}$/.test(String(p.id || "")))) return true;
+  btn.outerHTML = previewHtml(p);
+  return true;
 }
 
 /// ---------- fechas ----------
