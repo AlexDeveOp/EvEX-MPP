@@ -8,6 +8,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Fixed
+- **The mini window (and the pop-ups) could end up behind other windows** on Windows. Windows sometimes takes "always on top" away from a window (for example after resuming, unlocking or a display change), and another always-on-top window opened later stays above. They now put themselves back on top when that happens and, just in case, every 10 seconds while they are visible. This never takes the focus or flashes the taskbar, so it does not pull you out of a game.
 - The "Invalid fleet time" error, and the two calendar export errors (invalid date, event without a UID), now follow the interface language instead of always showing in Spanish. They only appear with broken fleet data.
 
 ## [0.10.0] - 2026-11-05

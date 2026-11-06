@@ -119,6 +119,9 @@ export class BrowserWindow {
   isDestroyed() {
     return this.destroyed;
   }
+  isVisible() {
+    return !!this.shown && !this.destroyed;
+  }
   destroy() {
     this.destroyed = true;
     this.handlers.closed?.();
@@ -139,6 +142,9 @@ export const screen = {
   on(event, fn) {
     (screen.listeners[event] ||= []).push(fn);
   },
+  removeListener(event, fn) {
+    screen.listeners[event] = (screen.listeners[event] || []).filter((x) => x !== fn);
+  },
   emit(event) {
     for (const fn of screen.listeners[event] || []) fn();
   },
@@ -151,6 +157,8 @@ export const session = {
     return partitions.get(name);
   },
 };
+// Avisos del sistema (reanudar, desbloquear…): powerMonitor.emit(evento) los dispara en los tests.
+export const powerMonitor = new EventEmitter();
 export const dialog = {};
 // Red de Chromium: cada net.request se guarda en net.requests y, al terminarla (end), la contesta net.onRequest(req)
 // si un test lo pone. La respuesta la simula el test emitiendo «response», «login» o «error».
@@ -181,4 +189,4 @@ export const net = {
     return req;
   },
 };
-export default { app, safeStorage, Notification, nativeImage, Tray, Menu, BrowserWindow, screen, session, dialog, net };
+export default { app, safeStorage, Notification, nativeImage, Tray, Menu, BrowserWindow, screen, session, dialog, net, powerMonitor };

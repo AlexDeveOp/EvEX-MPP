@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { userData } from "./paths.js";
 import { placeBounds, rememberBounds, fitBounds, clampOpacity, MINI_MIN, MINI_MAX } from "./mini-bounds.js";
-import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, waylandSession } from "./overlay.js";
+import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, waylandSession } from "./overlay.js";
 
 let win = null;
 let lastState = null;
@@ -18,6 +18,7 @@ let current = { enabled: false, opacity: 0.85, clickThrough: false };
 let options = { preload: "", onClick: () => {}, onShow: () => {}, onChange: () => {} };
 let saveTimer = null;
 let watchingDisplays = false;
+let stopKeepOnTop = () => {};
 
 // En Wayland el escritorio decide dónde van las ventanas: no se puede asegurar que quede encima.
 export const miniOnTop = () => !waylandSession();
@@ -91,12 +92,16 @@ function open() {
   });
   win = w;
   raiseOverlay(w);
+  // Que no se quede detrás de otras ventanas si Windows le quita el «siempre encima» (se para al cerrarla).
+  stopKeepOnTop();
+  stopKeepOnTop = keepOnTop(w);
   w.on("moved", saveLater);
   w.on("resized", saveLater);
   // Al cerrar y abrir seguido, el «closed» de la ventana vieja puede llegar después de crear la nueva: solo se
   // olvida la ventana si sigue siendo la actual.
   w.on("closed", () => {
     if (win !== w) return;
+    stopKeepOnTop();
     clearTimeout(saveTimer);
     win = null;
     lastState = null;
@@ -123,6 +128,7 @@ function close() {
   clearTimeout(saveTimer);
   const w = win;
   win = null;
+  stopKeepOnTop();
   // Al volver a abrirla no debe enseñar, ni un momento, los colores y contadores de la vez anterior.
   lastState = null;
   w.destroy();

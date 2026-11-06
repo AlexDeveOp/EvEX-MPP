@@ -3,7 +3,7 @@
 import { BrowserWindow, Notification, nativeImage, screen } from "electron";
 import path from "node:path";
 import { renderIcon, renderAlertIcon } from "./icon.js";
-import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, waylandSession } from "./overlay.js";
+import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, waylandSession } from "./overlay.js";
 import { pickDisplay, describeDisplays, isValidChoice } from "./popup-display.js";
 import { t } from "./i18n.js";
 
@@ -155,6 +155,8 @@ function showCustomPopup(id, data) {
     webPreferences: overlayWebPreferences(options.preload),
   });
   raiseOverlay(win);
+  // Los pings fijos pueden quedarse mucho rato: que tampoco acaben detrás de otra ventana.
+  const stopKeepOnTop = keepOnTop(win);
   p.win = win;
   popups.unshift(p);
   while (popups.length > MAX) closePopup(popups[popups.length - 1].id, true);
@@ -162,6 +164,7 @@ function showCustomPopup(id, data) {
     const i = popups.indexOf(p);
     if (i >= 0) popups.splice(i, 1);
     clearTimeout(p.timer);
+    stopKeepOnTop();
     // Sin burbujas abiertas, la próxima pila vuelve a elegir pantalla.
     if (!popups.length) stack = null;
     layout();
