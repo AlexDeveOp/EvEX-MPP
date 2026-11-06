@@ -4,9 +4,17 @@
 
 A desktop XMPP (Jabber) client for Windows and Linux built for EVE Online communities and alliances that coordinate over Jabber. It is a modern, highly customizable alternative to Pidgin: rooms with auto-join, fleet pings shown as cards, always-on-top pop-up alerts, EVE time and themes. The interface is available in English and Spanish.
 
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6) ![Linux](https://img.shields.io/badge/Linux-AppImage%20%7C%20.deb-fcc624)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16208/badge)](https://www.bestpractices.dev/projects/16208) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AlexDeveOp/EvEX-MPP/badge)](https://scorecard.dev/viewer/?uri=github.com/AlexDeveOp/EvEX-MPP) [![CI](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveOp/EvEX-MPP/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE) ![Electron](https://img.shields.io/badge/Electron-45-47848f) ![XMPP](https://img.shields.io/badge/XMPP-%40xmpp%2Fclient-blue) ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6) ![Linux](https://img.shields.io/badge/Linux-AppImage%20%7C%20.deb-fcc624) [![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-EvEX--MPP-0078d6)](https://apps.microsoft.com/detail/9P8R73JP3XTD)
 
 ## Download and install
+
+### Microsoft Store (Windows 10/11)
+
+<a href="https://apps.microsoft.com/detail/9P8R73JP3XTD?mode=direct"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200" alt="Get it from Microsoft"></a>
+
+The easiest way on Windows: the Store version is signed by Microsoft, so SmartScreen does not warn you, and the Store keeps it up to date. It is the same app; it just never checks GitHub for new versions, and starting with Windows is managed in Windows' *Startup apps*.
+
+### Installer and portable
 
 [Releases](../../releases) contains two executables:
 
@@ -171,7 +179,7 @@ If you run Pidgin at the same time, pings are delivered to the client with the *
 
 ## Code signing policy
 
-**Executables are not code-signed yet.** We applied to the [SignPath Foundation](https://signpath.org) program for free code signing for open-source projects. The application was declined because the project is still new and does not yet have enough public traction (stars, forks, contributors, external mentions); it was not a judgement on the code. We will reapply once the app has more traction, and meanwhile we are exploring other options, such as the Microsoft Store. Until then, please verify your download as described in [How to verify your download](#how-to-verify-your-download).
+**Executables are not code-signed yet.** We applied to the [SignPath Foundation](https://signpath.org) program for free code signing for open-source projects. The application was declined because the project is still new and does not yet have enough public traction (stars, forks, contributors, external mentions); it was not a judgement on the code. We will reapply once the app has more traction, Meanwhile, the [Microsoft Store version](#microsoft-store-windows-1011) is signed by Microsoft. For the executables in Releases, please verify your download as described in [How to verify your download](#how-to-verify-your-download).
 
 What already applies to every release:
 
