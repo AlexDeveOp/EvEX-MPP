@@ -11,7 +11,7 @@ import { Logs } from "./logs.js";
 import { renderIcon, renderAlertIcon } from "./icon.js";
 import { showPopup, configurePopups, popupIpc, systemPopups } from "./popups.js";
 import { configureMini, applyMini, miniIpc, isMiniOpen, miniOnTop, resendMini } from "./mini-window.js";
-import { captureNotification, captureMiniState } from "./capture.js";
+import { captureNotification, captureMiniState, keepCapture } from "./capture.js";
 import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
@@ -624,7 +624,8 @@ function registerIpc() {
   handle("settings:set", async (settings) => {
     const before = currentLang();
     const proxyBefore = JSON.stringify(store.get().settings.proxy);
-    const s = store.setSettings(settings);
+    // El modo captura lo lleva el proceso principal: la copia de la ventana no lo deshace (ver keepCapture).
+    const s = store.setSettings(keepCapture(settings, store.get().settings));
     if (JSON.stringify(s.proxy) !== proxyBefore) {
       await applyGlobalProxy();
       reconnectWithNewProxy((acc) => acc.proxy?.mode === "global");
@@ -901,7 +902,7 @@ function setLinuxAutostart(enabled) {
 
 function applySystemSettings(s) {
   scheduleUpdateChecks(!STORE && !!s.behavior.checkUpdates);
-  configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingSticky: s.notifications.pingSticky, display: s.notifications.popupDisplay, displayHint: s.notifications.popupDisplayHint, getWin: () => win, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
+  configurePopups({ corner: s.notifications.popupCorner, duration: s.notifications.popupDuration, pingDuration: s.notifications.pingDuration, pingSticky: s.notifications.pingSticky, display: s.notifications.popupDisplay, displayHint: s.notifications.popupDisplayHint, getWin: () => win, preload: path.join(ROOT, "src", "preload.cjs"), onClick: openFromNotification });
   // Mini ventana para jugar: al abrirla o cerrarla, la casilla de la bandeja cambia.
   configureMini({ preload: path.join(ROOT, "src", "preload-mini.cjs"), onClick: openFromNotification, onShow: showWindow, onChange: refreshTrayMenu, filter: (st) => (captureOn() ? captureMiniState(st) : st) });
   applyMini(s);

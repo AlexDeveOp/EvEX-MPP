@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { captureNotification, captureMiniState } from "../../src/main/capture.js";
+import { captureNotification, captureMiniState, keepCapture } from "../../src/main/capture.js";
 
 const ZW = String.fromCharCode(0x200b);
 
@@ -37,4 +37,23 @@ test("modo captura: la mini ventana se queda solo con los contadores (lista blan
   const st = { ping: { title: "Capital fleet", group: "all", ts: 1 }, fleets: [{ at: 2, title: "Final timer", group: "caps" }], countdown: true, unread: 3, pings: 1, mentions: 2, clickThrough: false, lang: "es", colors: { warn: "#e3b341" }, algoNuevo: "secreto" };
   assert.deepEqual(captureMiniState(st), { ping: null, fleets: [], countdown: false, capture: true, unread: 3, pings: 1, mentions: 2, clickThrough: false, lang: "es", colors: { warn: "#e3b341" } });
   assert.equal(captureMiniState(null), null);
+});
+
+test("modo captura: el aviso del formup conserva cuánto se queda (duration, reminder), sin su contenido", () => {
+  const out = captureNotification({ kind: "ping", reminder: true, duration: 30, title: "Formup en 10 min", text: "Capital fleet", fields: [{ key: "Doctrine", value: "Ferox" }], footer: "Formup a las 19:00 EVE", conv: "*", convType: "pings" });
+  assert.equal(out.duration, 30);
+  assert.equal(out.reminder, true);
+  assert.equal(out.title, "Nuevo ping de flota");
+  assert.deepEqual([out.text, out.fields, out.footer], ["", [], undefined]);
+});
+
+test("guardar los ajustes de la ventana no deshace el modo captura activado desde la bandeja", () => {
+  // La bandeja lo activó en el proceso principal; la ventana (con Preferencias abiertas) aún tenía la copia de antes y
+  // guarda otro cambio.
+  const main = { language: "es", capture: { enabled: true, globalShortcut: false } };
+  const fromWindow = { language: "en", capture: { enabled: false, globalShortcut: false } };
+  const saved = keepCapture(fromWindow, main);
+  assert.equal(saved.language, "en", "el otro cambio se guarda");
+  assert.deepEqual(saved.capture, { enabled: true, globalShortcut: false }, "el modo captura sigue activado");
+  assert.deepEqual(keepCapture({ language: "es" }, {}).capture, undefined);
 });

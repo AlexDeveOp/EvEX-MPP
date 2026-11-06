@@ -3,8 +3,9 @@
 // mini ventana mientras el modo está activo. El texto original no se toca: se manda otro objeto en su lugar.
 import { t } from "./i18n.js";
 
-// Solo lo que hace falta para que el aviso funcione (abrir la conversación al pulsarlo, colores, que se quede fijo).
-const KEEP = ["kind", "sticky", "accountId", "conv", "convType", "colors"];
+// Solo lo que hace falta para que el aviso funcione: abrir la conversación al pulsarlo, colores, cuánto se queda
+// (sticky; duration y reminder en los avisos del formup, ver popup-duration.js). Nada de eso es contenido.
+const KEEP = ["kind", "sticky", "duration", "reminder", "accountId", "conv", "convType", "colors"];
 
 export function captureNotification(data = {}) {
   const out = {};
@@ -13,6 +14,13 @@ export function captureNotification(data = {}) {
   out.text = "";
   out.fields = [];
   return out;
+}
+
+// settings.capture solo lo cambia el proceso principal (capture:set, bandeja, atajo, --toggle-capture). Cuando la
+// ventana guarda todos sus ajustes, su copia puede ser de antes de un cambio hecho desde la bandeja: se conserva el del
+// proceso principal para no deshacerlo.
+export function keepCapture(incoming, current) {
+  return { ...incoming, capture: current?.capture ?? incoming?.capture };
 }
 
 // Mini ventana: solo los contadores. Ni el último ping ni las próximas flotas (la hora del formup también es de la op).
