@@ -27,6 +27,26 @@ const FOOTER_RE = /~~~[^~]*~~~/g;
 // Las direcciones (p. ej. «…/news/2026/11/08/…») no dan ni hora ni fecha.
 const URL_RE = /\b(?:https?:\/\/|www\.)\S+/gi;
 
+// Avisos del mantenimiento diario («Reminder - DO NOT LOGIN AT DOWNTIME … 11:00 EVE»): no son un formup. Se miran solo
+// en texto libre (un campo de hora explícito manda siempre) y de forma estrecha, porque perder un formup real es peor
+// que un aviso de más: tiene que haber una frase clara de mantenimiento, la única hora del texto tiene que ser la del
+// downtime (11:00 EVE, o «at downtime») y no puede haber ninguna palabra clara de flota. «op», «timer» y «server»
+// salen en pings reales con otro sentido: no cuentan en ningún sentido. Un «downtime» o «DT» suelto tampoco.
+const MAINTENANCE_RE = /\b(?:do\s*not|don'?t|dont)\s+log\s*-?\s*(?:in|on)\b|\blog\s*-?\s*(?:off|out)\b|\bmaintenance\b|\bmantenimiento\b|\b(?:extended|long)\s+(?:down\s*time|dt)\b|\b(?:down\s*time|dt)\s+(?:is\s+|has\s+been\s+)?extended\b/i;
+const FLEET_WORD_RE = /\b(?:form\s*-?\s*ups?|formups?|fleets?|undock(?:ing)?|cta|stratops?|strat\s+ops?|roams?)\b/i;
+const ANY_HHMM_RE = new RegExp(HHMM, "gi");
+const isDowntimeTime = (at) => new Date(at).getUTCHours() === DOWNTIME[0] && new Date(at).getUTCMinutes() === DOWNTIME[1];
+
+export function isDowntimeNotice(text, at) {
+  if (at == null || !isDowntimeTime(at)) return false;
+  if (!MAINTENANCE_RE.test(text) || FLEET_WORD_RE.test(text)) return false;
+  for (const m of text.matchAll(ANY_HHMM_RE)) {
+    const [hh, mm] = m.slice(1).filter((x) => x !== undefined).slice(-2).map(Number);
+    if (hh !== DOWNTIME[0] || mm !== DOWNTIME[1]) return false;
+  }
+  return true;
+}
+
 const clean = (s) => String(s ?? "").replace(INVISIBLE, "").replace(FOOTER_RE, " ").replace(URL_RE, " ");
 
 // El día o la fecha solo cuentan si van pegados a la hora: el trozo de la misma línea justo antes y después de ella.
@@ -98,7 +118,8 @@ export function parseFieldTime(value, ts) {
 export function parseFleetTime(text, ts) {
   if (!ts) return null;
   const v = clean(text);
-  return relative(v, ts) ?? absolute(v, ts, CONTEXT_RE, DOWNTIME_RE);
+  const at = relative(v, ts) ?? absolute(v, ts, CONTEXT_RE, DOWNTIME_RE);
+  return isDowntimeNotice(v, at) ? null : at;
 }
 
 // p = resultado de parsePing (el pie «This was a broadcast … at …» es la hora de envío, no la del formup).

@@ -80,3 +80,38 @@ test("un día de la semana en otra línea no mueve el formup", () => {
   assert.equal(parseFleetTime(["fleet at 19:00", "Next op: Saturday"].join(NL), ts), utc(3, 19, 0));
   assert.equal(parseFleetTime("Saturday we form at 19:00", ts), utc(7, 19, 0), "pegado a la hora, sí cuenta");
 });
+
+// Avisos del mantenimiento diario: no son un formup. Casos genéricos (sin pings reales).
+const ping = (lines, to = "all") => parsePing([...lines, "", `~~~ This was a coord broadcast from bob to ${to} at 2026-11-03 08:00:00.000000 EVE ~~~`].join(NL));
+test("un aviso de downtime («do not log in», 11:00 EVE) no es un formup", () => {
+  const ts = utc(3, 8, 0);
+  for (const lines of [
+    ["Reminder - DO NOT LOGIN AT DOWNTIME", "Servers go down at 11:00 EVE, stay logged off until they are back"],
+    ["Reminder - DO NOT LOGIN AT DOWNTIME"],
+    ["Please log off before 11:00 EVE, extended downtime today"],
+    ["Maintenance at 11:00 EVE"],
+    [`Don't log in at downtime${ZW}`, "11:00 EVE"],
+  ]) {
+    assert.equal(parseFormup(ping(lines), ts), null, lines.join(" / "));
+    assert.equal(parseFleetTime(lines.join(NL), ts), null, lines.join(" / "));
+  }
+});
+
+test("los pings de flota con «downtime» siguen dando su formup", () => {
+  const ts = utc(3, 8, 0);
+  assert.equal(parseFormup(ping(["Formup 19:00 EVE, back before downtime"]), ts), utc(3, 19, 0));
+  assert.equal(parseFormup(ping(["Fleet up at 11:00 EVE, right after maintenance"]), ts), utc(3, 11, 0), "con palabra de flota");
+  assert.equal(parseFormup(ping(["Undock at 11:00 EVE, do not log in before"]), ts), utc(3, 11, 0));
+  assert.equal(parseFormup(ping(["Form up at downtime, do not log off"]), ts), utc(3, 11, 0));
+  assert.equal(parseFormup(ping(["CTA at downtime, maintenance is short today"]), ts), utc(3, 11, 0));
+  // Un campo de hora explícito manda siempre.
+  assert.equal(parseFormup(ping(["Do not log in at downtime", "Formup Time: 11:00"]), ts), utc(3, 11, 0));
+  // Otra hora distinta de la del downtime: no se toca (mejor un aviso de más que perder un formup).
+  assert.equal(parseFormup(ping(["Downtime extended until 11:30 EVE, do not log in"]), ts), utc(3, 11, 30));
+  // Un «downtime» o «DT» suelto no basta para decir que es un aviso de mantenimiento.
+  assert.equal(parseFleetTime("after DT tomorrow", ts), utc(4, 11, 0));
+  assert.equal(parseFleetTime("we form at downtime", utc(3, 20, 0)), utc(4, 11, 0));
+  // «op», «timer» y «server» no cuentan en ningún sentido.
+  assert.equal(parseFormup(ping(["Server timer at 11:00 EVE, do not log in early"]), ts), null);
+  assert.equal(parseFormup(ping(["Op at 19:00 EVE", "Server is fine"]), ts), utc(3, 19, 0));
+});
