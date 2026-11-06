@@ -35,12 +35,17 @@ test("«al hacer clic»: el recuadro no lleva <img> ni la dirección de la image
   S.settings.behavior.linkPreviewMode = "click";
   const { previews } = formatBody("mira https://imagenes.ejemplo.com/rastreo.png y https://youtu.be/dQw4w9WgXcQ");
   assert.equal(previews.length, 2, "se reconocen igual");
+  // Texto visible del recuadro y dirección de su título (el enlace original), comparados exactamente.
+  const label = (html) => /<\/span>([^<]*)<\/button>$/.exec(html)?.[1];
+  const titleUrl = (html) => new URL(/ title="([^"]*)"/.exec(html)[1].replace(/&amp;/g, "&"));
   const img = previewHtml(previews[0], { pending: true });
-  assert.ok(img.includes('class="link-preview preview-pending image"'));
-  assert.ok(img.includes("imagenes.ejemplo.com"));
-  assert.ok(!/<img\b/.test(img), "sin <img>: no se pide nada");
+  assert.ok(img.startsWith('<button type="button" class="link-preview preview-pending image"'));
+  assert.equal(label(img), "Imagen de imagenes.ejemplo.com · clic para cargar", "solo el dominio, a la vista");
+  assert.equal(titleUrl(img).hostname, "imagenes.ejemplo.com");
+  assert.ok(!/<img\b/.test(img) && !/\bsrc=/.test(img), "sin <img> ni src: no se pide nada");
   const yt = previewHtml(previews[1], { pending: true });
-  assert.ok(!/<img\b/.test(yt) && !yt.includes("i.ytimg.com"), "ni la miniatura de YouTube");
+  assert.equal(label(yt), "Vídeo de YouTube · clic para cargar");
+  assert.ok(!/<img\b/.test(yt) && !/\bsrc=/.test(yt), "ni la miniatura de YouTube");
   // La vista previa de verdad también lleva la clase estable.
   assert.ok(previewHtml(previews[0]).startsWith('<a class="link-preview preview image"'));
 });
