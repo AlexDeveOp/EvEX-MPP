@@ -6,6 +6,7 @@ import { renderIcon, renderAlertIcon } from "./icon.js";
 import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, waylandSession } from "./overlay.js";
 import { pickDisplay, describeDisplays, isValidChoice } from "./popup-display.js";
 import { t } from "./i18n.js";
+import { popupTimeout, normDuration } from "../renderer/js/popup-duration.js";
 
 const WIDTH = 380;
 const MARGIN = 12;
@@ -15,10 +16,14 @@ const MAX = 5;
 let nextId = 1;
 const popups = []; // el primero es el más cercano a la barra de tareas
 // display: en qué pantalla salen (ver popup-display.js); displayHint: la pista para reencontrar un monitor concreto.
-let options = { corner: "bottom-left", duration: 8, pingSticky: true, preload: "", onClick: () => {}, display: "primary", displayHint: null, getWin: () => null };
+// pingDuration: cuánto se queda la burbuja de un ping ("sticky", "message" o segundos; ver popup-duration.js).
+let options = { corner: "bottom-left", duration: 8, pingDuration: "sticky", preload: "", onClick: () => {}, display: "primary", displayHint: null, getWin: () => null };
 
 export function configurePopups(o) {
   options = { ...options, ...o };
+  // El interruptor viejo («los pings se quedan hasta cerrarlos») sigue valiendo si no llega la duración nueva.
+  if ("pingSticky" in o && !("pingDuration" in o)) options.pingDuration = normDuration(undefined, o.pingSticky);
+  else if ("pingDuration" in o) options.pingDuration = normDuration(o.pingDuration, o.pingSticky);
   watchDisplays();
 }
 
@@ -99,13 +104,14 @@ export function systemPopups() {
 
 const systemNotes = new Map(); // id → { note, data }
 
-// ¿La burbuja se queda hasta cerrarla? Un ping, si así lo dice «Los pings se quedan en pantalla»; una regla, según la
-// suya. Los recordatorios (el aviso antes del formup) solo obedecen a su propia opción: antes la de los pings la pisaba
-// y el recordatorio se quedaba fijo aunque se hubiera desactivado.
-export function isSticky(data, pingSticky = options.pingSticky) {
-  if (data.reminder) return !!data.sticky;
-  return !!(data.sticky || (data.kind === "ping" && pingSticky));
+// Cuánto dura la burbuja (ms) o null si se queda hasta cerrarla. Ver popup-duration.js: el aviso del formup obedece
+// solo a su opción, una regla que pide «se queda» se queda y un ping, según la suya.
+// ping: la duración de los pings ("sticky", "message" o segundos); también vale true/false (el interruptor viejo).
+export function timeoutOf(data, ping = options.pingDuration) {
+  const pingDuration = typeof ping === "boolean" ? normDuration(undefined, ping) : ping;
+  return popupTimeout(data, { pingDuration, messageSeconds: options.duration });
 }
+export const isSticky = (data, ping) => timeoutOf(data, ping) === null;
 
 function showSystemNotification(id, data) {
   const body = [data.text, ...(data.fields || []).map((f) => `${f.key}: ${f.value}`)].filter(Boolean).join("\n");
@@ -181,8 +187,8 @@ function showCustomPopup(id, data) {
 
 function armTimer(p) {
   clearTimeout(p.timer);
-  const sticky = isSticky(p.data);
-  if (!sticky) p.timer = setTimeout(() => closePopup(p.id), Math.max(3, options.duration) * 1000);
+  const ms = timeoutOf(p.data);
+  if (ms !== null) p.timer = setTimeout(() => closePopup(p.id), ms);
 }
 
 export function closePopup(id, immediate) {

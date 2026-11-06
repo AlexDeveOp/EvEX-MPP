@@ -6,6 +6,8 @@ import { newRule, normalizeRule, compileRule } from "../keywords.js";
 import { t } from "../i18n.js";
 import { isWindows, onWindows, trayAvailable } from "../system.js";
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
+import { durationSelect } from "./duration.js";
+import { normDuration } from "../popup-duration.js";
 import { dndGroup } from "./dnd-schedule.js";
 
 // Pantalla de las burbujas. Los monitores se piden al abrir Preferencias (pueden cambiar); al elegir una opción sale
@@ -99,7 +101,7 @@ export const notificationTabs = {
         ),
         popupDisplayField(n, set),
         field(t("Duración de los avisos de mensajes"), range(3, 30, 1, n.popupDuration, (v) => set((x) => (x.popupDuration = v)), (v) => `${v} s`)),
-        toggle(n.pingSticky, (v) => set((x) => (x.pingSticky = v)), t("Los pings se quedan en pantalla hasta cerrarlos"), t("Si no, desaparecen como los mensajes")),
+        field(t("Cuánto se queda el aviso del ping"), durationSelect(normDuration(n.pingDuration, n.pingSticky), (v) => set((x) => ((x.pingDuration = v), (x.pingSticky = v === "sticky")))), t("También en Preferencias → Pings de flota")),
         trayAvailable() ? toggle(n.trayBlink, (v) => set((x) => (x.trayBlink = v)), t("Parpadear el «!» de la bandeja con pings sin leer")) : null,
         h(
           "div",
