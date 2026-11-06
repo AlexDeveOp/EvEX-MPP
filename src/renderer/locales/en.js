@@ -1480,4 +1480,8 @@ export default {
   "Componentes de terceros": "Third-party components",
   "Fuentes, iconos y emojis que incluye la app": "Fonts, icons and emoji included in the app",
   "EVE Online es una marca de CCP hf. EvEX-MPP no está afiliado a CCP Games.": "EVE Online is a trademark of CCP hf. EvEX-MPP is not affiliated with CCP Games.",
+  // Errores de las flotas y del .ics que llegan a un aviso (fleets.js, ics.js)
+  "Hora de la flota no válida": "Invalid fleet time",
+  "Fecha no válida en el calendario": "Invalid date in the calendar",
+  "Falta el identificador (UID) de un evento del calendario": "A calendar event is missing its identifier (UID)",
 };

@@ -3,6 +3,8 @@
 // - Texto escapado según RFC 5545 §3.3.11 (\ ; , y saltos de línea).
 // - Líneas plegadas a 75 octetos de UTF-8 (§3.1), sin partir caracteres; la continuación empieza con un espacio.
 // - Fin de línea CRLF, horas en UTC (…Z), UID estable por flota (reexportar actualiza el evento en vez de duplicarlo).
+// Los errores llegan al aviso de «Exportar .ics» (fleet-export.js): van traducidos.
+import { t } from "./i18n.js";
 
 export const PRODID = "-//EvEX-MPP//Fleet calendar//EN";
 const CRLF = "\r\n";
@@ -46,7 +48,7 @@ export const unfold = (text) => String(text).replace(/\r\n[ \t]/g, "");
 // 2026-11-05T21:30:00Z → 20261105T213000Z
 export function formatUtc(date) {
   const d = new Date(date);
-  if (Number.isNaN(d.getTime())) throw new Error("fecha no válida");
+  if (Number.isNaN(d.getTime())) throw new Error(t("Fecha no válida en el calendario"));
   return d.toISOString().replace(/\.\d{3}Z$/, "Z").replace(/[-:]/g, "");
 }
 
@@ -62,7 +64,7 @@ export function alarmTrigger(minutes) {
 // Un evento. start/end: Date o milisegundos; si no hay end, dura durationMinutes (60 por defecto).
 // alarmMinutes: aviso antes de empezar (null = sin aviso). description y location son opcionales.
 export function eventLines({ uid, start, end, durationMinutes = 60, summary, description, location, alarmMinutes = null, dtstamp = Date.now(), categories, url }) {
-  if (!uid) throw new Error("falta el UID");
+  if (!uid) throw new Error(t("Falta el identificador (UID) de un evento del calendario"));
   const startMs = new Date(start).getTime();
   const endMs = end != null ? new Date(end).getTime() : startMs + durationMinutes * 60e3;
   const lines = ["BEGIN:VEVENT", `UID:${escapeText(uid)}`, `DTSTAMP:${formatUtc(dtstamp)}`, `DTSTART:${formatUtc(startMs)}`, `DTEND:${formatUtc(endMs)}`, `SUMMARY:${escapeText(summary || "Fleet")}`];

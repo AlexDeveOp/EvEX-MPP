@@ -12,6 +12,7 @@ import { S, saveSettings, on } from "./state.js";
 import { pingsConv } from "./convs.js";
 import { parsePing } from "./pings.js";
 import { parseFormup, INVISIBLE, TIME_KEY } from "./fleet-time.js";
+import { t } from "./i18n.js";
 
 export const SAME_OP_MS = 15 * 60e3;
 export const KEEP_MS = 90 * 86400e3; // lo guardado de hace más de 90 días se borra (config.json se guarda entero)
@@ -229,7 +230,8 @@ export function fleetsBetween(start, end) {
 
 function clean(f) {
   const at = Number(f.at);
-  if (!Number.isFinite(at)) throw new Error("Hora de la flota no válida");
+  // La vista de flotas lo enseña en un aviso (toast): va traducido.
+  if (!Number.isFinite(at)) throw new Error(t("Hora de la flota no válida"));
   return {
     at,
     title: String(f.title ?? "").slice(0, 200),
