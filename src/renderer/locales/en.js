@@ -423,8 +423,6 @@ export default {
   "Arriba a la izquierda": "Top left",
   "Arriba a la derecha": "Top right",
   "Duración de los avisos de mensajes": "Message alert duration",
-  "Los pings se quedan en pantalla hasta cerrarlos": "Pings stay on screen until you close them",
-  "Si no, desaparecen como los mensajes": "Otherwise they disappear like messages",
   "Parpadear el «!» de la bandeja con pings sin leer": "Blink the tray “!” while there are unread pings",
   "Probar aviso de mensaje": "Test message alert",
   "Probar aviso de ping": "Test ping alert",
@@ -914,7 +912,6 @@ export default {
   "Con burbuja y sonido, aunque esté activado «No molestar»": "With popup and sound, even in “Do not disturb”",
   "Avisar antes": "Alert in advance",
   "Avisar también a la hora exacta del formup": "Also alert at the exact formup time",
-  "El aviso se queda en pantalla hasta cerrarlo": "The alert stays on screen until closed",
   "Sonido del aviso": "Alert sound",
   "La hora se lee en hora EVE de campos como «Formup Time: 19:00» o de textos como «formup at 19:30 EVE» o «undock in 20 min». La hora del pie del ping es la de envío, no la del formup. Si el ping no trae hora, no hay cuenta atrás.":
     "The time is read in EVE time from fields like “Formup Time: 19:00” or from text like “formup at 19:30 EVE” or “undock in 20 min”. The time in the ping footer is when it was sent, not the formup. If the ping has no time, there is no countdown.",
@@ -1487,6 +1484,13 @@ export default {
   // Preferencias → Privacidad (settings/privacy.js)
   "Privacidad": "Privacy",
   "Opciones para que no se vea en pantalla ni salga de tu equipo más de lo necesario.": "Options so that no more than necessary is shown on screen or leaves your PC.",
+  // Cuánto se queda el aviso (pings y formup)
+  "Hasta cerrarlo": "Until closed",
+  "Como los mensajes ({n} s)": "Like messages ({n} s)",
+  "Cuánto se queda el aviso del ping": "How long the ping alert stays",
+  "También en Preferencias → Pings de flota": "Also in Preferences → Fleet pings",
+  "Cuánto se queda el aviso del formup": "How long the formup alert stays",
+  "Igual que el de los pings: hasta cerrarlo, como los mensajes o unos segundos": "Like the ping alert: until closed, like messages or a few seconds",
   // Caducidad del historial local (settings/retention.js)
   "{n} días": "{n} days",
   "{n} mensajes de salas y chats": "{n} room and chat messages",

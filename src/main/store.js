@@ -79,6 +79,9 @@ export const DEFAULT_SETTINGS = {
     popupDisplayHint: null,
     popupDuration: 8,
     pingSticky: true,
+    // Cuánto se queda la burbuja de un ping: "sticky", "message" o segundos (popup-duration.js). null = según
+    // pingSticky (el interruptor de antes), para no cambiar lo que ya tenga guardado.
+    pingDuration: null,
     trayBlink: true,
     dnd: false,
     // «No molestar» por horario (renderer/js/notify-rules.js): de–a (puede cruzar la medianoche) y días (0 = domingo).

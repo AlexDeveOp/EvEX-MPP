@@ -12,6 +12,8 @@ import { VOICE_DEFAULTS, TEMPLATE_FIELDS, voiceSettings, listVoices, pingSpeech,
 import { look, full, group, soundRow, popupTestColors } from "./common.js";
 import { setMini } from "../mini-feed.js";
 import { fleetIcsGroup } from "./fleet-ics.js";
+import { durationSelect } from "./duration.js";
+import { normDuration } from "../popup-duration.js";
 
 // «Pings de flota» → SRP: marcar pings para pedir el reembolso de naves perdidas (killmail, nota, estado y plazo).
 // Desactivado por defecto: quien no lo use no ve ni la bandera ni el filtro.
@@ -69,7 +71,11 @@ function pingAlertGroup() {
     toggle(r.enabled, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, enabled: v })), t("Repetir el sonido del ping hasta que mires la ventana"), t("Para no perderte un ping si estás lejos del ordenador")),
     field(t("Repetir cada"), range(10, 120, 5, r.interval, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, interval: v })), (v) => `${v} s`)),
     field(t("Máximo de repeticiones"), range(1, 20, 1, r.times, (v) => set((x) => (x.pingRepeat = { ...r, ...x.pingRepeat, times: v })), (v) => `${v}`)),
-    toggle(n.pingSticky, (v) => set((x) => (x.pingSticky = v)), t("Los pings se quedan en pantalla hasta cerrarlos"), t("Si no, desaparecen como los mensajes")),
+    field(
+      t("Cuánto se queda el aviso del ping"),
+      // Se guarda también el interruptor viejo, por si se vuelve a una versión anterior.
+      durationSelect(normDuration(n.pingDuration, n.pingSticky), (v) => set((x) => ((x.pingDuration = v), (x.pingSticky = v === "sticky")))),
+    ),
     h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => (api("notify:test", "ping", popupTestColors()), previewSound(S.settings.notifications.sounds.ping)) }, icon("siren"), t("Probar aviso de ping"))),
   );
 }
@@ -332,7 +338,7 @@ export function formupGroup() {
     speechAvailable()
       ? toggle(c.speak, (v) => set({ speak: v }), t("Leer el aviso en voz alta"), t("Con la voz y la velocidad de «Leer los pings en voz alta», en inglés: «{example}»", { example: reminderSpeech(15, "Capital fleet up") }))
       : null,
-    toggle(c.sticky, (v) => set({ sticky: v }), t("El aviso se queda en pantalla hasta cerrarlo")),
+    field(t("Cuánto se queda el aviso del formup"), durationSelect(c.duration, (v) => set({ duration: v, sticky: v === "sticky" })), t("Igual que el de los pings: hasta cerrarlo, como los mensajes o unos segundos")),
     field(t("Sonido del aviso"), h("div", { class: "row sound-row" }, sel, iconButton("volume-2", t("Probar"), () => previewSound(cfg().sound)), pick, vol)),
     h(
       "p",
