@@ -24,7 +24,8 @@ test("parsePing separa título, campos y pie", () => {
   assert.deepEqual(
     p.fields.map((f) => [f.key, f.value]),
     [
-      ["FC Name", "Bob FC"],
+      // Tal cual: las marcas invisibles de detrás de los dos puntos se quedan (solo se quitan espacios).
+      ["FC Name", `${ZW} Bob FC`],
       ["Formup Location", "Jita"],
       ["PAP Type", "Strategic"],
       ["Comms", "Op 1 https://example.com/comms"],
