@@ -57,7 +57,7 @@ test("createTray pone el icono reducido a 16 px, el nombre de la app y el menú"
   );
   assert.deepEqual(
     tray.menu.items.filter((i) => i.label).map((i) => i.label),
-    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "No molestar en la app (silenciar avisos)", "Desconectar todo", "Mini ventana para jugar", "Salir"],
+    ["Mostrar EvEX-MPP", "Cambiar de cuenta…", "Disponible", "Ausente", "No molestar", "Ausente (extendido)", "No molestar en la app (silenciar avisos)", "Desconectar todo", "Mini ventana para jugar", "Modo captura", "Salir"],
   );
   assert.equal(tray.menu.items.filter((i) => i.type === "separator").length, 4);
 });
@@ -267,4 +267,19 @@ test("setTrayDnd cambia el icono de la bandeja y su texto, y vuelve al quitarlo"
   setTrayDnd({ active: false });
   assert.equal(tray.image, plain);
   assert.equal(tray.tooltip, "EvEX-MPP");
+});
+
+test("la casilla «Modo captura» enseña si está activo y lo cambia el proceso principal", (t) => {
+  setup(t);
+  let on = false;
+  let toggles = 0;
+  createTray({ getWin: () => win, accounts, showWindow: () => {}, send: () => {}, quit: () => {}, captureOn: () => on, toggleCapture: () => toggles++ });
+  let box = item(buildTrayMenu(), "Modo captura");
+  assert.equal(box.type, "checkbox");
+  assert.equal(box.checked, false);
+  box.click();
+  assert.equal(toggles, 1);
+  on = true;
+  box = item(buildTrayMenu(), "Modo captura");
+  assert.equal(box.checked, true);
 });

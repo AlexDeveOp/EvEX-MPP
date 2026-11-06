@@ -104,6 +104,8 @@ export const DEFAULT_SETTINGS = {
   fleetIcs: { details: false, includeLink: false, alarm: 0 },
   // Mini ventana para jugar (src/main/mini-window.js). La posición se guarda aparte, por monitor.
   mini: { enabled: false, opacity: 0.85, clickThrough: false },
+  // Modo captura (src/main/capture.js): avisos sin detalles y ventana difuminada. globalShortcut: Ctrl+Shift+H global.
+  capture: { enabled: false, globalShortcut: false },
   behavior: {
     enterToSend: true,
     sendTyping: true,

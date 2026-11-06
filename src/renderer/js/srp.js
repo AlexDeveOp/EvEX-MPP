@@ -5,11 +5,11 @@
 import { S, saveSettings } from "./state.js";
 import { h, icon, toast } from "./dom.js";
 import { t, tk } from "./i18n.js";
+import { trimSpaces } from "./invisible.js";
 
 const DAY = 86400000;
 // Fecha y hora EVE (UTC), completas: el formulario de SRP suele pedir cuándo fue la flota.
 const eveDateTime = (ts) => new Date(ts).toISOString().slice(0, 16).replace("T", " ");
-const INVISIBLE = new RegExp(`[${String.fromCharCode(0x200b)}-${String.fromCharCode(0x200d, 0x2060, 0xfeff)}]`, "g"); // caracteres invisibles de los pings
 
 export const SRP_STATUS = [
   ["pending", tk("Pendiente de pedir")],
@@ -67,9 +67,10 @@ export function srpDeadline(ts, days = srpSettings().deadlineDays, now = Date.no
   return { at, left, state: left < DAY ? "soon" : "ok", text, short };
 }
 
-// Texto listo para pegar en el formulario de SRP: el ping tal cual y, debajo, el killmail y la nota si los hay.
+// Texto listo para pegar en el formulario de SRP: el ping tal cual (con sus caracteres invisibles, las marcas de agua
+// que algunas alianzas ponen en cada copia; solo sin espacios en los bordes) y, debajo, el killmail y la nota si los hay.
 export function srpText(m, mark = getMark(m.key)) {
-  const lines = [String(m.body || "").replace(INVISIBLE, "").trim()];
+  const lines = [trimSpaces(m.body || "")];
   const extra = [];
   extra.push(t("Ping: {eve} EVE", { eve: eveDateTime(m.ts) }));
   if (mark?.killmail) extra.push(t("Killmail: {url}", { url: mark.killmail.trim() }));

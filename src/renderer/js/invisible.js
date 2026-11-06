@@ -12,6 +12,11 @@ export const withoutInvisible = (s) => String(s ?? "").replace(INVISIBLE, "");
 // ¿Tiene algo que se vea? (un texto hecho solo de invisibles y espacios, no)
 export const hasVisible = (s) => withoutInvisible(s).trim() !== "";
 
+// Solo para PINTAR un valor: «FC Name:<invisibles> Bob» se guarda tal cual, con el espacio, pero al pintarlo ese
+// espacio de detrás de los invisibles iniciales se vería como un hueco delante. Se quitan esos espacios normales y los
+// invisibles se quedan. No usar para lo que se guarda o se copia.
+export const spaceAfterLeadingInvisible = (s) => String(s ?? "").replace(/^([\u200B-\u200D\u2060\uFEFF]+)[ \t]+/, "$1");
+
 // Recorta a n puntos de código (no parte un emoji ni un par sustituto).
 export function cutChars(s, n) {
   const chars = Array.from(String(s ?? ""));

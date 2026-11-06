@@ -1,5 +1,6 @@
 import { t } from "./i18n.js";
 import { shadeForWhite } from "./contrast.js";
+import { spaceAfterLeadingInvisible } from "./invisible.js";
 // Contenido de una burbuja de notificación. Los datos llegan ya preparados desde la ventana principal.
 const id = new URLSearchParams(location.search).get("id");
 const call = (ch, ...a) => window.evex.call(ch, ...a);
@@ -50,7 +51,7 @@ async function init() {
   if (d.text) body.append(el("div", "", d.text));
   if (d.fields?.length) {
     const dl = el("dl", "fields");
-    for (const f of d.fields) dl.append(el("dt", "", f.key), el("dd", "", f.value));
+    for (const f of d.fields) dl.append(el("dt", "", f.key), el("dd", "", spaceAfterLeadingInvisible(f.value)));
     body.append(dl);
   }
   if (d.time) {

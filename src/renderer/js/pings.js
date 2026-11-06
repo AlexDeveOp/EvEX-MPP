@@ -7,9 +7,9 @@ import { parseFormup, countdownText, countdownSettings, watchCountdowns } from "
 
 import { t } from "./i18n.js";
 import { srpEnabled, isMarked, flagButton, deadlineChip, srpPanel, statusChip } from "./srp.js";
-import { INVISIBLE, trimSpaces, withoutInvisible, removeCleanRange } from "./invisible.js";
-// \u00ABClave: valor\u00BB. El valor va tal cual, con sus caracteres invisibles (marcas de agua): solo se quitan los espacios de
-// despu\u00E9s de los dos puntos.
+import { INVISIBLE, trimSpaces, withoutInvisible, removeCleanRange, spaceAfterLeadingInvisible } from "./invisible.js";
+// «Clave: valor». El valor va tal cual, con sus caracteres invisibles (marcas de agua): solo se quitan los espacios de
+// después de los dos puntos.
 const FIELD_RE = /^([A-Za-z][\w ./()'&-]{1,32}?)\s*:[ \t]*(.+)$/;
 // p. ej. "~~~ This was a coord broadcast from bob to all at 2026-11-02 12:00:00 EVE ~~~"
 const FOOTER_RE = /~~~\s*This was an?\s+(?:[\w-]+\s+)?(?:broadcast|ping)\s+from\s+(\S+)\s+to\s+(\S+)\s+at\s+(.+?)\s*~~~/i;
@@ -86,8 +86,9 @@ export function dotlanSystem(key, value) {
   return /^[A-Za-z0-9-]{3,12}$/.test(sys) && /[A-Za-z]/.test(sys) ? sys : "";
 }
 
-function fieldValue(key, value, rules) {
-  const sys = dotlanSystem(key, value);
+function fieldValue(key, raw, rules) {
+  const sys = dotlanSystem(key, raw);
+  const value = spaceAfterLeadingInvisible(raw); // solo al pintar: el valor guardado no cambia
   if (sys) {
     return h("span", { html: formatBody(value, { rules }).html + ` <a class="link dotlan" href="https://evemaps.dotlan.net/system/${encodeURIComponent(sys)}" title="${esc(t("Ver {system} en Dotlan", { system: sys }))}">🗺 Dotlan</a>` });
   }
