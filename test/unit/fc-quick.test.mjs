@@ -134,3 +134,17 @@ test("store: normaliza los guardados con sus topes", () => {
   assert.equal(store.normalizeFcMode({ saved: many }).saved.length, store.FC_SAVED_MAX);
   assert.deepEqual(store.normalizeFcMode({}).saved, []);
 });
+
+test("toggleGroup: quitar un grupo sugerido lo descarta y pide repintar las tarjetas", () => {
+  const st = { selected: new Set(["caps", "all"]), autoMarked: new Set(["caps"]), dismissed: new Set() };
+  assert.deepEqual(q.toggleGroup(st, "caps"), { selected: false, suggestionsChanged: true });
+  assert.deepEqual([...st.selected], ["all"]);
+  assert.deepEqual([...st.autoMarked], []);
+  assert.deepEqual([...st.dismissed], ["caps"]);
+  // Un grupo marcado a mano: quitarlo no toca las sugerencias.
+  assert.deepEqual(q.toggleGroup(st, "all"), { selected: false, suggestionsChanged: false });
+  assert.deepEqual([...st.dismissed], ["caps"]);
+  // Volver a marcarlo a mano no lo hace «sugerido».
+  assert.deepEqual(q.toggleGroup(st, "caps"), { selected: true, suggestionsChanged: false });
+  assert.deepEqual([...st.autoMarked], []);
+});

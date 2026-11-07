@@ -100,5 +100,19 @@ export function mentionsGroup(text, name) {
   return words(text).some((w) => w === n || w === stem || w === `${n}s` || (prefixOk && w.length > stem.length && w.startsWith(stem)));
 }
 
+// Pulsar un grupo de la barra «Para»: lo marca o lo desmarca. Si se desmarca uno que había marcado la sugerencia, queda
+// descartado (no se vuelve a marcar) y hay que repintar las tarjetas «¿Va a …?».
+// state: { selected, autoMarked, dismissed } (Set). → { selected: boolean, suggestionsChanged: boolean }
+export function toggleGroup(state, name) {
+  if (state.selected.has(name)) {
+    state.selected.delete(name);
+    const wasAuto = state.autoMarked.delete(name);
+    if (wasAuto) state.dismissed.add(name);
+    return { selected: false, suggestionsChanged: wasAuto };
+  }
+  state.selected.add(name);
+  return { selected: true, suggestionsChanged: false };
+}
+
 // Grupos de la barra que el texto menciona y aún no están marcados.
 export const suggestGroups = (text, groupNames = [], selected = []) => groupNames.filter((g) => !selected.some((s) => same(s, g)) && mentionsGroup(text, g));

@@ -406,6 +406,7 @@ export function openSendPing() {
     const editor = h("div", { class: `fc-editor ${state.showInvisible ? "marks" : ""}` }, backdrop, area);
     const notice = h("div", { class: "fc-inv-notice" });
     const side = h("div", { class: "fc-understood" });
+    state.understoodBox = side;
     const paintMarks = () => {
       clear(backdrop);
       for (const r of fcc.invisibleRuns(state.paste)) backdrop.append(r.inv ? h("span", { class: "fc-inv", dataset: { name: r.inv }, title: r.inv }, r.text) : r.text);
@@ -518,10 +519,9 @@ export function openSendPing() {
             "aria-pressed": String(sel),
             title: g.address || "",
             onclick: () => {
-              if (sel) {
-                state.selected.delete(g.name);
-                if (state.autoMarked.delete(g.name)) state.dismissed.add(g.name);
-              } else state.selected.add(g.name);
+              // Si se quita a mano un grupo que había sugerido la app, su tarjeta «¿Va a …?» también se va.
+              const { suggestionsChanged } = fq.toggleGroup(state, g.name);
+              if (suggestionsChanged && state.tab === "paste" && state.understoodBox?.isConnected) paintUnderstood(state.understoodBox);
               paintTo();
               paintFoot();
             },
