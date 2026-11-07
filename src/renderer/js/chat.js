@@ -22,6 +22,7 @@ import { calendarMenuItem, prefillFromMessage, prefillFromPing } from "./fleet-m
 import { canEditTopic, mayTryTopic, topicLockedReason, canConfigureRoom, openTopicEditor, setTopic, openRoomConfig } from "./room-admin.js";
 
 import { t } from "./i18n.js";
+import { isNewestFirst, jumpButtons, jumpTopLabel, countsAsNew, feedKeyAction, JUMP_TOP_AFTER } from "./feed-jump.js";
 const panes = new Map();
 // Vistas que reúnen mensajes de varias conversaciones (pings, menciones): sin compositor ni historial hacia arriba.
 const isFeed = (c) => c.type === "pings" || c.type === "mentions";
@@ -341,12 +342,26 @@ function pane(c) {
   if (p) return p;
   const list = h("div", { class: "msg-list", tabindex: "-1" });
   const scroller = h("div", { class: "msg-scroll" }, list);
-  const jump = h("button", { class: "jump-bottom hidden", onclick: () => scrollToBottom(p, true) }, icon("arrow-down"), h("span", { class: "jump-count" }));
+  // Pings y Menciones van del más nuevo (arriba) al más viejo: su botón flotante sube al principio, no baja.
+  const newestFirst = isNewestFirst(c);
+  const jump = newestFirst
+    ? h("button", { class: "jump-bottom jump-top hidden", onclick: () => scrollToTop(p, true) }, icon("arrow-up"), h("span", { class: "jump-label" }), h("span", { class: "jump-count" }))
+    : h("button", { class: "jump-bottom hidden", onclick: () => scrollToBottom(p, true) }, icon("arrow-down"), h("span", { class: "jump-count" }));
   const typing = h("div", { class: "typing-line" });
   const header = h("header", { class: "conv-header" });
   const bg = h("div", { class: "conv-bg" });
   const root = h("section", { class: `conv-pane type-${c.type}`, dataset: { key: c.key } }, bg, header, h("div", { class: "conv-body" }, scroller, jump), typing);
   p = { root, list, scroller, jump, typing, header, bg, newCount: 0 };
+  if (newestFirst) {
+    root.addEventListener("keydown", (e) => {
+      const action = feedKeyAction(e);
+      if (!action) return;
+      e.preventDefault();
+      if (action === "top") return scrollToTop(p);
+      p.scroller.scrollTo({ top: p.scroller.scrollHeight });
+      jump.classList.toggle("hidden", !jumpButtons(c, p.scroller).up);
+    });
+  }
   if (c.type === "pings") {
     // view: «list» (las tarjetas de siempre), «upcoming» o «month» (calendario de flotas).
     p.filter = { query: "", group: "", view: "list", monthOffset: 0 };
@@ -359,6 +374,15 @@ function pane(c) {
   scroller.addEventListener("scroll", () => {
     const near = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
     p.atBottom = near;
+    if (newestFirst) {
+      const { up } = jumpButtons(c, scroller);
+      if (!up) {
+        p.newCount = 0;
+        setJumpCount(p);
+      }
+      jump.classList.toggle("hidden", !up);
+      return;
+    }
     if (near) {
       p.newCount = 0;
       jump.classList.add("hidden");
@@ -484,6 +508,42 @@ export async function revealMessage(c, key) {
     setTimeout(() => el.classList.remove("flash"), 2600);
   });
   return true;
+}
+
+function scrollToTop(p, smooth) {
+  p.scroller.scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+  p.newCount = 0;
+  setJumpCount(p);
+  p.jump.classList.add("hidden");
+}
+
+function setJumpCount(p) {
+  p.jump.querySelector(".jump-count").textContent = p.newCount ? t("{n} nuevos", { n: p.newCount }) : "";
+}
+
+// El texto del botón dice adónde lleva: al último ping, a la última mención o arriba del calendario.
+function setJumpLabel(c, p) {
+  const label = p.jump.querySelector(".jump-label");
+  if (!label) return;
+  const text = t(jumpTopLabel(c, p.filter?.view));
+  label.textContent = text;
+  p.jump.title = text;
+}
+
+// Tras repintar una vista del más nuevo arriba se está al principio: sin botón ni contador.
+function resetJumpTop(c, p) {
+  p.newCount = 0;
+  setJumpCount(p);
+  setJumpLabel(c, p);
+  p.jump.classList.add("hidden");
+}
+
+// Un ping o una mención en directo que entra mientras se lee más abajo se cuenta en el botón de subir.
+function countNewAtTop(p, m) {
+  if (!countsAsNew(m) || p.scroller.scrollTop <= JUMP_TOP_AFTER) return;
+  p.newCount++;
+  setJumpCount(p);
+  p.jump.classList.remove("hidden");
 }
 
 function scrollToBottom(p, smooth) {
@@ -795,6 +855,7 @@ function renderAllMessages(c, p, prependedCount) {
     p.list.append(frag);
     p.lastRendered = null;
     p.scroller.scrollTop = 0;
+    resetJumpTop(c, p);
     return;
   }
   if (c.type === "pings" && p.filter.view !== "list") {
@@ -807,6 +868,7 @@ function renderAllMessages(c, p, prependedCount) {
     });
     p.lastRendered = null;
     p.scroller.scrollTop = 0;
+    resetJumpTop(c, p);
     return;
   }
   if (c.type === "pings") {
@@ -815,6 +877,7 @@ function renderAllMessages(c, p, prependedCount) {
     for (const m of shown) p.list.append(pingCard(m, { srp: p.filter.srpOnly }));
     p.lastRendered = null;
     p.scroller.scrollTop = 0;
+    resetJumpTop(c, p);
     return;
   }
   // Al cargar más historial se pinta todo lo que hay en memoria; si no, solo los últimos MAX_RENDERED.
@@ -847,6 +910,7 @@ function appendMessage(c, m) {
     if (!p.dirty && mentionFilterMatches(m, p.filter)) {
       p.list.querySelector(".empty-state")?.remove();
       p.list.prepend(mentionCard(m, openMention));
+      countNewAtTop(p, m);
     }
     renderHeader(c, p);
     return;
@@ -858,6 +922,7 @@ function appendMessage(c, m) {
     if (!p.dirty && p.filter.view === "list" && pingMatches(m, p.filter.query, p.filter.group, p.filter.srpOnly)) {
       p.list.querySelector(".empty-state")?.remove();
       p.list.prepend(pingCard(m, { srp: p.filter.srpOnly }));
+      countNewAtTop(p, m);
     }
     refreshPingsHeader(c, p);
     return;
