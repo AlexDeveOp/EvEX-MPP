@@ -15,6 +15,7 @@ import { captureNotification, captureMiniState, keepCapture } from "./capture.js
 import { createTray, getTray, buildTrayMenu, refreshTray, setUnread, setTrayDnd } from "./tray.js";
 import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
+import { skipReceipt } from "./receipt-policy.js";
 import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
 import { markFcReply, registerFcIpc } from "./fc-ipc.js";
@@ -498,6 +499,7 @@ function getConn(id) {
   if (!x) {
     x = new XmppAccount(acc, { avatarDir: avatarDir(), version: app.getVersion(), getProxy: () => accountProxy(x.acc, store.get().settings, proxyPassword), log: connLog });
     x.historyOptions = (roomJid) => historyOptions(id, roomJid);
+    x.skipReceipt = (from, body) => skipReceipt({ pingSenders: store.get().settings.pingSenders, accountJid: x.acc.jid, from, body });
     x.on("event", (ev) => onAccountEvent(x, ev));
     accounts.set(id, x);
   }
