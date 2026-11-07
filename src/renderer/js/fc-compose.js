@@ -2,7 +2,7 @@
 // fc:send, el modo web y el resumen de resultados). La ventana está en fc-window.js.
 //
 // El texto del ping va TAL CUAL: aquí no se recorta ni se le quitan los invisibles al texto que se envía.
-import { renderTemplate } from "./fc-send.js";
+import { renderTemplate, isConfirmed } from "./fc-send.js";
 import { groupRows, groupUsable, learnedGroups, sameGroup } from "./fc-groups.js";
 import { trimSpaces, hasVisible } from "./invisible.js";
 
@@ -114,11 +114,10 @@ export const webResults = (groups) => groups.map((g) => ({ group: g.name, status
 // "error": la app no ha podido ni intentarlo (p. ej. se ha caído la conexión); lo pone la ventana, no el bot.
 export const STATUS_TONES = { sent: "ok", delivered: "ok-soft", accepted: "neutral", rejected: "error", error: "error", unconfirmed: "warn", copied: "info" };
 export const statusTone = (status) => STATUS_TONES[status] || "warn";
-export const isSent = (status) => status === "sent" || status === "delivered";
 
 export function summarize(results = []) {
   const total = results.length;
-  const sent = results.filter((r) => isSent(r.status)).length;
+  const sent = results.filter((r) => isConfirmed(r.status)).length;
   const rejected = results.filter((r) => r.status === "rejected" || r.status === "error").length;
   const copied = results.filter((r) => r.status === "copied").length;
   return { total, sent, rejected, copied, allSent: total > 0 && sent === total };

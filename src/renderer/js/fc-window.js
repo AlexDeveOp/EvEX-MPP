@@ -400,7 +400,8 @@ export function openSendPing() {
     // Al calendario solo si ha salido hacia algún grupo (lo copiado para la web también cuenta). Si te llega tu copia
     // del ping, ese ping ya pone la flota en el calendario: no se añade otra.
     if (state.tab === "paste" && state.addToCalendar && at && sum.rejected < sum.total) addToCalendarUnlessEcho(text, at, groups, startedAt);
-    showResults(fc, results, fcc.sendAccount(fc, S.accounts)?.id, () => {
+    // «Ver chat con el bot» cierra también esta ventana, para que el chat quede a la vista.
+    showResults(fc, results, fcc.sendAccount(fc, S.accounts)?.id, () => win.close(), () => {
       if (sum.allSent || sum.copied === sum.total) win.close();
     });
   }
@@ -460,7 +461,7 @@ function confirmSend(fc, text, groups, at) {
   });
 }
 
-function showResults(fc, results, accountId, onClose) {
+function showResults(fc, results, accountId, closeWindow, onClose) {
   const sum = fcc.summarize(results);
   const title =
     fc.groupMode === "web"
@@ -504,7 +505,7 @@ function showResults(fc, results, accountId, onClose) {
       // La respuesta del bot se guarda en su chat privado (que no se abre solo): desde aquí se llega a él. Solo en el
       // modo «línea»: en el de «dirección» los errores los da el servicio, no hay chat con un bot.
       fc.groupMode === "line" && accountId && fc.channel.jid
-        ? { label: t("Ver chat con el bot"), icon: "message-square", action: (c) => (c(), openConv(accountId, fc.channel.jid, fc.channel.kind === "groupchat" ? "groupchat" : "chat")) }
+        ? { label: t("Ver chat con el bot"), icon: "message-square", action: (c) => (c(), closeWindow(), openConv(accountId, fc.channel.jid, fc.channel.kind === "groupchat" ? "groupchat" : "chat")) }
         : null,
       "spacer",
       { label: t("Cerrar"), primary: true, action: (c) => c() },
