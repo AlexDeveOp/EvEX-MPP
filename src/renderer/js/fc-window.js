@@ -116,7 +116,7 @@ export function openSendPing() {
     sendBtn,
   );
   const body = h("div", { class: "fc-win" }, tabsNav, panel, toBar, foot);
-  const win = modal({ title: t("Enviar ping"), icon: "megaphone", wide: true, className: "fc-send-modal", body, onClose: () => (open = null) });
+  const win = modal({ title: t("Enviar ping (beta)"), icon: "megaphone", wide: true, className: "fc-send-modal", body, onClose: () => (open = null) });
   open = win;
 
   // ---------- texto que se enviaría ----------

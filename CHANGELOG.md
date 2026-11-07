@@ -7,8 +7,20 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-07
+
 ### Added
-- **FC mode** (*Preferences → FC mode*, off by default): send fleet pings from EvEX-MPP. A *Send ping* button under *Fleet pings* opens a window with *Quick ping* (saved pings), *Template* and *Paste text* tabs, in the order you choose. Pasted pings are sent exactly as they are, invisible opsec characters included. Target groups are learned from the pings you receive or added by hand, and a ping can go to one address per group (Openfire Broadcast), with a line at the start for a ping bot, or be copied for your alliance's ping website. Optional confirmation and a result per group with the bot's reply; a ping only counts as sent when it is confirmed. The settings can be exported to a file for other FCs, without your account, signature or saved pings.
+- **FC mode (beta)** (*Preferences → FC mode*, off by default): send fleet pings from EvEX-MPP. A *Send ping* button under *Fleet pings* opens a window with *Quick ping* (saved pings), *Template* and *Paste text* tabs, in the order you choose. Pasted pings are sent exactly as they are, invisible opsec characters included. Target groups are learned from the pings you receive or added by hand, and a ping can go to one address per group (Openfire Broadcast), with a line at the start for a ping bot, or be copied for your alliance's ping website. Optional confirmation and a result per group with the bot's reply; a ping only counts as sent when it is confirmed. The settings can be exported to a file for other FCs, without your account, signature or saved pings.
+  - FC mode pings are sent without delivery receipts or typing notifications. A broadcast service copies everything in the message to each member, so each member would have sent a receipt back to the FC (hundreds with *all*).
+  - When you mark several groups, the confirmation warns that anyone in more than one gets the ping several times, and suggests the group that covers them all (e.g. *allcaps*).
+  - It is a beta: tested against a local Openfire server with the Broadcast plugin and a simulated ping bot, not yet with a real alliance's ping system. Check the result of every ping and report any problem.
+- **Go to the latest ping**: in *Fleet pings* and *Mentions*, an up arrow appears when you scroll down and takes you back to the newest one, with a count of new ones that arrived meanwhile. *Home* and *End* also jump to the newest and oldest. The down arrow, which jumped to the oldest ping, is gone from those views.
+
+### Changed
+- EvEX-MPP no longer sends delivery receipts for fleet pings it receives (from your ping senders, or with a broadcast footer), so an FC is not flooded with receipts from every pilot.
+
+### Fixed
+- A test of formup reminders depended on the real date and started failing on 2026-11-07 ([#116](https://github.com/AlexDeveOp/EvEX-MPP/issues/116)). Only the test changed.
 
 ## [0.11.0] - 2026-11-06
 
@@ -397,7 +409,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.8.0...v0.9.0
