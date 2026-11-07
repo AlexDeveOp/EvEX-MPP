@@ -1,0 +1,262 @@
+/* ---------- modo FC: botón de la barra lateral, Preferencias → Modo FC y ventana «Enviar ping» ---------- */
+
+/* Botón corto debajo de «Pings de flota», con sangría para que se lea como parte de él. */
+.sb-item.fc-send {
+  width: calc(100% - 26px);
+  margin: 4px 0 2px 26px;
+  min-height: 28px;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.93em;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.sb-item.fc-send:hover,
+.sb-item.fc-send.is-hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.sb-item.fc-send:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.sb-item.fc-send .sb-icon {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* Interruptor principal */
+.fc-master {
+  margin: 14px 0 6px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+}
+.fc-master.on {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg3));
+}
+.fc-master .toggle-text > span:first-child {
+  font-weight: 600;
+}
+
+/* Con el modo apagado: en gris y sin poder tocarlo (el contenedor lleva además «inert»). */
+.fc-rest.fc-disabled {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  pointer-events: none;
+  user-select: none;
+}
+
+.fc-channel-select {
+  max-width: 420px;
+}
+.fc-channel-custom .row {
+  gap: 8px;
+  margin: -4px 0 10px;
+  flex-wrap: wrap;
+}
+.fc-channel-custom .input.mono {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* Pestañas de la ventana */
+.fc-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 560px;
+}
+.fc-tabrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg3);
+}
+.fc-tabrow.default {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.fc-tabnum {
+  width: 1.2em;
+  color: var(--text2);
+  font-size: 0.9em;
+}
+.fc-tabname {
+  flex: 1;
+}
+.fc-tabrow.default .fc-tabname {
+  font-weight: 600;
+}
+.fc-tabdefault {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88em;
+  color: var(--text2);
+  cursor: pointer;
+}
+.fc-tabrow.default .fc-tabdefault {
+  color: var(--text);
+}
+.fc-move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Plantilla */
+.fc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip.fc-field {
+  cursor: pointer;
+  padding: 4px 11px;
+  font: inherit;
+  font-size: 0.88em;
+}
+.chip.fc-field.on {
+  color: var(--text);
+}
+.chip.fc-field.off {
+  background: transparent;
+  border-style: dashed;
+}
+.chip.fc-field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.fc-format {
+  min-height: 6.5em;
+  line-height: 1.5;
+}
+.fc-format-actions {
+  justify-content: flex-end;
+  margin: -6px 0 10px;
+}
+
+/* Grupos de destino */
+.fc-subhead {
+  margin: 10px 0 6px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text2);
+}
+.fc-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.fc-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg3);
+  cursor: pointer;
+}
+.fc-mode span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fc-mode.sel {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg3));
+}
+.fc-mode input,
+.fc-tabdefault input,
+.fc-grow input[type="radio"] {
+  accent-color: var(--accent);
+}
+.fc-groups {
+  margin-top: 4px;
+}
+.fc-grow {
+  display: grid;
+  grid-template-columns: minmax(80px, 140px) minmax(0, 1fr) 56px 58px 32px;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fc-grow.address {
+  grid-template-columns: minmax(80px, 130px) minmax(0, 0.8fr) minmax(150px, 1.4fr) 56px 58px 32px;
+}
+.fc-ghead {
+  padding: 4px 0;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--text2);
+}
+.fc-grow.unused .fc-gname {
+  color: var(--text2);
+}
+.fc-gname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fc-tag {
+  font-size: 0.82em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--bg3);
+  color: var(--text2);
+  white-space: nowrap;
+}
+.switch.small {
+  width: 34px;
+  height: 19px;
+}
+.switch.small .slider::before {
+  width: 13px;
+  height: 13px;
+}
+.switch.small input:checked + .slider::before {
+  transform: translateX(15px);
+}
+.switch input:disabled + .slider {
+  opacity: 0.45;
+  cursor: default;
+}
+.fc-nogroups {
+  padding: 10px 0;
+}
+.fc-groups-foot {
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.btn.fc-add-group {
+  border-style: dashed;
+}
+
+/* Ventana «Enviar ping» (de momento, el aviso de «Próximamente») */
+.fc-soon {
+  text-align: center;
+  padding: 8px 6px 4px;
+  max-width: 420px;
+}
+.fc-soon-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+}
+.fc-soon-icon svg {
+  width: 100%;
+  height: 100%;
+}
