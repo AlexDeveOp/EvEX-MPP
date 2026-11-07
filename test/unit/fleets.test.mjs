@@ -133,11 +133,15 @@ test("no se juntan ops distintas a la misma hora: otro título u otro grupo", ()
   assert.equal(F.similarTitle("Capital fleet", "Dread fleet"), false, "«fleet» no cuenta");
 });
 
-test("los avisos de formup valen para las flotas a mano, no para las sugeridas sin aceptar", () => {
+test("los avisos de formup valen para las flotas a mano, no para las sugeridas sin aceptar", (t) => {
   const cfg = countdownSettings({ pingCountdown: { befores: [10], atTime: true } });
   const at = utc(7, 18, 30);
+  // addFleet apunta announcedAt con el reloj, y no se avisa de lo anterior a ese momento: las flotas se añaden una hora
+  // antes del formup con el reloj fijado. Con el reloj real, el test dejó de pasar el 2026-11-07 a las 18:20 UTC.
+  t.mock.timers.enable({ apis: ["Date"], now: at - 3600e3 });
   const m = F.addFleet({ at, title: "Roam con la corp" });
   const s = F.addFleet({ at: utc(7, 18, 40), title: "big op", source: "message", msgKey: "k" });
+  t.mock.timers.reset();
   const now = at - 10 * 60e3 + 5000;
   assert.deepEqual(fleetAlerts(F.allFleets(), cfg, now, {}).map((a) => [a.fleet.id, a.minutes]), [[m.id, 10]]);
   F.acceptFleet(s.id);
