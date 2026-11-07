@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Added
+- **FC mode** (*Preferences → FC mode*, off by default): send fleet pings from EvEX-MPP. A *Send ping* button under *Fleet pings* opens a window with *Quick ping* (saved pings), *Template* and *Paste text* tabs, in the order you choose. Pasted pings are sent exactly as they are, invisible opsec characters included. Target groups are learned from the pings you receive or added by hand, and a ping can go to one address per group (Openfire Broadcast), with a line at the start for a ping bot, or be copied for your alliance's ping website. Optional confirmation and a result per group with the bot's reply; a ping only counts as sent when it is confirmed. The settings can be exported to a file for other FCs, without your account, signature or saved pings.
+
 ## [0.11.0] - 2026-11-06
 
 ### Added
