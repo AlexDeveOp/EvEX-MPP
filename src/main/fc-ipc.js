@@ -28,6 +28,7 @@ function sendOne(x, item, req, timeoutMs) {
   return new Promise((resolve) => {
     let id = null;
     let echo = false;
+    const own = bare(x.ownJid);
     let done = false;
     const fromBot = (ev) => {
       if (bare(ev.conv) !== target) return false;
@@ -38,10 +39,20 @@ function sendOne(x, item, req, timeoutMs) {
     const onEvent = (ev) => {
       if (done) return;
       if (ev.type === "message-error") {
-        if (id && ev.id === id) finish({ error: { condition: ev.condition || "", text: ev.message || "" } });
+        // Openfire Broadcast pone el motivo en el cuerpo («Not allowed to send a broadcast message to …») y deja la
+        // condición sola (not-allowed); el texto del error, si lo hay, manda.
+        const text = ev.message && ev.message !== ev.condition ? ev.message : ev.body || ev.message || "";
+        if (id && ev.id === id) finish({ error: { condition: ev.condition || "", text } });
         return;
       }
-      if (ev.type !== "message" || ev.outgoing || ev.system || !fromBot(ev)) return;
+      if (ev.type !== "message" || ev.outgoing || ev.system) return;
+      // En «una dirección por grupo» el servicio de broadcast no contesta si acepta: si el FC es miembro del grupo, solo le
+      // llega su propia copia (desde su JID, mismo texto, sin pie). Es una pista, no una confirmación.
+      if (req.mode !== "line" && own && bare(ev.conv) === own && ev.body === item.body) {
+        echo = true;
+        return;
+      }
+      if (!fromBot(ev)) return;
       if (isBroadcastEcho(ev.body)) {
         echo = true;
         return;
