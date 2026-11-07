@@ -2,12 +2,22 @@
 // se ve en gris y no se puede tocar. Todo se guarda solo en este equipo (S.settings.fcMode; la forma válida la
 // asegura normalizeFcMode en src/main/store.js).
 import { S, rosterOf } from "../state.js";
-import { h, icon, iconButton, field, toggle, select, prompt, toast, clear } from "../dom.js";
+import { h, icon, iconButton, field, toggle, select, prompt, toast, clear, confirmDialog } from "../dom.js";
 import { t } from "../i18n.js";
 import { full, group } from "./common.js";
 import { pingsConv, loadHistory } from "../convs.js";
 import { learnedGroups, groupRows, groupUsable, upsertGroup, removeGroup, sameGroup } from "../fc-groups.js";
 import { webUrlOk } from "../fc-compose.js";
+import { sortSaved, renameSaved, removeSaved, moveSaved } from "../fc-quick.js";
+import { timeAgo } from "../format.js";
+
+// «Compartir configuración» (exportar e importar, en otro fichero): cada parte registra aquí sus controles,
+// addFcShareControls(() => elemento | null), una vez al arrancar. La sección solo sale si hay algo registrado y, al
+// contrario que el resto, se puede usar con el modo apagado (se importa la configuración y luego se activa).
+const shareControls = [];
+export function addFcShareControls(build) {
+  shareControls.push(build);
+}
 
 // Pestañas de la ventana «Enviar ping», en el orden de serie.
 export const FC_TAB_LABELS = { quick: () => t("Ping rápido"), template: () => t("Plantilla"), paste: () => t("Pegar texto") };
@@ -63,12 +73,68 @@ function fcContent(repaint) {
     { class: `fc-master ${f.enabled ? "on" : ""}` },
     toggle(f.enabled, (v) => set((x) => (x.enabled = v), repaint), f.enabled ? t("Modo FC activado") : t("Modo FC"), f.enabled ? t("«Enviar ping» está en la barra lateral, debajo de Pings de flota.") : t("Para FCs: enviar pings al bot de tu alianza desde EvEX-MPP. Apagado, no cambia nada.")),
   );
-  const rest = h("div", { class: `fc-rest ${f.enabled ? "" : "fc-disabled"}` }, channelGroup(repaint), tabsGroup(repaint), templateGroup(repaint), groupsGroup(repaint), safetyGroup(repaint));
+  const rest = h("div", { class: `fc-rest ${f.enabled ? "" : "fc-disabled"}` }, channelGroup(repaint), tabsGroup(repaint), templateGroup(repaint), groupsGroup(repaint), savedGroup(repaint), safetyGroup(repaint));
   if (!f.enabled) {
     rest.inert = true;
     rest.setAttribute("aria-disabled", "true");
   }
-  return [master, rest];
+  return [master, rest, shareGroup()].filter(Boolean);
+}
+
+function shareGroup() {
+  const parts = [];
+  for (const build of shareControls) {
+    try {
+      const el = build();
+      if (el) parts.push(el);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  return parts.length ? group(t("Compartir configuración"), h("div", { class: "fc-share" }, parts)) : null;
+}
+
+// ---------- pings rápidos guardados ----------
+
+const SAVED_ORDER_LABELS = [
+  ["used", () => t("Los que más uso primero")],
+  ["alpha", () => t("Por orden alfabético")],
+  ["manual", () => t("A mano")],
+];
+
+function savedGroup(repaint) {
+  const f = fc();
+  const list = sortSaved(f.saved, f.savedOrder);
+  const manual = f.savedOrder === "manual";
+  const rows = list.map((item, i) => {
+    const origin = item.kind === "paste" ? t("texto pegado") : t("de la plantilla");
+    const used = item.lastUsed ? t("usado {ago}", { ago: timeAgo(item.lastUsed) }) : t("nunca usado");
+    const rename = async () => {
+      const name = await prompt({ title: t("Cambiar el nombre"), label: t("Nombre del ping guardado"), value: item.name, icon: "pencil" });
+      if (name != null) set((x) => (x.saved = renameSaved(x.saved, item.id, name)), repaint);
+    };
+    const remove = async () => {
+      if (await confirmDialog({ title: t("Borrar el ping guardado"), message: t("¿Borrar «{name}» de Ping rápido?", { name: item.name }), okLabel: t("Borrar"), danger: true }))
+        set((x) => (x.saved = removeSaved(x.saved, item.id)), repaint);
+    };
+    return h(
+      "div",
+      { class: "fc-saved-row", dataset: { id: item.id } },
+      h("span", { class: "fc-saved-name" }, item.name),
+      h("span", { class: "muted small fc-saved-meta" }, `${origin} · ${used}`, item.groups.length ? ` · ${item.groups.join(", ")}` : ""),
+      manual ? moveButton("chevron-up", t("Subir"), i === 0, () => set((x) => (x.saved = moveSaved(x.saved, item.id, -1)), repaint)) : null,
+      manual ? moveButton("chevron-down", t("Bajar"), i === list.length - 1, () => set((x) => (x.saved = moveSaved(x.saved, item.id, 1)), repaint)) : null,
+      iconButton("pencil", t("Cambiar el nombre"), rename),
+      iconButton("trash-2", t("Borrar"), remove),
+    );
+  });
+  return group(
+    t("Pings rápidos guardados"),
+    rows.length
+      ? h("div", { class: "fc-saved-list" }, rows)
+      : h("p", { class: "muted small" }, t("Aún no hay ninguno. Para guardar uno, marca «Guardar en Ping rápido» al enviarlo desde Plantilla o Pegar texto.")),
+    field(t("Orden en «Ping rápido»"), select(SAVED_ORDER_LABELS.map(([v, l]) => [v, l()]), f.savedOrder, (v) => set((x) => (x.savedOrder = v), repaint))),
+  );
 }
 
 // ---------- canal del bot ----------

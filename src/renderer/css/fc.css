@@ -738,3 +738,158 @@
 .fc-advanced[open] summary {
   margin-bottom: 10px;
 }
+
+/* ---------- Ping rápido (pings guardados) ---------- */
+
+.fc-sv-col {
+  width: 330px;
+  flex: none;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.fc-sv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fc-sv {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fc-sv.sel {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg3));
+}
+.fc-sv:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.fc-sv-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.fc-sv-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.fc-grp {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  padding: 1px 6px;
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--warn) 40%, var(--text));
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+.fc-sv-hint {
+  margin: auto 0 0;
+  line-height: 1.5;
+}
+.fc-quick-head {
+  align-items: center;
+  gap: 10px;
+}
+.fc-quick-title {
+  flex: 1;
+  font-size: 1.2em;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.fc-quick-detail .fc-chips {
+  align-items: center;
+}
+.fc-quick-detail .fc-text {
+  max-height: none;
+  flex: 1;
+}
+.fc-eve {
+  color: var(--warn);
+  font-size: 1.1em;
+}
+.fc-time-hint {
+  margin-top: 6px;
+}
+
+/* Pie: «Guardar en Ping rápido» y su nombre */
+.fc-save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fc-save[hidden],
+.fc-in-quick[hidden],
+.fc-save-name[hidden] {
+  display: none;
+}
+.fc-save .fc-check {
+  color: var(--text);
+  font-weight: 600;
+}
+.input.fc-save-name {
+  width: 170px;
+  border-color: var(--accent);
+}
+.fc-in-quick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fc-in-quick .icon {
+  width: 1em;
+}
+
+/* «¿Va a caps?» */
+.fc-suggest {
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  font-size: 0.88em;
+  line-height: 1.5;
+}
+.fc-notes li.warn .icon {
+  color: var(--warn);
+}
+
+/* Preferencias: pings guardados */
+.fc-saved-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+.fc-saved-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fc-saved-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.fc-saved-meta {
+  flex: 1;
+  min-width: 0;
+}
+.fc-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

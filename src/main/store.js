@@ -132,6 +132,9 @@ export const DEFAULT_SETTINGS = {
     defaultGroup: "",
     confirm: true,
     confirmMulti: true,
+    // Pings rápidos guardados (renderer/js/fc-quick.js). Orden en la pestaña: "used", "alpha" o "manual".
+    saved: [],
+    savedOrder: "used",
   },
   behavior: {
     enterToSend: true,
@@ -323,7 +326,46 @@ export function normalizeFcMode(f) {
     defaultGroup: str(f.defaultGroup, 80),
     confirm: f.confirm !== false,
     confirmMulti: f.confirmMulti !== false,
+    saved: normalizeSaved(f.saved),
+    savedOrder: FC_SAVED_ORDERS.includes(f.savedOrder) ? f.savedOrder : "used",
   };
+}
+
+// Pings rápidos guardados: { id, name, kind, values, text, groups, uses, lastUsed, created }. values son los campos de la
+// plantilla sin la hora (se elige cada vez); text, solo en los pegados, TAL CUAL. Uno con el texto demasiado largo no se
+// recorta: se descarta (un texto que va tal cual no se puede cortar).
+export const FC_SAVED_MAX = 50;
+export const FC_SAVED_TEXT_MAX = 4000;
+export const FC_SAVED_ORDERS = ["used", "alpha", "manual"];
+const SAVED_VALUE_KEYS = FC_FIELDS.filter((k) => k !== "time");
+const count = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
+function normalizeSaved(list) {
+  const out = [];
+  const ids = new Set();
+  for (const q of Array.isArray(list) ? list : []) {
+    if (out.length >= FC_SAVED_MAX) break;
+    if (!q || typeof q !== "object") continue;
+    const kind = q.kind === "paste" ? "paste" : q.kind === "template" ? "template" : null;
+    const id = str(q.id, 60);
+    const name = str(q.name, 80).trim();
+    if (!kind || !id || ids.has(id) || !name) continue;
+    if (kind === "paste" && (typeof q.text !== "string" || !q.text || q.text.length > FC_SAVED_TEXT_MAX)) continue;
+    ids.add(id);
+    const v = q.values && typeof q.values === "object" ? q.values : {};
+    const groups = [...new Set((Array.isArray(q.groups) ? q.groups : []).map((g) => str(g, 80).trim()).filter(Boolean))].slice(0, 20);
+    out.push({
+      id,
+      name,
+      kind,
+      values: kind === "template" ? Object.fromEntries(SAVED_VALUE_KEYS.map((k) => [k, str(v[k], 500)])) : {},
+      text: kind === "paste" ? q.text : "",
+      groups,
+      uses: count(q.uses),
+      lastUsed: count(q.lastUsed),
+      created: count(q.created),
+    });
+  }
+  return out;
 }
 const withFcMode = (settings) => ((settings.fcMode = normalizeFcMode(settings.fcMode)), settings);
 
