@@ -1799,4 +1799,8 @@ export default {
   "Configuración del Modo FC": "FC mode configuration",
   "Exportar la configuración del Modo FC": "Export the FC mode configuration",
   "Importar una configuración del Modo FC": "Import an FC mode configuration",
+
+  // ---------- Modo FC: aviso de varios grupos (fc-window.js) ----------
+  "Sale un ping a cada grupo: quien esté en varios lo recibirá varias veces. Si tu alianza tiene un grupo que los reúne (p. ej. allcaps), usa ese.": "One ping goes to each group: anyone in several of them will get it several times. If your alliance has a group that covers them all (e.g. allcaps), use that one.",
+  "Elige todos en la web de tu alianza (o el grupo que los reúna).": "Choose all of them on your alliance's website (or the group that covers them all).",
 };

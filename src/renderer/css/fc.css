@@ -893,3 +893,20 @@
   flex-wrap: wrap;
   gap: 10px;
 }
+
+/* Aviso de varios grupos en la confirmación */
+.fc-multi-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: color-mix(in srgb, var(--warn) 55%, var(--text));
+  font-size: 0.9em;
+  line-height: 1.45;
+}
+.fc-multi-warn .icon {
+  flex: none;
+  margin-top: 1px;
+}

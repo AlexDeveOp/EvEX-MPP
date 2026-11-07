@@ -51,6 +51,13 @@ const SEND_ERRORS = {
   "no-text": () => t("Escribe o pega el texto del ping."),
   "no-groups": () => t("Elige al menos un grupo en «Para»."),
 };
+// Aviso con varios grupos (fcc.multiGroupWarning).
+const MULTI_WARNINGS = {
+  multi: () => t("Sale un ping a cada grupo: quien esté en varios lo recibirá varias veces. Si tu alianza tiene un grupo que los reúne (p. ej. allcaps), usa ese."),
+  "multi-web": () => t("Elige todos en la web de tu alianza (o el grupo que los reúna)."),
+};
+const multiWarning = (mode, n) => MULTI_WARNINGS[fcc.multiGroupWarning(mode, n)]?.() || null;
+
 const sendError = (msg) => {
   const code = String(msg ?? "").match(/\bfc:([a-z-]+)\b/)?.[1];
   return code && SEND_ERRORS[code] ? SEND_ERRORS[code]() : msg || t("Error desconocido");
@@ -545,7 +552,7 @@ export function openSendPing() {
         ? { name: saveName.value || proposedName(), kind: tab, values: state.values, text, groups: groups.map((g) => g.name) }
         : null;
     const tooLong = toSave?.kind === "paste" && text.length > fq.SAVED_TEXT_MAX;
-    if (fc.confirm || (fc.confirmMulti && groups.length > 1)) {
+    if (fcc.needsConfirm(fc, groups.length)) {
       const extra = toSave ? [tooLong ? t("Es demasiado largo para guardarlo en Ping rápido; se enviará igual.") : t("Se guardará en Ping rápido como «{name}»", { name: fq.saveQuick([], toSave).item?.name || toSave.name })] : [];
       if (!(await confirmSend(fc, text, groups, at, extra))) return;
     }
@@ -576,6 +583,9 @@ export function openSendPing() {
     const sum = fcc.summarize(results);
     const wentOut = sum.rejected < sum.total;
     const notes = [];
+    // Sin confirmación, el aviso de varios grupos va aquí.
+    const multi = multiWarning(fc.groupMode, groups.length);
+    if (multi && !fcc.needsConfirm(fc, groups.length)) notes.push({ ok: false, text: multi });
     if (wentOut && item) updateSettings((s) => (s.fcMode.saved = fq.markUsed(s.fcMode.saved, item.id)));
     if (wentOut && toSave) {
       const r = fq.saveQuick(fc.saved, toSave);
@@ -640,7 +650,14 @@ function confirmSend(fc, text, groups, at, extra = []) {
       title: groups.length > 1 && fc.groupMode !== "web" ? t("¿Enviar este ping a {n} grupos?", { n: groups.length }) : t("¿Enviar este ping?"),
       icon: "megaphone",
       className: "fc-confirm",
-      body: h("div", { class: "fc-confirm-body" }, h("p", { class: "muted" }, dest), h("pre", { class: "fc-text" }, text), notes.length ? h("ul", { class: "fc-notes" }, notes.map((n) => h("li", {}, icon("check"), n))) : null),
+      body: h(
+        "div",
+        { class: "fc-confirm-body" },
+        h("p", { class: "muted" }, dest),
+        multiWarning(fc.groupMode, groups.length) ? h("div", { class: "fc-multi-warn" }, icon("triangle-alert"), h("span", {}, multiWarning(fc.groupMode, groups.length))) : null,
+        h("pre", { class: "fc-text" }, text),
+        notes.length ? h("ul", { class: "fc-notes" }, notes.map((n) => h("li", {}, icon("check"), n))) : null,
+      ),
       actions: [
         "spacer",
         { label: t("Volver"), action: (c) => finish(false, c) },
