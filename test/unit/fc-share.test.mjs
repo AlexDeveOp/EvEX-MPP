@@ -116,7 +116,9 @@ test("ficheros maliciosos: URL no web, tipos cambiados, textos enormes, __proto_
     enabled: true,
     __proto__: { polluted: true },
   };
-  const text = `{"app":"EvEX-MPP","kind":"fc-config","v":1,"config":${JSON.stringify(evil).replace("{", '{"__proto__":{"polluted":true},')}}`;
+  // Un «__proto__» escrito en el JSON (JSON.parse lo deja como clave propia; JSON.stringify no lo escribiría).
+  const config = `{"__proto__":{"polluted":true},${JSON.stringify(evil).slice(1)}`;
+  const text = `{"app":"EvEX-MPP","kind":"fc-config","v":1,"config":${config}}`;
   const { merged, preview } = importFcConfig(text, anaFc());
   assert.equal({}.polluted, undefined, "sin contaminar Object.prototype");
   assert.equal(merged.polluted, undefined);
@@ -199,4 +201,16 @@ test("pings guardados: no salen al exportar, los del que importa se quedan y uno
   const r = importFcConfig(sneaky, ana);
   assert.deepEqual(r.merged.saved, ana.saved, "un saved en el fichero se ignora");
   assert.equal(r.merged.savedOrder, "alpha");
+});
+
+test("readSmallFile: lee sobre lo abierto, con tope, y rechaza carpetas", async (t) => {
+  const { readSmallFile } = await import("../../src/main/fc-share-ipc.js");
+  const dir = tempDir(t);
+  const f = path.join(dir, "a.json");
+  fs.writeFileSync(f, `${BOM}{"x":1}`);
+  assert.equal(await readSmallFile(f), `${BOM}{"x":1}`, "tal cual, con su BOM");
+  fs.writeFileSync(f, "x".repeat(11));
+  await assert.rejects(readSmallFile(f, 10), errCode("too-big"));
+  assert.equal(await readSmallFile(f, 11), "x".repeat(11), "justo en el tope, sí");
+  await assert.rejects(readSmallFile(dir), (e) => e.code === "bad-json" || e.code === "EISDIR");
 });

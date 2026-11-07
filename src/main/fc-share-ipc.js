@@ -10,6 +10,30 @@ import { t } from "./i18n.js";
 import { exportFcConfigText, importFcConfig, FC_SHARE_MAX_BYTES } from "./fc-share.js";
 
 export const FC_SHARE_DEFAULT_NAME = "evex-fc-config.json";
+
+const shareFail = (code) => Object.assign(new Error(`fc-share:${code}`), { code });
+
+// Se abre UNA vez y todo (es un fichero normal, cuánto ocupa, leerlo) va sobre lo abierto: el fichero no puede cambiar
+// entre la comprobación y la lectura. Nunca se lee más del máximo, aunque crezca mientras tanto.
+export async function readSmallFile(file, max = FC_SHARE_MAX_BYTES) {
+  const fh = await fs.promises.open(file, "r");
+  try {
+    const st = await fh.stat();
+    if (!st.isFile()) throw shareFail("bad-json");
+    if (st.size > max) throw shareFail("too-big");
+    const buf = Buffer.alloc(max + 1);
+    let n = 0;
+    for (;;) {
+      const { bytesRead } = await fh.read(buf, n, buf.length - n, n);
+      if (!bytesRead) break;
+      n += bytesRead;
+      if (n > max) throw shareFail("too-big");
+    }
+    return buf.subarray(0, n).toString("utf8");
+  } finally {
+    await fh.close();
+  }
+}
 const filters = () => [{ name: t("Configuración del Modo FC"), extensions: ["json"] }];
 
 // getFcMode: () => fcMode guardado. dialog se puede cambiar en los tests.
@@ -26,10 +50,6 @@ export function registerFcShareIpc(handle, { getWin = () => null, getFcMode, dia
     const r = await dialog.showOpenDialog(getWin(), { title: t("Importar una configuración del Modo FC"), properties: ["openFile"], filters: filters() });
     const file = !r.canceled && r.filePaths?.[0];
     if (!file) return { canceled: true };
-    const st = await fs.promises.stat(file);
-    if (!st.isFile()) throw Object.assign(new Error("fc-share:bad-json"), { code: "bad-json" });
-    if (st.size > FC_SHARE_MAX_BYTES) throw Object.assign(new Error("fc-share:too-big"), { code: "too-big" });
-    const text = await fs.promises.readFile(file, "utf8");
-    return { file: path.basename(file), ...importFcConfig(text, getFcMode()) };
+    return { file: path.basename(file), ...importFcConfig(await readSmallFile(file), getFcMode()) };
   });
 }
