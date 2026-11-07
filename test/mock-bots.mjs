@@ -19,7 +19,13 @@
 //    - El grupo «silent» solo tiene un miembro que nunca se conecta («ausente»): lo que le manda alguien de allowedUsers
 //      se acepta y no vuelve nada, como cualquier envío aceptado en Openfire de quien no es miembro. (Quien sí es miembro
 //      recibe su propia copia, que sirve de confirmación; quien no es miembro ni está en allowedUsers recibe el error.)
-//    - Diferencia con Openfire: este servidor no guarda mensajes para los desconectados.
+//    - La copia va a la dirección sin recurso del miembro y lleva todos los hijos del original (thread, chatstates,
+//      petición de recibo…). Los errores llevan también el código antiguo (405; 404 en el disco). Los items del
+//      disco#items van sin «name». Comprobado contra Openfire 5.1.2 con Broadcast 1.9.3 (2026-11-07).
+//    - Diferencias con Openfire: este servidor no guarda las copias para los desconectados (Openfire sí, y llegan al
+//      conectar con <delay>); la copia llega a todas las sesiones del miembro (Openfire la da a una, la de más
+//      prioridad, y las demás la ven por carbons); y no hay carbons (Openfire manda al remitente, en sus otros
+//      recursos, el «sent» de lo que envía al servicio).
 //
 // 2. Modo «line» (una línea al principio): un bot de chat, pingbot@<dominio>, como los bots de pings de las alianzas.
 //    - Se le escribe «!ping <grupo>» en la primera línea y el ping debajo.
@@ -133,11 +139,13 @@ export function createBots({ domain, log = () => {}, config = DEFAULT_BOTS, now 
     if (st.attrs.type === "error") return true;
     const fail = (text) => {
       log("broadcast rechazado", clean(from), "→", clean(to));
-      send(xml("message", { type: "error", from: to, to: from, ...(st.attrs.id ? { id: st.attrs.id } : {}) }, xml("subject", {}, "Error sending broadcast message"), xml("body", {}, text), xml("error", { type: "cancel" }, xml("not-allowed", STANZAS))));
+      // Como Openfire 5.1 con Broadcast 1.9.3: el error lleva también el código antiguo (405) y va antes del asunto.
+      send(xml("message", { type: "error", from: to, to: from, ...(st.attrs.id ? { id: st.attrs.id } : {}) }, xml("error", { code: "405", type: "cancel" }, xml("not-allowed", STANZAS)), xml("subject", {}, "Error sending broadcast message"), xml("body", {}, text)));
     };
     const copy = (target) => {
       const children = st.getChildElements().map((c) => (c.name === "body" && addr.messagePrefix ? xml("body", c.attrs, `${addr.messagePrefix} ${c.text()}`) : c));
-      return xml("message", { ...st.attrs, from, to: target }, ...children);
+      // A la dirección sin recurso del miembro, como Openfire (que la entrega a una de sus sesiones); aquí llega a todas.
+      return xml("message", { ...st.attrs, from, to: bareOf(target) }, ...children);
     };
     if (node === "all") {
       if (!canSendAll(from)) return fail(`Not allowed to send a broadcast message to ${to}`), true;
@@ -160,7 +168,8 @@ export function createBots({ domain, log = () => {}, config = DEFAULT_BOTS, now 
     const q = st.getChildElements()[0];
     const ns = q?.attrs.xmlns;
     const reply = (...children) => send(xml("iq", { type: "result", id: st.attrs.id, from: to, to: from }, ...children));
-    const error = (cond, type = "cancel") => send(xml("iq", { type: "error", id: st.attrs.id, from: to, to: from }, ...(q ? [q] : []), xml("error", { type }, xml(cond, STANZAS))));
+    const LEGACY = { "item-not-found": "404", "service-unavailable": "503" };
+    const error = (cond, type = "cancel") => send(xml("iq", { type: "error", id: st.attrs.id, from: to, to: from }, ...(q ? [q] : []), xml("error", { ...(LEGACY[cond] ? { code: LEGACY[cond] } : {}), type }, xml(cond, STANZAS))));
     const node = to.includes("@") ? to.split("@")[0].toLowerCase() : null;
     if (ns === DISCO_INFO && !node && !q.attrs.node)
       return reply(xml("query", { xmlns: DISCO_INFO }, xml("identity", { category: "component", type: "generic", name: "Broadcast service" }), xml("feature", { var: DISCO_INFO }), xml("feature", { var: DISCO_ITEMS }))), true;
@@ -170,8 +179,9 @@ export function createBots({ domain, log = () => {}, config = DEFAULT_BOTS, now 
       return error("item-not-found"), true;
     }
     if (ns === DISCO_ITEMS && !node) {
-      const items = usableGroups(from).map((g) => xml("item", { jid: `${g}@${service}`, name: g }));
-      if (canSendAll(from)) items.push(xml("item", { jid: `all@${service}`, name: "all" }));
+      // Openfire no pone «name» en estos items: solo la dirección.
+      const items = usableGroups(from).map((g) => xml("item", { jid: `${g}@${service}` }));
+      if (canSendAll(from)) items.push(xml("item", { jid: `all@${service}` }));
       return reply(xml("query", { xmlns: DISCO_ITEMS }, ...items)), true;
     }
     return error("service-unavailable"), true;
