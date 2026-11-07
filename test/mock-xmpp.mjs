@@ -15,11 +15,15 @@
 // Con MOCK_DEMO=1 (npm run demo) usa datos de ejemplo genéricos: dominio ejemplo.com, salas general, capitales y
 // logistica, textos en inglés como los pings reales, menciones al entrar en general y capitales, y un ping nuevo al
 // minuto de conectar. El historial de antes lo escribe test/demo/profile.mjs en el perfil de la demo.
+// Bots de pings para el «Modo FC» (enviar pings): broadcast.<dominio> como el complemento Broadcast de Openfire y
+// pingbot@<dominio> con «!ping <grupo>» en la primera línea. Usuarios, grupos y permisos en test/mock-bots.mjs
+// (MOCK_BOTS=<json> los cambia y MOCK_BOTS=off los apaga).
 import net from "node:net";
 import zlib from "node:zlib";
 import crypto from "node:crypto";
 import Parser from "@xmpp/xml/lib/Parser.js";
 import xml from "@xmpp/xml";
+import { createBots, loadBotsConfig } from "./mock-bots.mjs";
 
 const PORT = Number(process.env.MOCK_PORT) || 5299;
 const DEMO = !!process.env.MOCK_DEMO;
@@ -102,6 +106,7 @@ const configForm = (r) =>
 // Lo que se registra puede venir del cliente: se quitan los saltos de línea para que no pueda fingir líneas del registro.
 const log = (...a) => console.log(`${new Date().toISOString().slice(11, 19)} ${a.map(String).join(" ")}`.replace(/\n|\r/g, ""));
 const MAM = "urn:xmpp:mam:2";
+const bots = createBots({ domain: DOMAIN, log, config: loadBotsConfig() });
 // vCard y avatar XEP-0084 de cada usuario, en memoria mientras dure el servidor (para probar el avatar propio).
 // Cuentas a las que el servidor ya ha retirado el acceso (usuario de prueba «revocable»).
 const REVOKED = new Set();
@@ -184,7 +189,10 @@ net
       }
     });
     sock.on("error", () => {});
-    sock.on("close", () => log("desconectado", jid));
+    sock.on("close", () => {
+      bots.unregister(jid);
+      log("desconectado", jid);
+    });
 
     const result = (st, ...children) => send(xml("iq", { type: "result", id: st.attrs.id, to: st.attrs.from || jid, from: st.attrs.to || DOMAIN }, ...children));
 
@@ -235,9 +243,11 @@ net
       if (q?.is("bind")) {
         jid = `${user}@${DOMAIN}/${q.getChildText("resource") || "mock"}`;
         log("login", jid);
+        bots.register(jid, send);
         return result(st, xml("bind", { xmlns: "urn:ietf:params:xml:ns:xmpp-bind" }, xml("jid", {}, jid)));
       }
       const ns = q?.attrs.xmlns;
+      if (bots.onIq(st, jid, send)) return;
       if (ns === "jabber:iq:roster" && st.attrs.type === "get")
         return result(
           st,
@@ -251,7 +261,7 @@ net
         );
       // Descubrimiento de servicios del dominio y del segundo servidor de salas.
       if (ns === "http://jabber.org/protocol/disco#items" && to === DOMAIN)
-        return result(st, xml("query", { xmlns: ns }, Object.entries(SERVICES).map(([j, s]) => xml("item", { jid: j, name: s.name }))));
+        return result(st, xml("query", { xmlns: ns }, [...Object.entries(SERVICES).map(([j, s]) => xml("item", { jid: j, name: s.name })), bots.discoItem()].filter(Boolean)));
       if (ns === "http://jabber.org/protocol/disco#info" && SERVICES[to])
         return result(st, xml("query", { xmlns: ns }, xml("identity", SERVICES[to]), SERVICES[to].category === "conference" ? xml("feature", { var: "http://jabber.org/protocol/muc" }) : null));
       if (ns === "http://jabber.org/protocol/disco#items" && to === CHAT)
@@ -447,6 +457,7 @@ net
     }
 
     function onMessage(st) {
+      if (bots.onMessage(st, jid, send)) return;
       const to = st.attrs.to || "";
       const body = st.getChildText("body");
       const roomJid = to.split("/")[0];
