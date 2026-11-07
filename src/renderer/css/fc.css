@@ -910,3 +910,19 @@
   flex: none;
   margin-top: 1px;
 }
+
+/* Modo FC en beta: aviso en Preferencias. */
+.fc-beta {
+  margin: 8px 0 0;
+}
+.fc-beta-pill {
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  background: var(--accent2);
+}

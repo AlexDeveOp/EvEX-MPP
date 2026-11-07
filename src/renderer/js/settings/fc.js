@@ -72,6 +72,8 @@ function fcContent(repaint) {
     "div",
     { class: `fc-master ${f.enabled ? "on" : ""}` },
     toggle(f.enabled, (v) => set((x) => (x.enabled = v), repaint), f.enabled ? t("Modo FC activado") : t("Modo FC"), f.enabled ? t("«Enviar ping» está en la barra lateral, debajo de Pings de flota.") : t("Para FCs: enviar pings al bot de tu alianza desde EvEX-MPP. Apagado, no cambia nada.")),
+    // Beta: probado con un Openfire de pruebas y un bot simulado, todavía no con el sistema de pings de una alianza real.
+    h("p", { class: "fc-beta muted small" }, h("span", { class: "fc-beta-pill" }, t("Beta")), " ", t("Función nueva, en pruebas: comprueba el resultado de cada envío y avisa de cualquier fallo en GitHub.")),
   );
   const rest = h("div", { class: `fc-rest ${f.enabled ? "" : "fc-disabled"}` }, channelGroup(repaint), tabsGroup(repaint), templateGroup(repaint), groupsGroup(repaint), savedGroup(repaint), safetyGroup(repaint));
   if (!f.enabled) {
