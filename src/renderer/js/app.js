@@ -28,6 +28,8 @@ import { playSound, stopPingRepeat } from "./sounds.js";
 import { initDnd } from "./dnd.js";
 import { initFleetExport } from "./fleet-export.js";
 import { initRetentionSettings } from "./settings/retention.js";
+// Modo FC: los botones de «Compartir configuración» (se registran solos en settings/fc.js).
+import "./settings/fc-share-ui.js";
 import { showAuthRejected } from "./account-wipe.js";
 
 import { t, locale, setLanguagePreference, translateStatic } from "./i18n.js";
