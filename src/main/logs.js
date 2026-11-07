@@ -92,6 +92,8 @@ export class Logs {
       ...(entry.fromJid ? { jid: entry.fromJid } : {}),
       ...(entry.replaces ? { rep: entry.replaces } : {}),
       ...(entry.kind ? { kind: entry.kind } : {}),
+      // Respuesta de un bot de pings a un envío del Modo FC: está en el chat del bot, pero no es un ping.
+      ...(entry.fcReply ? { fc: 1 } : {}),
     };
     e.key = Logs.key(e);
     // Más antiguo que el plazo de caducidad (p. ej. historial de una sala al volver a entrar): no se guarda.

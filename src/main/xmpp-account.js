@@ -911,7 +911,7 @@ export class XmppAccount extends EventEmitter {
     const mtype = msg.attrs.type || type;
     if (mtype === "error") {
       const { condition, text } = stanzaErrorText(msg);
-      this.event("message-error", { conv: bare(from), id: msg.attrs.id, condition, message: text || condition });
+      this.event("message-error", { conv: bare(from), id: msg.attrs.id, condition, message: text || condition, body: msg.getChildText("body") || "" });
       return;
     }
 
