@@ -1,6 +1,7 @@
 // Preferencias → Modo FC → «Compartir configuración»: textos de error y vista previa antes de importar.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 // DOM mínimo para h() (el entorno de pruebas no trae uno), con textContent y búsqueda por etiqueta.
 class FakeNode {
@@ -12,6 +13,7 @@ class FakeNode {
     this.attrs = {};
     this.style = { setProperty() {} };
     this.dataset = {};
+    this.classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
   }
   append(...c) {
     this.children.push(...c);
@@ -20,6 +22,9 @@ class FakeNode {
     this.attrs[k] = v;
   }
   addEventListener() {}
+  closest() {
+    return null;
+  }
   get textContent() {
     return this.tagName === "#TEXT" ? this.text : this.children.map((c) => c.textContent).join("");
   }
@@ -74,4 +79,30 @@ test("vista previa: modo, canal, grupos, plantilla tal cual, cambios y avisos; n
 test("los controles: dos botones", () => {
   const el = buildFcShareControls();
   assert.equal(el.querySelectorAll("button").length, 2);
+});
+
+test("se registra solo al cargarse y, con el Modo FC apagado, sus botones quedan FUERA de la zona en gris", async () => {
+  const src = fs.readFileSync(new URL("../../src/renderer/js/app.js", import.meta.url), "utf8");
+  assert.ok(src.includes(`import "./settings/fc-share-ui.js";`), "app.js lo carga");
+  const { S } = await import("../../src/renderer/js/state.js");
+  const { TEST_SETTINGS } = await import("./helpers.mjs");
+  S.settings = structuredClone({ ...TEST_SETTINGS, fcMode: normalizeFcMode({ enabled: false }) });
+  S.accounts = [];
+  const { fcTabs } = await import("../../src/renderer/js/settings/fc.js");
+  const root = { children: [fcTabs.fc()].flat(Infinity).filter(Boolean) };
+  // Camino desde la pestaña hasta los controles.
+  const pathTo = (n, cls) => {
+    if (n.className === cls) return [n];
+    for (const c of n.children || []) {
+      const p = pathTo(c, cls);
+      if (p) return [n, ...p];
+    }
+    return null;
+  };
+  const path = pathTo(root, "fc-share-controls");
+  assert.ok(path, "la sección sale");
+  assert.ok(path.every((n) => !n.inert), "ni ella ni nada por encima está en gris");
+  assert.equal(path.at(-1).querySelectorAll("button").length, 2, "los dos botones");
+  const grey = (n) => !!n.inert || (n.children || []).some(grey);
+  assert.ok(grey(root), "el resto sí, con el modo apagado");
 });

@@ -35,6 +35,9 @@ const bobFc = () =>
     confirm: false,
     confirmMulti: true,
   });
+// Pings rápidos guardados (nunca salen en el fichero; ver feedback de opsec: un texto pegado lleva las marcas de quien lo
+// copió).
+const SAVED = [{ id: "q1", name: "Caps ya", kind: "paste", text: `Caps${ZW} up`, groups: ["caps"], uses: 3, lastUsed: 1, created: 1 }];
 // La de quien importa: su cuenta, su firma y el modo apagado.
 const anaFc = () => normalizeFcMode({ enabled: false, channel: { accountId: "cuenta-de-ana-9", jid: "", kind: "" }, template: { signAs: "Ana" } });
 const errCode = (code) => (e) => e.code === code && e.message === `fc-share:${code}`;
@@ -183,4 +186,17 @@ test("fc:importFile: vista previa sin aplicar nada; cancelar, carpetas y fichero
   const theme = path.join(dir, "tema.json");
   fs.writeFileSync(theme, JSON.stringify({ name: "Oscuro", colors: {} }));
   await assert.rejects(ipc(t, { open: { canceled: false, filePaths: [theme] } }).handlers["fc:importFile"](), errCode("not-fc-config"));
+});
+
+test("pings guardados: no salen al exportar, los del que importa se quedan y uno colado en el fichero no entra", () => {
+  const text = exportFcConfigText({ ...bobFc(), saved: SAVED, savedOrder: "alpha" });
+  assert.ok(!text.includes("Caps ya") && !text.includes("saved"), "ni los pings ni su orden");
+  const ana = normalizeFcMode({ ...anaFc(), saved: [{ ...SAVED[0], id: "a1", name: "Mío" }], savedOrder: "alpha" });
+  const { merged } = importFcConfig(text, ana);
+  assert.deepEqual(merged.saved, ana.saved, "los suyos, intactos");
+  assert.equal(merged.savedOrder, "alpha");
+  const sneaky = JSON.stringify({ app: "EvEX-MPP", kind: "fc-config", v: 1, config: { groupMode: "address", saved: SAVED, savedOrder: "used" } });
+  const r = importFcConfig(sneaky, ana);
+  assert.deepEqual(r.merged.saved, ana.saved, "un saved en el fichero se ignora");
+  assert.equal(r.merged.savedOrder, "alpha");
 });

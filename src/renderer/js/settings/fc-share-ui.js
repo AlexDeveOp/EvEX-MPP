@@ -2,10 +2,12 @@
 // El fichero lo hace y lo lee el proceso principal (src/main/fc-share.js): aquí solo hay los dos botones, la vista previa
 // y, si el usuario dice que sí, se guarda la configuración mezclada (que ya conserva su cuenta, su firma y si el modo
 // está activo). Se puede importar con el Modo FC apagado: importar no lo enciende.
+// Se registra solo al cargarse (app.js lo importa): settings/fc.js llama a buildFcShareControls en cada repintado.
 import { S } from "../state.js";
 import { h, icon, modal, toast } from "../dom.js";
 import { t } from "../i18n.js";
 import { full } from "./common.js";
+import { addFcShareControls } from "./fc.js";
 
 const api = (ch, ...args) => window.evex.call(ch, ...args);
 
@@ -109,7 +111,7 @@ async function importConfig() {
 export function buildFcShareControls() {
   return h(
     "div",
-    { class: "fc-share" },
+    { class: "fc-share-controls" },
     h("p", { class: "muted" }, t("Pasa a otro FC los grupos, la plantilla y cómo se envía. No incluye tu cuenta, tu firma ni tus pings guardados.")),
     h(
       "div",
@@ -119,3 +121,5 @@ export function buildFcShareControls() {
     ),
   );
 }
+
+addFcShareControls(buildFcShareControls);
