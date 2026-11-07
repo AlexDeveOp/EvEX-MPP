@@ -323,10 +323,13 @@ export function ingestMessage(ev) {
     return;
   }
 
-  if (!c.loaded && !S.tabs.includes(c.key) && type === "chat" && !msg.out) {
+  // La respuesta de un bot de pings a un envío del Modo FC no abre pestaña: ya se ve en la ventana de envío (que enlaza a
+  // este chat). Cualquier otro mensaje privado la abre como siempre.
+  const opensTab = type === "chat" && !msg.out && !ev.fcReply && !S.tabs.includes(c.key);
+  if (opensTab && !c.loaded) {
     // Primer mensaje de una conversación privada: abrir pestaña sin robar el foco.
     openConv(c.accountId, c.conv, "chat", { focus: !S.active });
-  } else if (type === "chat" && !S.tabs.includes(c.key) && !msg.out) {
+  } else if (opensTab) {
     S.tabs.push(c.key);
     persistTabs();
     emit("tabs");
