@@ -17,6 +17,7 @@ import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
 import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
+import { registerFcIpc } from "./fc-ipc.js";
 import { userData, mediaDir, avatarDir } from "./paths.js";
 import { createConnLog } from "./conn-log.js";
 import { autostartFile, autostartExec, desktopEntry, storeUserDataDir } from "./platform.js";
@@ -844,6 +845,7 @@ function registerIpc() {
 
   registerMediaIpc(handle, { getWin: () => win, getConn, fetchImpl: netFetch });
   registerPidginIpc(handle, { logs, send, publicAccount });
+  registerFcIpc(handle, { getConn });
 
   // Burbuja propia, notificación de Windows o ambas, según Preferencias → Notificaciones.
   handle("notify", (data) => {

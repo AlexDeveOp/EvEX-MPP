@@ -9,6 +9,7 @@ const CHANNELS = [
   "room:join", "room:leave", "room:list", "room:info", "room:nick", "room:subject", "room:moderate", "room:invite", "room:affiliations", "room:config-get", "room:config-set", "xmpp:ping", "msg:attention", "disco:items",
   "rooms:update", "rooms:pushBookmarks", "rooms:fetchBookmarks",
   "room:services",
+  "fc:send",
   "roster:add", "roster:remove", "roster:update", "roster:answer",
   "logs:tail", "logs:search", "logs:list", "retention:preview", "retention:apply",
   "pidgin:scan", "pidgin:import", "pidgin:repairLogs", "pidgin:repairStatus", "pidgin:repairOffered", "sounds:pidginScan", "sounds:pidginImport", "gifs:search", "gifs:save", "gifs:remove",
