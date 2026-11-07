@@ -9,6 +9,7 @@ import { openAccounts, connectWithPrompt, openSwitchAccount } from "./accounts.j
 import { openBackgroundEditor, openAvatarSettings } from "./settings.js";
 import { openSearch } from "./search.js";
 import { sidebarSirenTs } from "./pings.js";
+import { openSendPing } from "./fc-window.js";
 
 import { t } from "./i18n.js";
 import { effectiveLevel } from "./notify-rules.js";
@@ -93,6 +94,15 @@ function renderSidebar() {
       icon("siren", "sb-icon"),
       h("span", { class: "sb-name" }, t("Pings de flota")),
       pc.unread ? h("span", { class: "badge mention" }, pc.unread) : null,
+    ),
+  );
+  // Modo FC (Preferencias → Modo FC): botón corto para enviar un ping, debajo de «Pings de flota».
+  if (S.settings.fcMode?.enabled) root.append(
+    h(
+      "button",
+      { class: "sb-item fc-send", type: "button", "data-key": "fc:send", title: t("Enviar un ping al bot de tu alianza"), onclick: () => openSendPing() },
+      icon("megaphone", "sb-icon"),
+      h("span", { class: "sb-name" }, t("Enviar ping")),
     ),
   );
   // Bandeja de menciones: los mensajes de las salas que te mencionan o coinciden con tus palabras clave. Solo sale

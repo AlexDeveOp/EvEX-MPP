@@ -108,6 +108,26 @@ export const DEFAULT_SETTINGS = {
   mini: { enabled: false, opacity: 0.85, clickThrough: false },
   // Modo captura (src/main/capture.js): avisos sin detalles y ventana difuminada. globalShortcut: Ctrl+Shift+H global.
   capture: { enabled: false, globalShortcut: false },
+  // Modo FC (renderer/js/settings/fc.js): enviar pings al bot de la alianza. Apagado de serie; todo es local.
+  // channel: sala o contacto del bot. groupMode: "address" (una dirección por grupo) o "line" (una línea al principio,
+  // con lineFormat). groups: los añadidos a mano y los aprendidos que se han tocado ({ name, address, button, manual }).
+  fcMode: {
+    enabled: false,
+    channel: { accountId: "", jid: "", kind: "" },
+    tabs: ["quick", "template", "paste"],
+    defaultTab: "quick",
+    template: {
+      fields: ["type", "fc", "time", "place", "doctrine", "comms", "notes"],
+      format: "{tipo} · FC: {fc}\nFormup: {hora} EVE · {lugar}\nDoctrine: {doctrina} · Comms: {comms}\n{notas}",
+      signAs: "",
+    },
+    groupMode: "address",
+    lineFormat: "!ping {grupo}",
+    groups: [],
+    defaultGroup: "",
+    confirm: true,
+    confirmMulti: true,
+  },
   behavior: {
     enterToSend: true,
     sendTyping: true,
@@ -185,7 +205,7 @@ export function load() {
   const raw = readJson(configFile(), {});
   config = {
     accounts: raw.accounts || [],
-    settings: deepMerge(DEFAULT_SETTINGS, migrateLinkPreviews(raw.settings || {})),
+    settings: withFcMode(deepMerge(DEFAULT_SETTINGS, migrateLinkPreviews(raw.settings || {}))),
     imported: raw.imported || {},
   };
   return config;
@@ -207,7 +227,7 @@ export function flush() {
 }
 
 export function setSettings(settings) {
-  get().settings = deepMerge(DEFAULT_SETTINGS, settings);
+  get().settings = withFcMode(deepMerge(DEFAULT_SETTINGS, settings));
   config.settings.proxy = { enabled: !!config.settings.proxy.enabled, ...normalizeProxySettings(config.settings.proxy) };
   save();
   return config.settings;
@@ -247,6 +267,49 @@ const PROXY_TYPES = ["socks5", "http", "https"];
 const PROXY_PORTS = { socks5: 1080, http: 8080, https: 443 };
 
 // Datos del proxy sin contraseña: tipo válido, host sin espacios y puerto por defecto según el tipo.
+// Modo FC: deja los ajustes en una forma válida aunque vengan de una versión vieja, a medias o tocados a mano.
+export const FC_TABS = ["quick", "template", "paste"];
+export const FC_FIELDS = ["type", "fc", "time", "place", "doctrine", "comms", "pap", "notes"];
+// Cómo se elige el grupo de destino. Para añadir otro modo, se añade aquí y en settings/fc.js.
+export const FC_GROUP_MODES = ["address", "line"];
+const str = (v, max = 500) => (typeof v === "string" ? v.slice(0, max) : "");
+export function normalizeFcMode(f) {
+  const d = DEFAULT_SETTINGS.fcMode;
+  f = f && typeof f === "object" && !Array.isArray(f) ? f : {};
+  const ch = f.channel && typeof f.channel === "object" ? f.channel : {};
+  const tabs = Array.isArray(f.tabs) ? [...new Set(f.tabs.filter((x) => FC_TABS.includes(x)))] : [];
+  for (const x of FC_TABS) if (!tabs.includes(x)) tabs.push(x);
+  const tp = f.template && typeof f.template === "object" ? f.template : {};
+  const fields = Array.isArray(tp.fields) ? FC_FIELDS.filter((x) => tp.fields.includes(x)) : [...d.template.fields];
+  const seen = new Set();
+  const groups = [];
+  for (const g of Array.isArray(f.groups) ? f.groups : []) {
+    const name = str(g?.name, 80).trim();
+    if (!name || seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    groups.push({ name, address: str(g.address, 300).trim(), button: g.button !== false, manual: !!g.manual });
+  }
+  return {
+    enabled: f.enabled === true,
+    channel: { accountId: str(ch.accountId, 200), jid: str(ch.jid, 300).trim(), kind: ["groupchat", "chat"].includes(ch.kind) ? ch.kind : "" },
+    tabs,
+    defaultTab: FC_TABS.includes(f.defaultTab) ? f.defaultTab : d.defaultTab,
+    template: {
+      fields,
+      format: typeof tp.format === "string" ? tp.format.slice(0, 4000) : d.template.format,
+      signAs: str(tp.signAs, 100),
+    },
+    groupMode: FC_GROUP_MODES.includes(f.groupMode) ? f.groupMode : d.groupMode,
+    lineFormat: typeof f.lineFormat === "string" ? f.lineFormat.slice(0, 200) : d.lineFormat,
+    groups,
+    // Puede ser un grupo aprendido que aún no está en `groups`: no se comprueba aquí.
+    defaultGroup: str(f.defaultGroup, 80),
+    confirm: f.confirm !== false,
+    confirmMulti: f.confirmMulti !== false,
+  };
+}
+const withFcMode = (settings) => ((settings.fcMode = normalizeFcMode(settings.fcMode)), settings);
+
 export function normalizeProxySettings(p = {}) {
   const type = PROXY_TYPES.includes(p.type) ? p.type : "socks5";
   const port = Number(p.port);
