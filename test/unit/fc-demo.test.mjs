@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 import { client, xml } from "@xmpp/client";
 import { writeDemoProfile, demoFcMode, DEMO_ACCOUNT, DEMO_JID, DEMO_PASSWORD } from "../demo/profile.mjs";
 import { normalizeFcMode } from "../../src/main/store.js";
-import { barGroups, buildRequest, templateText } from "../../src/renderer/js/fc-compose.js";
+import { barGroups, buildRequest, templateText, countInvisible } from "../../src/renderer/js/fc-compose.js";
+import { sortSaved, quickText, savedGroupsIn } from "../../src/renderer/js/fc-quick.js";
 import { DEFAULT_FORMAT } from "../../src/renderer/js/settings/fc.js";
 import { buildPlan, interpretReply, isBroadcastEcho } from "../../src/renderer/js/fc-send.js";
 import { tempDir } from "./helpers.mjs";
@@ -55,6 +56,30 @@ test("el perfil de demo trae el Modo FC activado: canal pingbot, modo line, grup
     barGroups(fc, []).map((g) => g.name),
     ["all", "caps", "supers", "silent"],
   );
+});
+
+test("pings guardados de ejemplo: Strat op Ferox (all+caps), Home defense (all) y uno pegado con dos invisibles (caps)", () => {
+  const NOW = Date.UTC(2026, 10, 5, 12, 0);
+  const fc = normalizeFcMode(demoFcMode(NOW));
+  assert.equal(fc.savedOrder, "used");
+  // El normalizador no quita nada: todos los campos son válidos.
+  assert.deepEqual(fc.saved, demoFcMode(NOW).saved);
+  assert.deepEqual(
+    sortSaved(fc.saved, fc.savedOrder).map((q) => [q.name, q.kind, q.groups]),
+    [
+      ["Strat op Ferox", "template", ["all", "caps"]],
+      ["Home defense", "template", ["all"]],
+      ["Caps a staging (pegado)", "paste", ["caps"]],
+    ],
+  );
+  const strat = fc.saved.find((q) => q.id === "demo-strat");
+  const text = quickText(fc, strat, "19:00");
+  assert.match(text, /^Strat op · FC: Bob FC\nFormup: 19:00 EVE · Home station\nDoctrine: Ferox/);
+  const pasted = fc.saved.find((q) => q.kind === "paste");
+  assert.equal(countInvisible(pasted.text), 2);
+  assert.equal(quickText(fc, pasted, "19:00"), pasted.text, "el pegado sale tal cual, con sus invisibles");
+  // Sus grupos están en la barra «Para».
+  for (const q of fc.saved) assert.deepEqual(savedGroupsIn(q, barGroups(fc, [])), q.groups);
 });
 
 test("con la cuenta de la demo: enviado a all y caps, rechazado en supers y sin confirmar en silent", async (t) => {

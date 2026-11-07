@@ -78,8 +78,10 @@ export function demoRoomHistory(now = Date.now()) {
 // Modo FC activado contra el bot simulado (test/mock-bots.mjs, modo «line»), con la plantilla de serie. Con la cuenta
 // de la demo, en la ventana «Enviar ping» sale enviado a all y caps, rechazado en supers y sin confirmar en silent.
 // all y caps ya se aprenden del pie de los pings; supers y silent van «a mano».
-export function demoFcMode() {
+export function demoFcMode(now = Date.now()) {
   const group = (name, manual = false) => ({ name, address: "", button: true, manual });
+  const day = 86400e3;
+  const saved = (id, name, kind, content, groups, uses, usedDaysAgo) => ({ id, name, kind, values: {}, text: "", ...content, groups, uses, lastUsed: now - usedDaysAgo * day, created: now - 20 * day });
   return {
     enabled: true,
     channel: { accountId: DEMO_ACCOUNT, jid: PINGBOT, kind: "chat" },
@@ -87,6 +89,14 @@ export function demoFcMode() {
     groupMode: "line",
     lineFormat: "!ping {grupo}",
     groups: [group("all"), group("caps"), group("supers", true), group("silent", true)],
+    // Pings guardados para «Ping rápido» (sin hora: se elige al enviar). El pegado lleva un par de invisibles (un ZWSP y
+    // un WJ) como los que usan algunas alianzas para marcar sus pings: se envían tal cual y el editor los marca.
+    saved: [
+      saved("demo-strat", "Strat op Ferox", "template", { values: { type: "Strat op", fc: "Bob FC", place: "Home station", doctrine: "Ferox", comms: "Op 1", pap: "Strategic", notes: "Bring a spare ship" } }, ["all", "caps"], 5, 1),
+      saved("demo-home", "Home defense", "template", { values: { type: "Home defense", fc: "Bob FC", place: "Home station", doctrine: "Whatever you have", comms: "Op 2", pap: "", notes: "" } }, ["all"], 3, 3),
+      saved("demo-caps", "Caps a staging (pegado)", "paste", { text: "Capitals​ to staging, fuel up\nFC Name: Bob FC\nFormup Location: Staging\nDoctrine: Capitals⁠" }, ["caps"], 1, 6),
+    ],
+    savedOrder: "used",
   };
 }
 
@@ -115,7 +125,7 @@ export function writeDemoProfile(dir, { port, now = Date.now() } = {}) {
         overrides: {},
         dismissed: {},
       },
-      fcMode: demoFcMode(),
+      fcMode: demoFcMode(now),
       openTabs: [{ accountId: null, conv: "*", type: "pings" }, ...rooms.map((r) => ({ accountId: DEMO_ACCOUNT, conv: r.jid, type: "groupchat" }))],
     },
   };
