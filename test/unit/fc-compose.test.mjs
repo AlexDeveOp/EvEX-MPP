@@ -136,3 +136,17 @@ test("invisibleRuns marca cada invisible y al unirlos sale el texto exacto", () 
   assert.equal(c.countInvisible("nada raro"), 0);
   assert.deepEqual(c.invisibleRuns(""), []);
 });
+
+test("aviso de varios grupos: cuál toca y si va en la confirmación o en el resultado", () => {
+  assert.equal(c.multiGroupWarning("line", 1), null);
+  assert.equal(c.multiGroupWarning("address", 0), null);
+  assert.equal(c.multiGroupWarning("line", 2), "multi");
+  assert.equal(c.multiGroupWarning("address", 3), "multi");
+  assert.equal(c.multiGroupWarning("web", 2), "multi-web");
+  assert.equal(c.multiGroupWarning("web", 1), null);
+  assert.equal(c.needsConfirm({ confirm: true, confirmMulti: false }, 1), true);
+  assert.equal(c.needsConfirm({ confirm: false, confirmMulti: true }, 2), true);
+  assert.equal(c.needsConfirm({ confirm: false, confirmMulti: true }, 1), false);
+  // Las dos apagadas: no hay confirmación y el aviso sale en el resultado.
+  assert.equal(c.needsConfirm({ confirm: false, confirmMulti: false }, 3), false);
+});

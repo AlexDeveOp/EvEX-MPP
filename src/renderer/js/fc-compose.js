@@ -108,6 +108,13 @@ export function buildRequest(fc, groups, text) {
 // Modo web: no se envía nada; el resultado es «copiado» para cada grupo, nunca «enviado».
 export const webResults = (groups) => groups.map((g) => ({ group: g.name, status: "copied", reason: "", reply: null, echo: false }));
 
+// Varios grupos a la vez: un ping por grupo, así que quien esté en varios lo recibe varias veces. Aviso "multi" (por
+// Jabber) o "multi-web" (en la web se eligen todos allí); null con uno solo.
+export const multiGroupWarning = (mode, n) => (n > 1 ? (mode === "web" ? "multi-web" : "multi") : null);
+// ¿Se pide confirmación? Con varios grupos, también si solo está activado «Avisar antes de enviar a más de un grupo».
+// Si no la hay, el aviso de varios grupos sale en el resultado.
+export const needsConfirm = (fc, n) => !!fc.confirm || (!!fc.confirmMulti && n > 1);
+
 // ---------- resultado ----------
 
 // Tono de cada estado. Lo que no se conoce, como «sin confirmar»: nunca cuenta como enviado.
