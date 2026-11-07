@@ -933,7 +933,8 @@ export class XmppAccount extends EventEmitter {
     // Recibos de entrega
     const received = msg.getChild("received", NS.RECEIPTS);
     if (received?.attrs.id && !carbon) this.event("receipt", { conv: fromBare, id: received.attrs.id });
-    if (msg.getChild("request", NS.RECEIPTS) && msg.attrs.id && mtype !== "groupchat" && !carbon) {
+    // skipReceipt (lo pone main.js, ver receipt-policy.js): a los pings no se les devuelve recibo.
+    if (msg.getChild("request", NS.RECEIPTS) && msg.attrs.id && mtype !== "groupchat" && !carbon && !this.skipReceipt?.(from, msg.getChildText("body"))) {
       this.send(xml("message", { to: from, id: crypto.randomUUID() }, xml("received", { xmlns: NS.RECEIPTS, id: msg.attrs.id }))).catch(() => {});
     }
 
