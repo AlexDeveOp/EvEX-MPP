@@ -85,7 +85,9 @@ export function buildPlan({ mode = "address", groups = [], linePrefix = "!ping {
 
 // De serie, sin configurar nada. Un «texto que indica que se ha enviado» propio sustituye a los de éxito.
 export const DEFAULT_SENT = /\b(?:sent|broadcast(?:ed)?|delivered|ping(?:ed)? sent|enviado)\b/i;
-export const DEFAULT_REJECTED = /\b(?:denied|not allowed|no permission|permission denied|forbidden|unauthori[sz]ed|rejected|not authori[sz]ed|unknown (?:group|command)|invalid group|rechazado|sin permiso|no autorizado)\b/i;
+// Los fallos van aquí también: DEFAULT_SENT acepta «broadcast», y «Broadcast failed» o «Error broadcasting…» no pueden
+// salir como enviados (el rechazo manda sobre el éxito).
+export const DEFAULT_REJECTED = /\b(?:denied|not allowed|no permission|permission denied|forbidden|unauthori[sz]ed|rejected|not authori[sz]ed|unknown (?:group|command)|invalid group|fail(?:ed|ure|s)?|errors?|could not|couldn'?t|unable|rechazado|sin permiso|no autorizado|fallo|fall[oó]|no se pudo)\b/i;
 
 // Texto configurable → expresión: si parece una (/…/i) se usa como tal; si no, el texto tal cual, sin mayúsculas.
 export function toPattern(spec) {

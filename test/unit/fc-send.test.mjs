@@ -190,3 +190,11 @@ test("sendPlan solo observa: las respuestas siguen llegando a los demás oyentes
   await sendPlan(x, { mode: "address", groups: [GROUPS[0]], text: "x" });
   assert.deepEqual(seen, ["Ping sent"]);
 });
+
+test("interpretReply: los fallos nunca salen como enviados aunque digan «broadcast»", () => {
+  for (const body of ["Broadcast failed", "Error broadcasting to caps", "Could not send the ping", "Couldn't broadcast: unknown target", "Unable to broadcast right now", "Broadcast failure", "Ping fails for all", "errors while broadcasting", "No se pudo enviar el ping", "Fallo al enviar"]) {
+    assert.equal(interpretReply({ body }).status, "rejected", body);
+  }
+  // Los éxitos de siempre siguen siéndolo.
+  for (const body of ["Ping sent to all", "Broadcast delivered", "Broadcasted to caps", "Enviado a all"]) assert.equal(interpretReply({ body }).status, "sent", body);
+});
