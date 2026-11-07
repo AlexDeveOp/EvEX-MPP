@@ -4,6 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { client } from "@xmpp/client";
 import { XmppAccount } from "../../src/main/xmpp-account.js";
 import { sendPlan, markFcReply } from "../../src/main/fc-ipc.js";
 import { Logs } from "../../src/main/logs.js";
@@ -70,6 +71,30 @@ test("address sin permiso: rechazado con el motivo que da el servicio", async (t
   const [r] = await sendPlan(x, { mode: "address", groups: [address("supers")], text: "Supers up" }, opts);
   assert.equal(r.status, "rejected");
   assert.equal(r.reason, `Not allowed to send a broadcast message to supers@${SVC}`);
+});
+
+// El servicio de broadcast copia el mensaje con todos sus hijos: con una petición de recibo, cada miembro que lo
+// recibe devolvería un recibo al FC (cientos con «all»). Comprobado contra Openfire 5.1.2 con Broadcast 1.9.3.
+// (El simulado no reenvía mensajes entre usuarios, así que aquí se mira la copia que llega a un miembro.)
+test("address: los envíos del Modo FC van sin petición de recibo ni estado de escritura", async (t) => {
+  const bob = await account(t, "fc_bob");
+  const member = client({ service: `xmpp://127.0.0.1:${PORT}`, domain: D, resource: "raw", credentials: (auth) => auth({ username: "usuario", password: "test" }, "PLAIN") });
+  member.on("error", () => {});
+  const copies = [];
+  member.on("stanza", (s) => s.is("message") && s.getChildText("body") && copies.push(s));
+  await member.start();
+  t.after(() => member.stop().catch(() => {}));
+  const extras = (body) => {
+    const m = copies.find((s) => s.getChildText("body") === body);
+    return m && { receipt: !!m.getChild("request", "urn:xmpp:receipts"), chatstate: !!m.getChild("active", "http://jabber.org/protocol/chatstates") };
+  };
+  // Control: un mensaje normal llega con los dos, porque el servicio lo copia todo (como Openfire).
+  await bob.sendMessage({ to: `all@${SVC}`, body: "mensaje normal", type: "chat" });
+  const [r] = await sendPlan(bob, { mode: "address", groups: [address("all")], text: "Ping a todos" }, opts);
+  assert.equal(r.status, "delivered");
+  for (let i = 0; i < 40 && copies.length < 2; i++) await wait(50);
+  assert.deepEqual(extras("mensaje normal"), { receipt: true, chatstate: true });
+  assert.deepEqual(extras("Ping a todos"), { receipt: false, chatstate: false });
 });
 
 test("address con varios grupos: cada uno con su resultado, en orden", async (t) => {

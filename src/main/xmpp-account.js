@@ -1007,11 +1007,14 @@ export class XmppAccount extends EventEmitter {
 
   // ---------- envío ----------
 
-  async sendMessage({ to, body, type, replaces, oob }) {
+  // plain: solo el cuerpo, sin estado de escritura ni petición de recibo. Para el Modo FC: un servicio de broadcast
+  // reparte el mensaje con todos sus hijos, y cada miembro que lo recibe devolvería un recibo al FC (cientos con «all»).
+  async sendMessage({ to, body, type, replaces, oob, plain = false }) {
     const id = crypto.randomUUID();
     const isRoom = type === "groupchat";
-    const m = xml("message", { to, type: isRoom ? "groupchat" : "chat", id }, xml("body", {}, body), xml("active", NS.CHATSTATES));
-    if (!isRoom) m.append(xml("request", NS.RECEIPTS));
+    const m = xml("message", { to, type: isRoom ? "groupchat" : "chat", id }, xml("body", {}, body));
+    if (!plain) m.append(xml("active", NS.CHATSTATES));
+    if (!isRoom && !plain) m.append(xml("request", NS.RECEIPTS));
     if (replaces) m.append(xml("replace", { xmlns: NS.CORRECT, id: replaces }));
     // Adjunto (XEP-0066): los clientes que lo entienden muestran la imagen; el cuerpo lleva la misma URL para los demás.
     if (oob && /^https?:\/\//.test(oob)) m.append(xml("x", { xmlns: NS.OOB }, xml("url", {}, oob)));

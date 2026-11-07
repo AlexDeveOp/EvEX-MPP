@@ -54,6 +54,7 @@ test("address: un miembro envía a su grupo; llega a los miembros tal cual, con 
   assert.equal(got.attrs.from, `usuario@${D}/t`, "from = el remitente, como Openfire");
   assert.equal(got.attrs.type, "chat", "conserva el tipo");
   assert.equal(got.getChildText("body"), text, "sin pie y con sus invisibles");
+  assert.equal(got.attrs.to, `fc_bob@${D}`, "a la dirección sin recurso, como Openfire");
   await wait(400);
   assert.deepEqual(bodies(p1), [], "no es miembro");
   assert.deepEqual(bodies(ana), [], "no es miembro de caps");
@@ -72,7 +73,18 @@ test("address: sin permiso, error not-allowed con el mismo id y el texto de Open
   assert.equal(e.getChildText("subject"), "Error sending broadcast message");
   assert.equal(e.getChildText("body"), `Not allowed to send a broadcast message to supers@${SVC}`);
   assert.equal(e.getChild("error").attrs.type, "cancel");
+  assert.equal(e.getChild("error").attrs.code, "405", "con el código antiguo, como Openfire 5.1");
   assert.ok(e.getChild("error").getChild("not-allowed", "urn:ietf:params:xml:ns:xmpp-stanzas"));
+});
+
+test("address: la copia lleva todos los hijos del original (también la petición de recibo)", async (t) => {
+  const [u, bob] = [await user(t, "usuario"), await user(t, "fc_bob")];
+  await u.send(xml("message", { to: `caps@${SVC}`, type: "chat", id: "s7" }, xml("body", {}, "con hijos"), xml("thread", {}, "t1"), xml("request", "urn:xmpp:receipts")));
+  assert.ok(await until(() => bodies(bob).includes("con hijos")));
+  const got = bob.inbox.find((m) => m.getChildText("body") === "con hijos");
+  assert.equal(got.attrs.id, "s7", "con el mismo id");
+  assert.equal(got.getChildText("thread"), "t1");
+  assert.ok(got.getChild("request", "urn:xmpp:receipts"), "Openfire no quita la petición de recibo: por eso el Modo FC no la pone");
 });
 
 test("address: grupo que no existe y «all» sin estar en allowedUsers", async (t) => {
@@ -112,10 +124,12 @@ test("address: disco del servicio como Openfire", async (t) => {
   const bob = await user(t, "fc_bob");
   const info = await u.iqCaller.request(xml("iq", { type: "get", to: SVC }, xml("query", { xmlns: "http://jabber.org/protocol/disco#info" })));
   assert.equal(info.getChild("query").getChild("identity").attrs.name, "Broadcast service");
-  const items = async (c) => (await c.iqCaller.request(xml("iq", { type: "get", to: SVC }, xml("query", { xmlns: "http://jabber.org/protocol/disco#items" })))).getChild("query").getChildren("item").map((i) => i.attrs.jid);
+  const itemEls = async (c) => (await c.iqCaller.request(xml("iq", { type: "get", to: SVC }, xml("query", { xmlns: "http://jabber.org/protocol/disco#items" })))).getChild("query").getChildren("item");
+  const items = async (c) => (await itemEls(c)).map((i) => i.attrs.jid);
+  assert.ok((await itemEls(bob)).every((i) => i.attrs.name === undefined), "sin «name», como Openfire");
   assert.deepEqual((await items(u)).sort(), [`caps@${SVC}`].sort(), "usuario solo puede caps (es miembro; no está en allowedUsers)");
   assert.deepEqual((await items(bob)).sort(), [`all@${SVC}`, `caps@${SVC}`, `silent@${SVC}`, `supers@${SVC}`].sort());
-  await assert.rejects(u.iqCaller.request(xml("iq", { type: "get", to: `supers@${SVC}` }, xml("query", { xmlns: "http://jabber.org/protocol/disco#info" }))), (e) => e.condition === "item-not-found");
+  await assert.rejects(u.iqCaller.request(xml("iq", { type: "get", to: `supers@${SVC}` }, xml("query", { xmlns: "http://jabber.org/protocol/disco#info" }))), (e) => e.condition === "item-not-found" && e.element?.attrs.code === "404");
   // El dominio anuncia el servicio, como hace Openfire con sus componentes.
   const domainItems = (await u.iqCaller.request(xml("iq", { type: "get", to: D }, xml("query", { xmlns: "http://jabber.org/protocol/disco#items" })))).getChild("query").getChildren("item").map((i) => i.attrs.jid);
   assert.ok(domainItems.includes(SVC));
