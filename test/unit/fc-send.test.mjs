@@ -58,6 +58,8 @@ test("buildPlan, línea al principio: todo al canal del bot, con la línea del g
 
 test("buildPlan: errores claros y la estructura lista para un tercer modo", () => {
   assert.throws(() => buildPlan({ mode: "otro", groups: GROUPS, text: "x" }), { code: "unknown-mode", mode: "otro" });
+  assert.throws(() => buildPlan({ mode: "toString", groups: GROUPS, text: "x" }), { code: "unknown-mode" });
+  assert.throws(() => buildPlan({ mode: "web", groups: GROUPS, text: "x" }), { code: "not-jabber", mode: "web" }, "el modo web nunca sale por la cuenta");
   assert.throws(() => buildPlan({ mode: "address", groups: [], text: "x" }), { code: "no-groups" });
   assert.throws(() => buildPlan({ mode: "address", groups: GROUPS, text: "" }), { code: "no-text" });
   assert.throws(() => buildPlan({ mode: "address", groups: [{ name: "x" }], text: "a" }), { code: "no-address", group: "x" });

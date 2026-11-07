@@ -58,7 +58,10 @@ function dropEmptyPieces(line, fields, known) {
 
 // Los errores llevan un código (error.code) y los datos (error.group, error.mode); el texto lo pone la interfaz con t(),
 // porque este módulo no puede importar nada. Códigos: FC_ERRORS.
-export const FC_ERRORS = ["no-address", "no-bot", "unknown-mode", "no-text", "no-groups"];
+export const FC_ERRORS = ["no-address", "no-bot", "unknown-mode", "not-jabber", "no-text", "no-groups"];
+// Modos que NO envían por Jabber (los hace la interfaz): «web» copia el texto y abre la web de pings de la alianza. Si
+// llegan aquí es un error, y se dice claro para que nunca salgan por la cuenta.
+export const LOCAL_MODES = ["web"];
 function fcError(code, data = {}) {
   return Object.assign(new Error(`fc:${code}`), { code, ...data });
 }
@@ -81,7 +84,8 @@ export const SEND_MODES = {
 
 // Un mensaje por grupo: [{ group, to, body }]. El texto nunca se toca.
 export function buildPlan({ mode = "address", groups = [], linePrefix = "!ping {grupo}", botJid = "", text = "" } = {}) {
-  const make = SEND_MODES[mode];
+  if (LOCAL_MODES.includes(mode)) throw fcError("not-jabber", { mode });
+  const make = Object.prototype.hasOwnProperty.call(SEND_MODES, mode) ? SEND_MODES[mode] : null;
   if (!make) throw fcError("unknown-mode", { mode });
   if (typeof text !== "string" || text === "") throw fcError("no-text");
   if (!groups.length) throw fcError("no-groups");
@@ -120,8 +124,9 @@ export function toPattern(spec) {
 //               servicio de broadcast de Openfire no confirma nada cuando acepta; solo avisa si rechaza.
 // - unconfirmed «Sin confirmar»: modo line sin respuesta ni copia.
 // - rejected    «Rechazado»: error del servidor o respuesta del bot que lo dice.
+// - copied      modo web (lo pone la interfaz, nunca sale de aquí): texto copiado y web abierta.
 // Solo sent y delivered cuentan como enviados.
-export const STATUSES = ["sent", "delivered", "accepted", "unconfirmed", "rejected"];
+export const STATUSES = ["sent", "delivered", "accepted", "unconfirmed", "rejected", "copied"];
 export const isConfirmed = (status) => status === "sent" || status === "delivered";
 
 // reply: null (sin respuesta a tiempo) | { error: { condition, text } } | { body }.
