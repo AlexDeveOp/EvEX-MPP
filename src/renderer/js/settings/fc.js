@@ -7,6 +7,7 @@ import { t } from "../i18n.js";
 import { full, group } from "./common.js";
 import { pingsConv, loadHistory } from "../convs.js";
 import { learnedGroups, groupRows, groupUsable, upsertGroup, removeGroup, sameGroup } from "../fc-groups.js";
+import { webUrlOk } from "../fc-compose.js";
 
 // Pestañas de la ventana «Enviar ping», en el orden de serie.
 export const FC_TAB_LABELS = { quick: () => t("Ping rápido"), template: () => t("Plantilla"), paste: () => t("Pegar texto") };
@@ -29,7 +30,10 @@ export const DEFAULT_FORMAT = "{tipo} · FC: {fc}\nFormup: {hora} EVE · {lugar}
 const GROUP_MODES = [
   ["address", () => t("Una dirección por grupo"), () => t("Cada grupo tiene su contacto o sala")],
   ["line", () => t("Una línea al principio del ping"), () => t("El bot lee una orden, p. ej. «!ping caps»")],
+  ["web", () => t("Web de la alianza"), () => t("Se envía desde una página web: la app copia el texto y la abre")],
 ];
+// El bloque «Avanzado» sigue abierto al repintar.
+let advancedOpen = false;
 
 const fc = () => S.settings.fcMode;
 const set = (fn, repaint) => {
@@ -202,6 +206,21 @@ function groupsGroup(repaint) {
     line.addEventListener("input", () => set((x) => (x.lineFormat = line.value)));
     lineField = field(t("Formato de la línea"), line, t("Va en la primera línea del ping. {grupo} se cambia por el nombre del grupo.", { grupo: "{grupo}" }));
   }
+  let webField = null;
+  if (mode === "web") {
+    const url = h("input", { class: "input mono", type: "url", value: f.webUrl, placeholder: "https://pings.ejemplo.com", spellcheck: "false", maxlength: 2000 });
+    const err = h("span", { class: "field-hint fc-url-error", hidden: true }, t("Tiene que empezar por https:// o http://."));
+    const check = () => {
+      const v = url.value.trim();
+      const ok = !v || webUrlOk(v);
+      err.hidden = ok;
+      url.classList.toggle("invalid", !ok);
+      // Una dirección que no es web no se guarda: al enviar se abriría en el navegador.
+      if (ok) set((x) => (x.webUrl = v));
+    };
+    url.addEventListener("input", check);
+    webField = h("div", {}, field(t("Página de pings de tu alianza"), url, t("Al enviar, la app no manda nada por Jabber: copia el texto exacto, abre esta página en el navegador y tú eliges el grupo y lo pegas allí.")), err);
+  }
 
   const rows = groupRows(f.groups, learnedGroups(pingsConv().messages));
   const save = (name, patch) => set((x) => (x.groups = upsertGroup(x.groups, name, patch)), repaint);
@@ -268,9 +287,30 @@ function groupsGroup(repaint) {
     h("p", { class: "fc-subhead" }, t("Cómo le dice tu bot a qué grupo va (pregúntalo a tu FC)")),
     modes,
     lineField,
+    webField,
     h("div", { class: "fc-groups" }, head, list.length ? list : h("p", { class: "muted small fc-nogroups" }, t("Aún no hay grupos: salen solos cuando te llegan pings, o añádelos a mano."))),
     h("div", { class: "row fc-groups-foot" }, add, mode === "address" ? h("span", { class: "muted small" }, t("Un grupo sin dirección no sale como botón.")) : null),
+    mode === "web" ? null : advancedBlock(f),
   );
+}
+
+// Avanzado: para reconocer mejor la respuesta del bot. Vacío = lo de serie.
+function advancedBlock(f) {
+  const input = (key, placeholder) => {
+    const el = h("input", { class: "input mono", type: "text", value: f[key], placeholder, spellcheck: "false", maxlength: key === "botNick" ? 100 : 300 });
+    el.addEventListener("input", () => set((x) => (x[key] = key === "botNick" ? el.value.trim() : el.value)));
+    return el;
+  };
+  const box = h(
+    "details",
+    { class: "fc-advanced", open: advancedOpen },
+    h("summary", {}, t("Avanzado")),
+    field(t("Apodo del bot en la sala"), input("botNick", "pingbot"), t("Solo si el canal del bot es una sala: así se sabe qué mensaje es su respuesta. Sin él, en una sala el ping sale como «sin confirmar».")),
+    field(t("Texto que indica que se ha enviado"), input("sentPattern", "Broadcast sent"), t("Si tu bot contesta con algo propio. Vacío: se reconocen «sent», «delivered»… Admite /expresión/i.")),
+    field(t("Texto que indica que se ha rechazado"), input("rejectedPattern", "/not allowed/i"), t("Vacío: se reconocen «denied», «not allowed», «no permission»…")),
+  );
+  box.addEventListener("toggle", () => (advancedOpen = box.open));
+  return box;
 }
 
 // ---------- seguridad ----------
