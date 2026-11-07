@@ -10,7 +10,7 @@ const notes = [];
 globalThis.window.evex = { call: async (ch, data) => (ch === "notify" ? notes.push(data) : null), on: () => {} };
 S.settings = structuredClone({
   ...TEST_SETTINGS,
-  notifications: { enabled: true, pings: true, sound: false, volume: 0, sounds: {}, keywords: [], keywordRules: [], roomModes: {} },
+  notifications: { enabled: true, pings: true, privateMessages: true, sound: false, volume: 0, sounds: {}, keywords: [], keywordRules: [], roomModes: {} },
   pingSenders: ["pingbot"],
   pingVoice: { enabled: false },
 });
@@ -57,4 +57,17 @@ test("una respuesta marcada de un contacto que NO es remitente de pings tampoco 
   assert.ok(!S.tabs.includes(convKey("a1", bot2)));
   ingestMessage({ ...msg("otra cosa"), conv: bot2, nick: "relay", fromJid: bot2 });
   assert.ok(S.tabs.includes(convKey("a1", bot2)), "lo que no es respuesta FC la abre como siempre");
+});
+
+test("la respuesta marcada no cuenta como no leída ni avisa (ni burbuja ni sonido); un mensaje normal sí", () => {
+  const bot3 = "bot3@ejemplo.com";
+  const c = getConv("a1", bot3, "chat");
+  const n = notes.length;
+  ingestMessage({ ...msg("Broadcast sent to 2 users", { fcReply: true }), conv: bot3, nick: "bot3", fromJid: bot3 });
+  assert.equal(c.unread, 0, "sin contador");
+  assert.equal(notes.length, n, "sin aviso");
+  assert.equal(c.messages.at(-1).body, "Broadcast sent to 2 users", "pero guardada en su chat");
+  ingestMessage({ ...msg("hola"), conv: bot3, nick: "bot3", fromJid: bot3 });
+  assert.equal(c.unread, 1, "un mensaje normal cuenta");
+  assert.ok(notes.slice(n).some((x) => x.kind === "msg"), "y avisa");
 });

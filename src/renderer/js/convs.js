@@ -352,6 +352,8 @@ export function ingestMessage(ev) {
     if (msg.out && S.active === c.key) markRead(c.key);
     return;
   }
+  // La respuesta del bot a un envío del Modo FC se enseña en la ventana de envío: guardada, pero sin contador ni aviso.
+  if (ev.fcReply) return;
   const visible = S.active === c.key && S.focused;
   const fresh = !msg.delayed || Date.now() - msg.ts < 120e3;
   if (!visible && fresh) {
