@@ -260,3 +260,481 @@
   width: 100%;
   height: 100%;
 }
+
+/* ---------- ventana «Enviar ping» ---------- */
+
+.fc-send-modal .modal-body {
+  padding: 0;
+}
+.fc-win {
+  display: flex;
+  flex-direction: column;
+  min-height: min(560px, 70vh);
+}
+.fc-wtabs {
+  display: flex;
+  gap: 22px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.fc-wtab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text2);
+  font: inherit;
+  cursor: pointer;
+}
+.fc-wtab .icon {
+  width: 1em;
+}
+.fc-wtab.sel {
+  color: var(--text);
+  font-weight: 600;
+  border-color: var(--accent);
+}
+.fc-wtab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.fc-wpanel {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.fc-wpanel > * {
+  flex: 1;
+}
+.fc-split {
+  display: flex;
+  min-height: 0;
+}
+.fc-form,
+.fc-paste-main {
+  width: 50%;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.fc-paste-main {
+  width: auto;
+  flex: 1;
+}
+.fc-side,
+.fc-understood {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg);
+  overflow-y: auto;
+  min-width: 0;
+}
+.fc-understood {
+  flex: none;
+  width: 300px;
+}
+.fc-understood p {
+  margin: 0;
+}
+.fc-lab {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text2);
+}
+.fc-fld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.chip.fc-pick {
+  cursor: pointer;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 0.88em;
+  background: transparent;
+}
+.chip.fc-pick.sel {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-weight: 600;
+}
+.fc-time-row {
+  gap: 10px;
+  align-items: center;
+}
+.input.fc-time {
+  width: 5.5em;
+}
+.input.invalid {
+  border-color: color-mix(in srgb, var(--danger) 70%, var(--border));
+}
+.fc-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fc-preview-card {
+  pointer-events: none;
+}
+.fc-text {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.9em;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.fc-edit-text {
+  align-self: flex-start;
+}
+
+/* Editor de «Pegar texto»: el textarea encima de una copia del texto donde se marcan los invisibles. La copia tiene el
+   texto transparente y la misma letra, tamaño y ajuste de línea, así que cada marca cae donde está el carácter. */
+.fc-editor {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.fc-editor-marks,
+.fc-editor-input {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 14px;
+  font-family: var(--mono);
+  font-size: 0.93em;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+  scrollbar-gutter: stable;
+}
+.fc-editor-marks {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: transparent;
+  pointer-events: none;
+  visibility: hidden;
+}
+.fc-editor.marks .fc-editor-marks {
+  visibility: visible;
+}
+.fc-editor-input {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  resize: none;
+  outline: none;
+  overflow-y: auto;
+}
+.fc-inv {
+  position: relative;
+}
+.fc-inv::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--warn) 75%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warn) 40%, transparent);
+}
+.fc-paste-head {
+  justify-content: space-between;
+  align-items: center;
+}
+.fc-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88em;
+  color: var(--text2);
+  cursor: pointer;
+}
+.fc-check input {
+  accent-color: var(--accent);
+}
+.fc-inv-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--bg3);
+  font-size: 0.88em;
+  line-height: 1.45;
+  color: var(--text2);
+}
+.fc-inv-notice[hidden] {
+  display: none;
+}
+.fc-inv-notice.has {
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: color-mix(in srgb, var(--warn) 55%, var(--text));
+}
+.fc-inv-notice .icon {
+  flex: none;
+  margin-top: 1px;
+}
+.fc-kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  margin: 0;
+  font-size: 0.9em;
+}
+.fc-kv dt,
+.fc-kv dd {
+  margin: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fc-kv dt {
+  color: var(--text2);
+  padding-right: 10px;
+}
+.fc-kv dd {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.fc-ok {
+  color: var(--ok);
+}
+.fc-understood .icon {
+  width: 1em;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.fc-cal {
+  margin-top: auto;
+}
+.fc-quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+  padding: 30px 20px;
+}
+.fc-quick .row {
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Barra «Para»: los grupos en ámbar, siempre a la vista */
+.fc-to {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.fc-to[hidden] {
+  display: none;
+}
+.fc-to-label {
+  width: 44px;
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+.fc-to-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 0.92em;
+  cursor: pointer;
+}
+.fc-to-btn .icon {
+  width: 0.9em;
+}
+.fc-to-btn.sel {
+  border-color: var(--warn);
+  color: color-mix(in srgb, var(--warn) 40%, var(--text));
+  background: color-mix(in srgb, var(--warn) 16%, var(--bg3));
+  font-weight: 600;
+}
+.fc-to-btn:focus-visible {
+  outline: 2px solid var(--warn);
+  outline-offset: 1px;
+}
+.fc-to-count {
+  margin-left: auto;
+}
+.fc-wfoot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+.fc-where {
+  font-size: 0.92em;
+  color: var(--text2);
+}
+.fc-chan {
+  color: var(--text);
+}
+.fc-blocker {
+  font-size: 0.88em;
+  color: var(--warn);
+}
+.fc-send-btn[hidden] {
+  display: none;
+}
+
+/* Confirmación y resultado */
+.modal.fc-confirm,
+.modal.fc-results {
+  width: min(560px, 100%);
+}
+.fc-confirm-body,
+.fc-results-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fc-confirm-body p,
+.fc-results-body p {
+  margin: 0;
+  line-height: 1.5;
+}
+.fc-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9em;
+  color: var(--text2);
+}
+.fc-notes .icon {
+  width: 1em;
+  color: var(--ok);
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+.fc-res {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+}
+.fc-res-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.fc-res-main {
+  flex: 1;
+  min-width: 0;
+}
+.fc-res-group {
+  font-weight: 600;
+}
+.fc-res.ok .fc-res-icon {
+  color: var(--ok);
+}
+.fc-res.ok-soft .fc-res-icon {
+  color: color-mix(in srgb, var(--ok) 65%, var(--text2));
+}
+.fc-res.neutral .fc-res-icon {
+  color: var(--text2);
+}
+.fc-res.warn .fc-res-icon {
+  color: var(--warn);
+}
+.fc-res.info .fc-res-icon {
+  color: var(--accent);
+}
+.fc-res.error {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg3));
+}
+.fc-res.error .fc-res-icon {
+  color: var(--danger);
+}
+.fc-res-quote {
+  margin-top: 6px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+.fc-res-help {
+  margin-top: 7px;
+  font-size: 0.88em;
+  line-height: 1.45;
+  color: var(--text2);
+}
+
+/* Preferencias: modo web y «Avanzado» */
+.fc-url-error {
+  color: var(--danger);
+}
+.fc-url-error[hidden] {
+  display: none;
+}
+.fc-advanced {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.fc-advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text2);
+}
+.fc-advanced[open] summary {
+  margin-bottom: 10px;
+}

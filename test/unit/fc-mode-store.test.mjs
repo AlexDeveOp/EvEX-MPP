@@ -81,3 +81,15 @@ test("el formato de serie de la plantilla es el mismo en store.js y en Preferenc
   assert.equal(DEFAULT_FORMAT, store.DEFAULT_SETTINGS.fcMode.template.format);
   assert.deepEqual(FC_FIELDS.map(([id]) => id), store.FC_FIELDS);
 });
+
+test("modo web: solo se guarda una URL http o https; el modo avanzado se limpia", () => {
+  const ok = store.normalizeFcMode({ groupMode: "web", webUrl: " https://pings.ejemplo.com/enviar ", botNick: "  pingbot ", sentPattern: "/sent/i", rejectedPattern: 3 });
+  assert.equal(ok.groupMode, "web");
+  assert.equal(ok.webUrl, "https://pings.ejemplo.com/enviar");
+  assert.equal(ok.botNick, "pingbot");
+  assert.equal(ok.sentPattern, "/sent/i");
+  assert.equal(ok.rejectedPattern, "");
+  for (const bad of ["javascript:alert(1)", "file:///C:/x", "pings.ejemplo.com", "", null]) assert.equal(store.normalizeFcMode({ webUrl: bad }).webUrl, "", String(bad));
+  assert.equal(store.normalizeFcMode({ webUrl: "http://pings.ejemplo.com" }).webUrl, "http://pings.ejemplo.com");
+  assert.deepEqual(store.FC_GROUP_MODES, ["address", "line", "web"]);
+});

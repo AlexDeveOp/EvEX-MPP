@@ -109,8 +109,9 @@ export const DEFAULT_SETTINGS = {
   // Modo captura (src/main/capture.js): avisos sin detalles y ventana difuminada. globalShortcut: Ctrl+Shift+H global.
   capture: { enabled: false, globalShortcut: false },
   // Modo FC (renderer/js/settings/fc.js): enviar pings al bot de la alianza. Apagado de serie; todo es local.
-  // channel: sala o contacto del bot. groupMode: "address" (una dirección por grupo) o "line" (una línea al principio,
-  // con lineFormat). groups: los añadidos a mano y los aprendidos que se han tocado ({ name, address, button, manual }).
+  // channel: sala o contacto del bot. groupMode: "address" (una dirección por grupo), "line" (una línea al principio,
+  // con lineFormat) o "web" (se copia el texto y se abre webUrl). groups: los añadidos a mano y los aprendidos que se
+  // han tocado ({ name, address, button, manual }).
   fcMode: {
     enabled: false,
     channel: { accountId: "", jid: "", kind: "" },
@@ -123,6 +124,10 @@ export const DEFAULT_SETTINGS = {
     },
     groupMode: "address",
     lineFormat: "!ping {grupo}",
+    webUrl: "",
+    botNick: "",
+    sentPattern: "",
+    rejectedPattern: "",
     groups: [],
     defaultGroup: "",
     confirm: true,
@@ -263,16 +268,23 @@ export function normalizeAccount(a) {
   };
 }
 
-const PROXY_TYPES = ["socks5", "http", "https"];
-const PROXY_PORTS = { socks5: 1080, http: 8080, https: 443 };
-
-// Datos del proxy sin contraseña: tipo válido, host sin espacios y puerto por defecto según el tipo.
 // Modo FC: deja los ajustes en una forma válida aunque vengan de una versión vieja, a medias o tocados a mano.
 export const FC_TABS = ["quick", "template", "paste"];
 export const FC_FIELDS = ["type", "fc", "time", "place", "doctrine", "comms", "pap", "notes"];
 // Cómo se elige el grupo de destino. Para añadir otro modo, se añade aquí y en settings/fc.js.
-export const FC_GROUP_MODES = ["address", "line"];
+// "web": la app no envía nada; copia el texto y abre la página de pings de la alianza (webUrl).
+export const FC_GROUP_MODES = ["address", "line", "web"];
 const str = (v, max = 500) => (typeof v === "string" ? v.slice(0, max) : "");
+// Solo http y https: la URL se abre en el navegador.
+export function safeWebUrl(v) {
+  const s = str(v, 2000).trim();
+  try {
+    const u = new URL(s);
+    return ["http:", "https:"].includes(u.protocol) ? s : "";
+  } catch {
+    return "";
+  }
+}
 export function normalizeFcMode(f) {
   const d = DEFAULT_SETTINGS.fcMode;
   f = f && typeof f === "object" && !Array.isArray(f) ? f : {};
@@ -301,6 +313,11 @@ export function normalizeFcMode(f) {
     },
     groupMode: FC_GROUP_MODES.includes(f.groupMode) ? f.groupMode : d.groupMode,
     lineFormat: typeof f.lineFormat === "string" ? f.lineFormat.slice(0, 200) : d.lineFormat,
+    webUrl: safeWebUrl(f.webUrl),
+    // Avanzado: el nick del bot en una sala (para reconocer su respuesta) y los textos de éxito y rechazo propios.
+    botNick: str(f.botNick, 100).trim(),
+    sentPattern: str(f.sentPattern, 300),
+    rejectedPattern: str(f.rejectedPattern, 300),
     groups,
     // Puede ser un grupo aprendido que aún no está en `groups`: no se comprueba aquí.
     defaultGroup: str(f.defaultGroup, 80),
@@ -310,6 +327,10 @@ export function normalizeFcMode(f) {
 }
 const withFcMode = (settings) => ((settings.fcMode = normalizeFcMode(settings.fcMode)), settings);
 
+const PROXY_TYPES = ["socks5", "http", "https"];
+const PROXY_PORTS = { socks5: 1080, http: 8080, https: 443 };
+
+// Datos del proxy sin contraseña: tipo válido, host sin espacios y puerto por defecto según el tipo.
 export function normalizeProxySettings(p = {}) {
   const type = PROXY_TYPES.includes(p.type) ? p.type : "socks5";
   const port = Number(p.port);
