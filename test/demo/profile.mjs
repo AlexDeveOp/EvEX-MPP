@@ -75,6 +75,21 @@ export function demoRoomHistory(now = Date.now()) {
   };
 }
 
+// Modo FC activado contra el bot simulado (test/mock-bots.mjs, modo «line»), con la plantilla de serie. Con la cuenta
+// de la demo, en la ventana «Enviar ping» sale enviado a all y caps, rechazado en supers y sin confirmar en silent.
+// all y caps ya se aprenden del pie de los pings; supers y silent van «a mano».
+export function demoFcMode() {
+  const group = (name, manual = false) => ({ name, address: "", button: true, manual });
+  return {
+    enabled: true,
+    channel: { accountId: DEMO_ACCOUNT, jid: PINGBOT, kind: "chat" },
+    template: { signAs: "Bob FC" },
+    groupMode: "line",
+    lineFormat: "!ping {grupo}",
+    groups: [group("all"), group("caps"), group("supers", true), group("silent", true)],
+  };
+}
+
 // Escribe el perfil en dir (config.json y logs/). Devuelve lo necesario para conectar.
 export function writeDemoProfile(dir, { port, now = Date.now() } = {}) {
   fs.mkdirSync(dir, { recursive: true });
@@ -100,6 +115,7 @@ export function writeDemoProfile(dir, { port, now = Date.now() } = {}) {
         overrides: {},
         dismissed: {},
       },
+      fcMode: demoFcMode(),
       openTabs: [{ accountId: null, conv: "*", type: "pings" }, ...rooms.map((r) => ({ accountId: DEMO_ACCOUNT, conv: r.jid, type: "groupchat" }))],
     },
   };
