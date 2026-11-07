@@ -33,8 +33,8 @@
 // Usuarios de prueba (contraseña «test», como todos; «usuario» es la cuenta de siempre y «piloto» la de la demo):
 //   fc_bob    address: all y cualquier grupo (allowedUsers) · line: all y caps
 //   fc_ana    address: all y cualquier grupo (allowedUsers) · line: all, caps y supers
-//   usuario,  address: caps (es miembro) · line: caps y silent
-//   piloto
+//   usuario   address: caps (es miembro) · line: caps y silent
+//   piloto    address: caps (es miembro) · line: all, caps y silent (la cuenta de la demo)
 //   piloto1   nada en ninguno de los dos (y no es miembro de ningún grupo)
 // Grupos: caps = usuario, piloto, fc_bob, piloto_dos · supers = fc_ana, piloto_tres · silent = ausente (nunca conectado).
 // «all» llega a todos los conectados.
@@ -70,7 +70,9 @@ export const DEFAULT_BOTS = {
       fc_bob: ["all", "caps"],
       fc_ana: ["all", "caps", "supers"],
       usuario: ["caps", "silent"],
-      piloto: ["caps", "silent"],
+      // La cuenta de la demo (npm run demo): en la ventana «Enviar ping» sale enviado a all y caps, rechazado en supers
+      // y sin confirmar en silent.
+      piloto: ["all", "caps", "silent"],
       piloto1: [],
     },
     silent: ["silent"],
