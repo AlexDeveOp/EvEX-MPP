@@ -89,7 +89,7 @@ async function loadPings(c) {
       all.push(...entries.map((e) => ({ ...fromLog({ accountId: acc.id, conv: sender, type: "chat" }, e), accountId: acc.id, conv: sender })));
     }
   }
-  const fresh = all.filter((m) => !c.keys.has(m.key) && !m.out && !m.editOf);
+  const fresh = all.filter((m) => !c.keys.has(m.key) && !m.out && !m.editOf && !m.fc);
   for (const m of fresh) c.keys.add(m.key);
   c.messages = mergeSorted(fresh, c.messages);
   c.loaded = true;
@@ -111,6 +111,7 @@ function fromLog(c, e) {
     sys: !!e.sys,
     jid: e.jid || "",
     editOf: e.rep || "",
+    ...(e.fc ? { fc: true } : {}),
     history: true,
   };
 }
@@ -287,16 +288,19 @@ export function ingestMessage(ev) {
     delayed: !!ev.delayed,
     oob: ev.oob || "",
     subject: ev.subject || "",
+    ...(ev.fcReply ? { fc: true } : {}),
   };
+  // La respuesta de un bot de pings a un envío del Modo FC va a su chat privado, como un mensaje normal.
+  const asPing = isPingSender(ev.conv) && !ev.fcReply;
   const mre = mentionRegex(mentionWords(c));
   if (mre) mre.lastIndex = 0;
   msg.mention = !msg.out && !msg.sys && !!mre && mre.test(msg.body);
   // Una regla por palabra clave puede contar como mención y decide el sonido y la burbuja del aviso.
-  const rule = !msg.out && !msg.sys ? matchRule(msg.body, isPingSender(ev.conv) ? "pings" : type === "chat" ? "private" : "rooms") : null;
+  const rule = !msg.out && !msg.sys ? matchRule(msg.body, asPing ? "pings" : type === "chat" ? "private" : "rooms") : null;
   if (rule && rule.notify !== "never" && type === "groupchat") msg.mention = true;
 
   // Los pings van a la pestaña «Pings de flota», no a un chat privado con el bot.
-  if (isPingSender(ev.conv) && !msg.out) {
+  if (asPing && !msg.out) {
     c.messages.push(msg);
     emit("message", { conv: c, msg });
     const pc = pingsConv();

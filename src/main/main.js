@@ -17,7 +17,7 @@ import { configurePingSync, syncPings } from "./ping-sync.js";
 import { createPingDedupe, isPingSender } from "./ping-dedupe.js";
 import { registerMediaIpc } from "./media-ipc.js";
 import { registerPidginIpc } from "./pidgin-ipc.js";
-import { registerFcIpc } from "./fc-ipc.js";
+import { markFcReply, registerFcIpc } from "./fc-ipc.js";
 import { userData, mediaDir, avatarDir } from "./paths.js";
 import { createConnLog } from "./conn-log.js";
 import { autostartFile, autostartExec, desktopEntry, storeUserDataDir } from "./platform.js";
@@ -508,8 +508,10 @@ const pingRepeats = createPingDedupe();
 
 function onAccountEvent(x, ev) {
   const accId = x.acc.id;
+  // Modo FC: la respuesta del bot a un envío en curso no es un ping (ev.fcReply); se guarda como mensaje normal.
+  markFcReply(x, ev);
   // La segunda copia de un ping (otra conexión de la cuenta, p. ej. Pidgin) no se guarda ni se avisa.
-  if (ev.type === "message" && !ev.outgoing && !ev.replaces && isPingSender(store.get().settings.pingSenders, x.acc.jid, ev.conv)) {
+  if (ev.type === "message" && !ev.outgoing && !ev.replaces && !ev.fcReply && isPingSender(store.get().settings.pingSenders, x.acc.jid, ev.conv)) {
     if (pingRepeats.repeated(`${accId}/${ev.conv.toLowerCase()}`, ev.body, ev.ts)) return;
   }
   if (ev.type === "message") {

@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { renderTemplate, buildPlan, SEND_MODES, interpretReply, toPattern, isBroadcastEcho } from "../../src/renderer/js/fc-send.js";
+import { renderTemplate, buildPlan, SEND_MODES, interpretReply, toPattern, isBroadcastEcho, isEchoOf, isOwnCopy, isConfirmed, STATUSES } from "../../src/renderer/js/fc-send.js";
 import { sendPlan, FC_REPLY_MS } from "../../src/main/fc-ipc.js";
 
 const [ZW, ZNJ, ZWJ] = [0x200b, 0x200c, 0x200d].map((c) => String.fromCharCode(c));
@@ -57,11 +57,11 @@ test("buildPlan, línea al principio: todo al canal del bot, con la línea del g
 });
 
 test("buildPlan: errores claros y la estructura lista para un tercer modo", () => {
-  assert.throws(() => buildPlan({ mode: "otro", groups: GROUPS, text: "x" }), /modo de envío desconocido/);
-  assert.throws(() => buildPlan({ mode: "address", groups: [], text: "x" }), /no hay grupos/);
-  assert.throws(() => buildPlan({ mode: "address", groups: GROUPS, text: "" }), /no hay texto/);
-  assert.throws(() => buildPlan({ mode: "address", groups: [{ name: "x" }], text: "a" }), /no tiene dirección/);
-  assert.throws(() => buildPlan({ mode: "line", groups: GROUPS, text: "a" }), /canal del bot/);
+  assert.throws(() => buildPlan({ mode: "otro", groups: GROUPS, text: "x" }), { code: "unknown-mode", mode: "otro" });
+  assert.throws(() => buildPlan({ mode: "address", groups: [], text: "x" }), { code: "no-groups" });
+  assert.throws(() => buildPlan({ mode: "address", groups: GROUPS, text: "" }), { code: "no-text" });
+  assert.throws(() => buildPlan({ mode: "address", groups: [{ name: "x" }], text: "a" }), { code: "no-address", group: "x" });
+  assert.throws(() => buildPlan({ mode: "line", groups: GROUPS, text: "a" }), { code: "no-bot" });
   assert.deepEqual(Object.keys(SEND_MODES), ["address", "line"]);
 });
 
@@ -143,7 +143,7 @@ test("sendPlan: sin respuesta en 15 s es «sin confirmar», nunca «enviado» (r
   assert.equal(FC_REPLY_MS, 15e3);
 });
 
-test("sendPlan: el propio ping reenviado no es la respuesta; se apunta aparte y se sigue esperando", async (t) => {
+test("sendPlan: el propio ping reenviado no es la respuesta; se sigue esperando y sin respuesta queda «delivered»", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const x = fakeAccount();
   const p = sendPlan(x, { mode: "line", groups: [GROUPS[0]], botJid: "pings-bot@ejemplo.com", text: PING });
@@ -151,7 +151,7 @@ test("sendPlan: el propio ping reenviado no es la respuesta; se apunta aparte y 
   x.reply({ type: "message", conv: "pings-bot@ejemplo.com", convType: "chat", nick: "pings-bot", body: `${PING}${NL}~~~ This was a coord broadcast from bob to all at 2026-11-07 18:00:00 EVE ~~~` });
   t.mock.timers.tick(FC_REPLY_MS);
   const [r] = await p;
-  assert.equal(r.status, "unconfirmed", "el eco solo no prueba nada");
+  assert.equal(r.status, "delivered", "ha llegado la copia propia, sin respuesta del bot");
   assert.equal(r.echo, true);
 });
 
@@ -177,7 +177,7 @@ test("sendPlan: un error que no es de este mensaje no cuenta; si no se puede env
   await tick();
   x.reply({ type: "message-error", conv: "all@pings.ejemplo.com", id: "otro-id", condition: "forbidden", message: "nada que ver" });
   t.mock.timers.tick(FC_REPLY_MS);
-  assert.equal((await p)[0].status, "unconfirmed");
+  assert.equal((await p)[0].status, "accepted", "address sin error de este mensaje: no rechazado");
   const off = await sendPlan(fakeAccount({ fail: true }), { mode: "address", groups: [GROUPS[0]], text: "x" });
   assert.deepEqual([off[0].status, off[0].reason], ["rejected", "No conectado"]);
 });
@@ -197,4 +197,45 @@ test("interpretReply: los fallos nunca salen como enviados aunque digan «broadc
   }
   // Los éxitos de siempre siguen siéndolo.
   for (const body of ["Ping sent to all", "Broadcast delivered", "Broadcasted to caps", "Enviado a all"]) assert.equal(interpretReply({ body }).status, "sent", body);
+});
+
+test("sendPlan: otro ping del mismo bot (no el nuestro) no es la copia propia", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const x = fakeAccount();
+  const p = sendPlan(x, { mode: "line", groups: [GROUPS[0]], botJid: "pings-bot@ejemplo.com", text: PING });
+  await tick();
+  x.reply({ type: "message", conv: "pings-bot@ejemplo.com", convType: "chat", nick: "pings-bot", body: `Otra flota${NL}~~~ This was a coord broadcast from ana to all at 2026-11-07 18:00:00 EVE ~~~` });
+  t.mock.timers.tick(FC_REPLY_MS);
+  const [r] = await p;
+  assert.deepEqual([r.status, r.echo], ["unconfirmed", false]);
+});
+
+test("estados: address sin error es «accepted»; con copia, «delivered»; solo sent y delivered cuentan como enviados", () => {
+  assert.deepEqual(interpretReply(null, { mode: "address" }), { status: "accepted", reason: "no-error" });
+  assert.deepEqual(interpretReply(null, { mode: "address", echo: true }), { status: "delivered", reason: "echo" });
+  assert.deepEqual(interpretReply(null, { mode: "line" }), { status: "unconfirmed", reason: "timeout" });
+  assert.deepEqual(interpretReply(null, { mode: "line", echo: true }), { status: "delivered", reason: "echo" });
+  assert.equal(interpretReply({ body: "Broadcast sent to 3 users" }, { mode: "line", echo: true }).status, "sent", "el éxito del bot manda");
+  assert.equal(interpretReply({ body: "You are not allowed to broadcast to caps" }, { mode: "line", echo: true }).status, "rejected");
+  assert.equal(interpretReply({ error: { condition: "not-allowed" } }, { mode: "address", echo: true }).status, "rejected");
+  assert.equal(interpretReply({ body: "ok?" }, { mode: "line", echo: true }).status, "delivered", "una respuesta que no se entiende no tapa la copia");
+  assert.deepEqual(STATUSES.filter(isConfirmed), ["sent", "delivered"]);
+});
+
+test("isEchoOf e isOwnCopy comparan sin invisibles ni espacios, pero sin tocar el texto", () => {
+  const ZW = String.fromCharCode(0x200b);
+  const text = `Caps${ZW} up${NL}Formup: home`;
+  const foot = "~~~ This was a coord broadcast from bob to caps at 2026-11-07 18:00:00 EVE ~~~";
+  assert.equal(isEchoOf(`${text}${NL}${NL}${foot}`, text), true);
+  assert.equal(isEchoOf(`Caps up${NL}Formup:  home ${NL}${foot}`, text), true, "el bot puede recolocar espacios o quitar invisibles");
+  assert.equal(isEchoOf(`Otra flota${NL}${foot}`, text), false);
+  assert.equal(isEchoOf(text, text), false, "sin pie no es un reenvío del bot");
+  assert.equal(isEchoOf(foot, ""), false);
+  const own = { ownJid: "bob@ejemplo.com/evex", text };
+  assert.equal(isOwnCopy({ conv: "bob@ejemplo.com", body: text }, own), true);
+  assert.equal(isOwnCopy({ conv: "BOB@ejemplo.com", body: `Caps up${NL}Formup: home` }, own), true);
+  assert.equal(isOwnCopy({ conv: "ana@ejemplo.com", body: text }, own), false, "de otro no es la copia propia");
+  assert.equal(isOwnCopy({ conv: "bob@ejemplo.com", body: "Otra cosa" }, own), false);
+  assert.equal(isOwnCopy({ conv: "bob@ejemplo.com", body: text }, { ownJid: "", text }), false);
+  assert.equal(text.includes(ZW), true, "el texto sigue con su invisible");
 });
