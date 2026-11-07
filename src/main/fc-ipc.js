@@ -104,7 +104,8 @@ function sendOne(x, item, req, timeoutMs) {
       resolve({ group: item.group, to: item.to, status: r.status, reason: r.reason, reply: reply?.body ?? null, echo });
     }
     Promise.resolve()
-      .then(() => x.sendMessage({ to: item.to, body: item.body, type: inRoom ? "groupchat" : "chat" }))
+      // Sin recibo ni estado de escritura: el servicio de broadcast los copiaría a cada miembro (ver sendMessage).
+      .then(() => x.sendMessage({ to: item.to, body: item.body, type: inRoom ? "groupchat" : "chat", plain: true }))
       .then((sentId) => (id = sentId))
       .catch((e) => finish({ error: { condition: "send-failed", text: e?.message || String(e) } }));
   });
