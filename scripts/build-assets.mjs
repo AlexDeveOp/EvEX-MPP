@@ -17,7 +17,7 @@ const ICONS = [
   "chevron-up", "circle", "eye", "eye-off", "lock", "key-round", "server", "globe", "download", "upload",
   "folder-open", "volume-2", "volume-x", "zap", "radio", "siren", "megaphone", "history", "sliders-horizontal",
   "info", "triangle-alert", "copy", "at-sign", "pin", "shield", "crown", "mic-off", "ellipsis-vertical",
-  "panel-right", "panel-left", "sparkles", "wifi", "wifi-off", "power", "funnel", "arrow-down", "rocket",
+  "panel-right", "panel-left", "sparkles", "wifi", "wifi-off", "power", "funnel", "arrow-down", "arrow-up", "rocket",
   "crosshair", "layout-dashboard", "reply", "quote", "link", "external-link", "file-text", "book-marked", "ban",
   "keyboard", "wand-sparkles", "brush", "sticker", "import", "database", "clock", "calendar", "map-pin",
   "swords", "flag", "moon-star", "circle-dot", "circle-minus", "circle-slash", "message-circle", "inbox",

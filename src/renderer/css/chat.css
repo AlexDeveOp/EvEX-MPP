@@ -300,6 +300,10 @@
   font-size: 0.85em;
   z-index: 3;
 }
+/* Pings y Menciones: el botón sube al más nuevo y dice adónde lleva. */
+.jump-top .jump-count:not(:empty)::before {
+  content: "· ";
+}
 .jump-count:empty {
   display: none;
 }
