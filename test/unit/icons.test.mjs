@@ -128,3 +128,27 @@ test("las páginas de licencia del instalador llevan exactamente un BOM y ningú
     assert.ok(!b.includes(Buffer.from("\r\r")), `license_${lang}: CR doble en los saltos de línea`);
   }
 });
+
+test("todos los iconos que pide la interfaz existen en icons.js (si no, dom.js dibuja un círculo)", async () => {
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const { ICONS } = await import("../../src/renderer/js/data/icons.js");
+  const src = fileURLToPath(new URL("../../src/", import.meta.url));
+  const used = new Map();
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(m?js|cjs)$/.test(e.name) && !p.includes(`${path.sep}data${path.sep}`)) {
+        const code = fs.readFileSync(p, "utf8");
+        // icon("nombre") y { icon: "nombre" } (menús, botones…)
+        for (const m of code.matchAll(/\bicon(?:\(\s*|:\s*)["'`]([a-z0-9-]+)["'`]/g)) used.set(m[1], path.relative(src, p));
+      }
+    }
+  };
+  walk(src);
+  assert.ok(used.size > 50, `se encuentran los usos (${used.size})`);
+  const missing = [...used].filter(([name]) => !(name in ICONS)).map(([name, file]) => `${name} (${file})`);
+  assert.deepEqual(missing, [], "iconos sin dibujo: añádelos a scripts/build-assets.mjs y ejecuta npm run assets");
+});

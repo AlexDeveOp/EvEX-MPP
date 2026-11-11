@@ -63,7 +63,7 @@ export function previewBody(file, preview) {
     h("div", { class: "field-label" }, t("Plantilla:")),
     h("pre", { class: "fc-share-format", style: { whiteSpace: "pre-wrap", maxHeight: "12em", overflow: "auto" } }, preview.format),
     changes.length ? row(t("Cambia:"), changes.join(", ")) : h("p", { class: "muted" }, t("Es igual que tu configuración: no cambia nada.")),
-    ...preview.warnings.map((w) => h("p", { class: "muted" }, icon("alert-triangle"), " ", WARNING_TEXTS[w]?.() || w)),
+    ...preview.warnings.map((w) => h("p", { class: "muted" }, icon("triangle-alert"), " ", WARNING_TEXTS[w]?.() || w)),
     h("p", { class: "muted" }, t("Se mantienen tu cuenta, tu firma y si el Modo FC está activo.")),
   );
 }
