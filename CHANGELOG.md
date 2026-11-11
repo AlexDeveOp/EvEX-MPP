@@ -7,6 +7,9 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+### Fixed
+- FC mode: when importing a shared configuration, the warnings showed a circle instead of the warning icon. A new test checks that every icon the interface asks for exists. ([#122](https://github.com/AlexDeveOp/EvEX-MPP/issues/122))
+
 ## [0.12.0] - 2026-11-07
 
 ### Added
