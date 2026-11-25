@@ -7,10 +7,15 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-11-25
+
 ### Fixed
 - Mini window: on Windows it sometimes could not be moved by its bar until it was closed and opened again, usually after the monitors turned off, after resuming from sleep or after switching focus between monitors. Chromium stopped delivering the mouse press to that window (the release still arrived), so neither dragging nor the counters worked. The mini window now rebuilds itself half a second after unlocking, resuming or coming back from more than a minute without activity (when the monitors turn back on), a second after a display is connected or disconnected, and at once if a click loses its press; the app also moves the window itself instead of relying on Chromium's drag area ([#129](https://github.com/AlexDeveOp/EvEX-MPP/issues/129)).
 - FC mode: when importing a shared configuration, the warnings showed a circle instead of the warning icon. A new test checks that every icon the interface asks for exists. ([#122](https://github.com/AlexDeveOp/EvEX-MPP/issues/122))
 - A ping sync test depended on the real date and started failing on 2026-11-12 ([#127](https://github.com/AlexDeveOp/EvEX-MPP/issues/127)). Only the test changed.
+
+### Security
+- Updated Electron to 45.4.1, with the latest Chromium security fixes.
 
 ## [0.12.0] - 2026-11-07
 
@@ -414,7 +419,8 @@ First release published from the public repository; the application itself is un
 - Themes, color editor, fonts, backgrounds, message styles, animated emoji and custom emoji.
 - Local history with search, mentions and keywords, message correction, IRC-style commands.
 
-[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/AlexDeveOp/EvEX-MPP/compare/v0.9.0...v0.10.0
