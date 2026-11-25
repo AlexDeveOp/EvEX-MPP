@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createMiniHeal, HEAL_DELAY_MS, HEAL_MIN_GAP_MS } from "../../src/main/mini-heal.js";
+import { createMiniHeal, HEAL_DELAY_MS, HEAL_QUICK_MS, HEAL_MIN_GAP_MS } from "../../src/main/mini-heal.js";
 import { createLostPressDetector, LOST_PRESS_WINDOW_MS } from "../../src/renderer/js/mini-lost-press.js";
 
 function setup() {
@@ -105,4 +105,14 @@ test("clics perdidos: dos huérfanos muy separados no avisan; otros botones no c
   t += 100;
   d.up({ button: 0 });
   assert.equal(lost, 1, "el huérfano anterior aún cuenta dentro del plazo");
+});
+
+test("mini-heal: al desbloquear o volver de suspensión se recrea enseguida, antes de que se toque", () => {
+  const { env, heal } = setup();
+  heal.after("unlock-screen", HEAL_QUICK_MS);
+  env.advance(HEAL_QUICK_MS - 1);
+  assert.equal(env.rebuilt.length, 0);
+  env.advance(1);
+  assert.deepEqual(env.logs, ["unlock-screen"]);
+  assert.ok(HEAL_QUICK_MS <= 1000, "menos de un segundo");
 });

@@ -12,7 +12,7 @@ import { userData } from "./paths.js";
 import { placeBounds, rememberBounds, fitBounds, clampOpacity, MINI_MIN, MINI_MAX } from "./mini-bounds.js";
 import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, waylandSession } from "./overlay.js";
 import { createMiniDrag } from "./mini-drag.js";
-import { createMiniHeal } from "./mini-heal.js";
+import { createMiniHeal, HEAL_QUICK_MS } from "./mini-heal.js";
 
 let win = null;
 let lastState = null;
@@ -95,8 +95,8 @@ function open() {
     screen.on("display-metrics-changed", refitMini);
     // Tras estos cambios, Chromium puede dejar la mini sin recibir clics: se recrea (ver mini-heal.js).
     if (process.platform === "win32") {
-      for (const [source, event] of [[powerMonitor, "resume"], [powerMonitor, "unlock-screen"], [screen, "display-added"], [screen, "display-removed"]]) {
-        source?.on?.(event, () => isMiniOpen() && heal.after(event));
+      for (const [source, event, delay] of [[powerMonitor, "resume", HEAL_QUICK_MS], [powerMonitor, "unlock-screen", HEAL_QUICK_MS], [screen, "display-added"], [screen, "display-removed"]]) {
+        source?.on?.(event, () => isMiniOpen() && heal.after(event, delay));
       }
     }
   }
