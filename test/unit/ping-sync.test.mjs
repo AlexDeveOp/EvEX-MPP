@@ -114,7 +114,10 @@ test("sin conexión o sin archivo en el servidor, no se le pide nada", async () 
   assert.deepEqual(conn.starts, []);
 });
 
-test("pide al archivo del servidor desde un minuto antes del último ping guardado y añade solo lo que falta", async () => {
+test("pide al archivo del servidor desde un minuto antes del último ping guardado y añade solo lo que falta", async (t) => {
+  // Reloj fijo poco después del ping de los datos de prueba (2026-11-05 10:15 UTC): con la hora real, el límite de
+  // 7 días (ARCHIVE_LOOKBACK) gana a «un minuto antes del último ping» y el test falla a partir del 12 de noviembre.
+  t.mock.timers.enable({ apis: ["Date"], now: Date.UTC(2026, 10, 5, 12, 0) });
   conn.online = true;
   conn.mam = true;
   const last = logs.lastTimestamp("acc1", BOT);

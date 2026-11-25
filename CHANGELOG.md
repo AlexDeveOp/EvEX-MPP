@@ -9,6 +9,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 
 ### Fixed
 - FC mode: when importing a shared configuration, the warnings showed a circle instead of the warning icon. A new test checks that every icon the interface asks for exists. ([#122](https://github.com/AlexDeveOp/EvEX-MPP/issues/122))
+- A ping sync test depended on the real date and started failing on 2026-11-12 ([#127](https://github.com/AlexDeveOp/EvEX-MPP/issues/127)). Only the test changed.
 
 ## [0.12.0] - 2026-11-07
 
