@@ -3,6 +3,7 @@
 // datos (o el tic de cada segundo) entre pulsar y soltar.
 import { t, currentLang } from "./i18n.js";
 import { fleetCountdown, timeAgo } from "./countdown.js";
+import { createLostPressDetector } from "./mini-lost-press.js";
 
 const call = (ch, ...a) => window.evex.call(ch, ...a);
 const root = document.getElementById("mini");
@@ -128,6 +129,14 @@ setInterval(tick, 1000);
 setTimeout(() => {
   if (!state) ui.empty.textContent = t("Abre EvEX-MPP para ver los pings (pulsa aquí)");
 }, 3000);
+
+// ---------- clics perdidos ----------
+
+// Tras apagarse los monitores, Chromium puede tragarse el «pulsar» y entregar solo el «soltar»: la mini no responde.
+// Si pasa, se pide al proceso principal que recree la ventana (src/main/mini-heal.js).
+const lostPress = createLostPressDetector(() => call("mini:stuck").catch(() => {}));
+addEventListener("pointerdown", (e) => lostPress.down(e), true);
+addEventListener("pointerup", (e) => lostPress.up(e), true);
 
 // ---------- mover la ventana con la barra ----------
 

@@ -2,7 +2,7 @@
 // datos, pedir que se abra la app y cambiar su tamaño o moverla. Nada de ajustes, archivos, enlaces ni salir.
 const { contextBridge, ipcRenderer } = require("electron");
 
-const CHANNELS = ["mini:get", "mini:click", "mini:resize", "mini:drag"];
+const CHANNELS = ["mini:get", "mini:click", "mini:resize", "mini:drag", "mini:stuck"];
 const EVENTS = ["mini-state"];
 
 contextBridge.exposeInMainWorld("evex", {

@@ -5,13 +5,14 @@
 // propio preload (preload-mini.cjs), con solo lo que necesita.
 // La posición y el tamaño se guardan por monitor en userData/mini-window.json (no en los ajustes: la ventana
 // principal los guarda enteros y pisaría lo que se mueva aquí).
-import { BrowserWindow, screen } from "electron";
+import { BrowserWindow, screen, powerMonitor } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { userData } from "./paths.js";
 import { placeBounds, rememberBounds, fitBounds, clampOpacity, MINI_MIN, MINI_MAX } from "./mini-bounds.js";
 import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, waylandSession } from "./overlay.js";
 import { createMiniDrag } from "./mini-drag.js";
+import { createMiniHeal } from "./mini-heal.js";
 
 let win = null;
 let lastState = null;
@@ -35,6 +36,7 @@ const drag = createMiniDrag({
     saveLater();
   },
 });
+const heal = createMiniHeal({ rebuild: () => rebuild(), log: (why) => console.log(`[mini] se recrea la ventana (${why})`) });
 
 // En Wayland el escritorio decide dónde van las ventanas: no se puede asegurar que quede encima.
 export const miniOnTop = () => !waylandSession();
@@ -91,6 +93,12 @@ function open() {
     watchingDisplays = true;
     screen.on("display-removed", refitMini);
     screen.on("display-metrics-changed", refitMini);
+    // Tras estos cambios, Chromium puede dejar la mini sin recibir clics: se recrea (ver mini-heal.js).
+    if (process.platform === "win32") {
+      for (const [source, event] of [[powerMonitor, "resume"], [powerMonitor, "unlock-screen"], [screen, "display-added"], [screen, "display-removed"]]) {
+        source?.on?.(event, () => isMiniOpen() && heal.after(event));
+      }
+    }
   }
   const bounds = placeBounds(loadSaved(), screen.getAllDisplays(), screen.getPrimaryDisplay().id);
   const w = new BrowserWindow({
@@ -144,6 +152,7 @@ function close() {
   saveBounds();
   clearTimeout(saveTimer);
   drag.end();
+  heal.stop();
   const w = win;
   win = null;
   stopKeepOnTop();
@@ -151,6 +160,19 @@ function close() {
   lastState = null;
   w.destroy();
   options.onChange(false);
+}
+
+// Recrea la ventana en el mismo sitio y con los mismos datos (mini-heal.js). La nueva se enseña sin coger el foco.
+function rebuild() {
+  if (!isMiniOpen()) return;
+  saveBounds();
+  clearTimeout(saveTimer);
+  drag.end();
+  const w = win;
+  win = null;
+  stopKeepOnTop();
+  w.destroy();
+  open();
 }
 
 // Se llama al arrancar y cada vez que se guardan los ajustes.
@@ -182,6 +204,8 @@ export function miniIpc(handle) {
   });
   // Arrastre de la barra: «manual» dice a la página si lo hace la app (si no, usa la zona de arrastre de Chromium);
   // «start» al pulsar y «end» al soltar.
+  // La página vio un «soltar» sin su «pulsar»: Chromium se está tragando los clics. Se recrea la ventana.
+  handle("mini:stuck", () => (isMiniOpen() ? heal.stuck() : false));
   handle("mini:drag", (action) => {
     if (action === "manual") return manualMiniDrag();
     if (action === "end") return drag.end();
