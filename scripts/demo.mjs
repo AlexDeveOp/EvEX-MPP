@@ -71,6 +71,8 @@ function run(cmd, args, opts) {
 
 async function main() {
   const keep = process.argv.includes("--keep");
+  // Cifrar la contraseña y arrancar Electron lleva unos segundos sin nada en pantalla: que no parezca colgado.
+  console.log("demo: preparando la demo… (la ventana tarda unos segundos en abrirse)");
   const base = PROFILES_DIR;
   fs.mkdirSync(base, { recursive: true, mode: 0o700 });
   const port = await freePort();
@@ -100,6 +102,7 @@ async function main() {
 
   // Para revisarla con herramientas (p. ej. test/cdp.mjs): npm run demo -- --remote-debugging-port=9333
   const extra = process.argv.slice(2).filter((x) => /^--remote-debugging-port=[0-9]+$/.test(x));
+  console.log("demo: abriendo EvEX-MPP…");
   const app = spawn(electron, [root, ...extra], { stdio: "inherit", env: { ...env, EVEX_USERDATA: profile }, windowsHide: false });
   const stop = (code) => {
     if (mock.exitCode === null) mock.kill();

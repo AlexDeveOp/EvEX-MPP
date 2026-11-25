@@ -148,6 +148,11 @@ jobs:
           $verify = if ("${{ github.event.repository.visibility }}" -eq "public") {
             "`n- Provenance / Procedencia: ``gh attestation verify <file> --repo ${{ github.repository }}`` (offline: add ``--bundle EvEX-MPP-${{ github.ref_name }}.intoto.jsonl``)."
           } else { "" }
+          # Enlaces a VirusTotal por el SHA-256 de cada ejecutable: funcionan en cuanto se suben allí los ficheros
+          # (a mano, tras publicar), sin tener que editar las notas. Las cifras (0/66…) van en la tabla del README.
+          $vt = foreach ($f in @(@{ Label = "installer / instalador"; Name = "EvEX-MPP-Setup-$version.exe" }, @{ Label = "portable"; Name = "EvEX-MPP-$version-portable.exe" })) {
+            "[$($f.Label)](https://www.virustotal.com/gui/file/$((Get-FileHash "dist/$($f.Name)" -Algorithm SHA256).Hash.ToLower()))"
+          }
           @"
           $($match.Groups[1].Value.Trim())
 
@@ -161,6 +166,7 @@ jobs:
           | ``EvEX-MPP-$($version)-portable.exe`` | Portable: nothing to install. / Portable, sin instalar. |
 
           - Verify / Verifica: ``Get-FileHash <file> -Algorithm SHA256`` must equal its line in ``checksums.txt``.
+          - VirusTotal: $($vt -join " · ") (reports available shortly after each release / informes disponibles poco después de cada versión).
           - Not code-signed yet: SmartScreen → "More info" → "Run anyway" / «Más información» → «Ejecutar de todas formas». [Code signing policy](https://github.com/${{ github.repository }}#code-signing-policy)
 
           ### Linux (x64)
