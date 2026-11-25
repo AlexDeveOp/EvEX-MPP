@@ -26,7 +26,7 @@ function setup() {
 test("mini-heal: tras un cambio de pantallas recrea la ventana una vez, agrupando los eventos seguidos", () => {
   const { env, heal } = setup();
   heal.after("display-removed");
-  env.advance(1000);
+  env.advance(HEAL_DELAY_MS / 2);
   heal.after("display-added"); // los monitores vuelven: se cuenta desde aquí
   env.advance(HEAL_DELAY_MS - 1);
   assert.equal(env.rebuilt.length, 0);
