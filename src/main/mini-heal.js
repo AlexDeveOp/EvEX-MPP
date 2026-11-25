@@ -45,3 +45,20 @@ export function createMiniHeal({ rebuild, setTimeout: later = setTimeout, clearT
   return { after, stuck, stop };
 }
 
+
+// Los monitores que se apagan por inactividad no dejan ningún evento en la app, pero sí una huella: un rato sin tocar
+// nada y, de golpe, actividad (el movimiento o la tecla que los enciende). feed(segundos de inactividad del sistema)
+// devuelve true en ese momento: la mini se recrea antes de que se llegue a tocar.
+export const IDLE_WAKE_AFTER_S = 60;
+export function createIdleWake({ after = IDLE_WAKE_AFTER_S } = {}) {
+  let wasIdle = false;
+  return {
+    feed(idleSeconds) {
+      if (!Number.isFinite(idleSeconds)) return false;
+      const woke = wasIdle && idleSeconds < 2;
+      if (idleSeconds >= after) wasIdle = true;
+      else if (woke || idleSeconds < 2) wasIdle = false;
+      return woke;
+    },
+  };
+}

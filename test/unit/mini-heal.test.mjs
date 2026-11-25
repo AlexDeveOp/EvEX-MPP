@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createMiniHeal, HEAL_DELAY_MS, HEAL_QUICK_MS, HEAL_MIN_GAP_MS } from "../../src/main/mini-heal.js";
-import { createLostPressDetector, LOST_PRESS_WINDOW_MS } from "../../src/renderer/js/mini-lost-press.js";
+import { createMiniHeal, createIdleWake, IDLE_WAKE_AFTER_S, HEAL_DELAY_MS, HEAL_QUICK_MS, HEAL_MIN_GAP_MS } from "../../src/main/mini-heal.js";
+import { createLostPressDetector } from "../../src/renderer/js/mini-lost-press.js";
 
 function setup() {
   const env = { time: 100000, timers: [], rebuilt: [], logs: [] };
@@ -64,47 +64,26 @@ test("mini-heal: stop() anula la pendiente (al cerrar la mini)", () => {
 
 test("clics perdidos: pulsar y soltar normales no avisan nunca", () => {
   let lost = 0;
-  let t = 0;
-  const d = createLostPressDetector(() => lost++, { now: () => t });
+  const d = createLostPressDetector(() => lost++);
   for (let i = 0; i < 20; i++) {
     d.down({ button: 0 });
     d.up({ button: 0 });
-    t += 100;
   }
   assert.equal(lost, 0);
 });
 
-test("clics perdidos: un «soltar» huérfano suelto no avisa; dos seguidos sí (mini congelada)", () => {
+test("clics perdidos: avisa al primer «soltar» sin su «pulsar» (tras apagarse los monitores no hay otra señal)", () => {
   let lost = 0;
-  let t = 0;
-  const d = createLostPressDetector(() => lost++, { now: () => t });
-  d.up({ button: 0 }); // pulsar fuera y soltar encima: normal
-  assert.equal(lost, 0);
-  t += 2000;
-  d.up({ button: 0 }); // vuelve a pasar enseguida: la mini se traga los «pulsar»
-  assert.equal(lost, 1);
-  t += 500;
-  d.up({ button: 0 }); // la cuenta empieza de nuevo
-  assert.equal(lost, 1);
-});
-
-test("clics perdidos: dos huérfanos muy separados no avisan; otros botones no cuentan", () => {
-  let lost = 0;
-  let t = 0;
-  const d = createLostPressDetector(() => lost++, { now: () => t });
+  const d = createLostPressDetector(() => lost++);
   d.up({ button: 0 });
-  t += LOST_PRESS_WINDOW_MS + 1;
-  d.up({ button: 0 });
-  assert.equal(lost, 0);
-  d.up({ button: 2 });
-  d.up({ button: 2 });
-  assert.equal(lost, 0);
-  // Un clic normal en medio también reinicia la sospecha del «pulsar» pendiente.
+  assert.equal(lost, 1);
+  // La ventana nueva vuelve a recibir los «pulsar»: no se repite.
   d.down({ button: 0 });
   d.up({ button: 0 });
-  t += 100;
-  d.up({ button: 0 });
-  assert.equal(lost, 1, "el huérfano anterior aún cuenta dentro del plazo");
+  assert.equal(lost, 1);
+  // Otros botones no cuentan.
+  d.up({ button: 2 });
+  assert.equal(lost, 1);
 });
 
 test("mini-heal: al desbloquear o volver de suspensión se recrea enseguida, antes de que se toque", () => {
@@ -115,4 +94,23 @@ test("mini-heal: al desbloquear o volver de suspensión se recrea enseguida, ant
   env.advance(1);
   assert.deepEqual(env.logs, ["unlock-screen"]);
   assert.ok(HEAL_QUICK_MS <= 1000, "menos de un segundo");
+});
+
+test("vuelta de la actividad: avisa una vez al tocar algo tras más de un minuto sin actividad", () => {
+  const w = createIdleWake();
+  const seq = [0, 1, 0, 5, 30, IDLE_WAKE_AFTER_S - 1, IDLE_WAKE_AFTER_S, 300, 900, 1, 0, 0, 1];
+  const woke = seq.map((s) => w.feed(s));
+  assert.deepEqual(woke.map((v, i) => (v ? seq[i] : null)).filter((v) => v !== null), [1], "solo al volver");
+  assert.equal(woke.indexOf(true), 9, "en el primer segundo con actividad tras los 900 s");
+});
+
+test("vuelta de la actividad: pausas cortas no cuentan, y un dato raro no hace nada", () => {
+  const w = createIdleWake();
+  for (const s of [0, 10, 40, 59, 0, 1, 20, 0]) assert.equal(w.feed(s), false, String(s));
+  assert.equal(w.feed(NaN), false);
+  assert.equal(w.feed(undefined), false);
+  // Con el umbral pasado, aunque llegue un dato raro en medio, se avisa al volver.
+  w.feed(120);
+  w.feed(NaN);
+  assert.equal(w.feed(0), true);
 });

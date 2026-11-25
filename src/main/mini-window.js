@@ -12,7 +12,7 @@ import { userData } from "./paths.js";
 import { placeBounds, rememberBounds, fitBounds, clampOpacity, MINI_MIN, MINI_MAX } from "./mini-bounds.js";
 import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, waylandSession } from "./overlay.js";
 import { createMiniDrag } from "./mini-drag.js";
-import { createMiniHeal, HEAL_QUICK_MS } from "./mini-heal.js";
+import { createMiniHeal, createIdleWake, HEAL_QUICK_MS } from "./mini-heal.js";
 
 let win = null;
 let lastState = null;
@@ -98,6 +98,11 @@ function open() {
       for (const [source, event, delay] of [[powerMonitor, "resume", HEAL_QUICK_MS], [powerMonitor, "unlock-screen", HEAL_QUICK_MS], [screen, "display-added"], [screen, "display-removed"]]) {
         source?.on?.(event, () => isMiniOpen() && heal.after(event, delay));
       }
+      // Monitores que se encienden tras apagarse por inactividad: Windows no avisa, se ve en el tiempo sin actividad.
+      const wake = createIdleWake();
+      setInterval(() => {
+        if (isMiniOpen() && wake.feed(powerMonitor.getSystemIdleTime())) heal.after("vuelve la actividad", HEAL_QUICK_MS);
+      }, 1000).unref?.();
     }
   }
   const bounds = placeBounds(loadSaved(), screen.getAllDisplays(), screen.getPrimaryDisplay().id);
