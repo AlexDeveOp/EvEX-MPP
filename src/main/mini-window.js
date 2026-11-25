@@ -11,6 +11,7 @@ import path from "node:path";
 import { userData } from "./paths.js";
 import { placeBounds, rememberBounds, fitBounds, clampOpacity, MINI_MIN, MINI_MAX } from "./mini-bounds.js";
 import { OVERLAY_WINDOW, overlayWebPreferences, raiseOverlay, keepOnTop, waylandSession } from "./overlay.js";
+import { createMiniDrag } from "./mini-drag.js";
 
 let win = null;
 let lastState = null;
@@ -20,6 +21,20 @@ let options = { preload: "", onClick: () => {}, onShow: () => {}, onChange: () =
 let saveTimer = null;
 let watchingDisplays = false;
 let stopKeepOnTop = () => {};
+
+// Arrastre propio de la barra (ver mini-drag.js). En Wayland no: ahí la app no puede colocar sus ventanas y se queda
+// la zona de arrastre de Chromium, que mueve la ventana a través del escritorio.
+export const manualMiniDrag = () => !waylandSession();
+const drag = createMiniDrag({
+  getCursor: () => screen.getCursorScreenPoint(),
+  getBounds: () => win.getBounds(),
+  setBounds: (b) => isMiniOpen() && win.setBounds(b),
+  // Al soltar: dentro del área útil del monitor en que haya quedado, y se guarda.
+  onEnd: () => {
+    refitMini();
+    saveLater();
+  },
+});
 
 // En Wayland el escritorio decide dónde van las ventanas: no se puede asegurar que quede encima.
 export const miniOnTop = () => !waylandSession();
@@ -102,6 +117,7 @@ function open() {
   // olvida la ventana si sigue siendo la actual.
   w.on("closed", () => {
     if (win !== w) return;
+    drag.end();
     stopKeepOnTop();
     clearTimeout(saveTimer);
     win = null;
@@ -127,6 +143,7 @@ function close() {
   if (!isMiniOpen()) return;
   saveBounds();
   clearTimeout(saveTimer);
+  drag.end();
   const w = win;
   win = null;
   stopKeepOnTop();
@@ -162,6 +179,15 @@ export function miniIpc(handle) {
     const next = fitBounds({ x: b.x, y: b.y, width: Number(size?.width) || b.width, height: Number(size?.height) || b.height }, screen.getDisplayMatching(b).workArea);
     win.setBounds(next);
     saveLater();
+  });
+  // Arrastre de la barra: «manual» dice a la página si lo hace la app (si no, usa la zona de arrastre de Chromium);
+  // «start» al pulsar y «end» al soltar.
+  handle("mini:drag", (action) => {
+    if (action === "manual") return manualMiniDrag();
+    if (action === "end") return drag.end();
+    if (action !== "start" || !isMiniOpen() || current.clickThrough || !manualMiniDrag()) return false;
+    drag.start();
+    return true;
   });
   handle("mini:click", (target) => {
     if (current.clickThrough) return;

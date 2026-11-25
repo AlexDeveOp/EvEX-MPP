@@ -8,6 +8,7 @@ Spanish summary / resumen en español: [README.es.md](README.es.md).
 ## [Unreleased]
 
 ### Fixed
+- Mini window: on Windows it sometimes could not be moved by its bar until it was closed and opened again, usually after the monitors turned off, after resuming from sleep or after switching focus between monitors. The app now moves the window itself instead of relying on Chromium's drag area ([#129](https://github.com/AlexDeveOp/EvEX-MPP/issues/129)).
 - FC mode: when importing a shared configuration, the warnings showed a circle instead of the warning icon. A new test checks that every icon the interface asks for exists. ([#122](https://github.com/AlexDeveOp/EvEX-MPP/issues/122))
 - A ping sync test depended on the real date and started failing on 2026-11-12 ([#127](https://github.com/AlexDeveOp/EvEX-MPP/issues/127)). Only the test changed.
 

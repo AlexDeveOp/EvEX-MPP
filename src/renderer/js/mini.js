@@ -129,6 +129,37 @@ setTimeout(() => {
   if (!state) ui.empty.textContent = t("Abre EvEX-MPP para ver los pings (pulsa aquí)");
 }, 3000);
 
+// ---------- mover la ventana con la barra ----------
+
+// La mueve el proceso principal siguiendo el ratón (src/main/mini-drag.js): la zona de arrastre de Chromium se
+// quedaba a veces congelada en Windows tras apagarse los monitores o volver de suspensión. Aquí solo se avisa al
+// pulsar y al soltar; los contadores de la barra siguen siendo botones. Si el proceso principal dice que no (Wayland),
+// se queda la zona de arrastre del CSS.
+call("mini:drag", "manual")
+  .then((manual) => {
+    if (!manual) return;
+    root.classList.add("manual-drag");
+    bar.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || e.target.closest(".count, button, a")) return;
+      e.preventDefault();
+      bar.setPointerCapture(e.pointerId);
+      call("mini:drag", "start").catch(() => {});
+      const ends = ["pointerup", "pointercancel", "lostpointercapture"];
+      function end() {
+        bar.removeEventListener("pointermove", check);
+        for (const n of ends) bar.removeEventListener(n, end);
+        call("mini:drag", "end").catch(() => {});
+      }
+      // Si el botón ya no está pulsado (se soltó fuera sin avisar), se termina.
+      function check(ev) {
+        if (!ev.buttons) end();
+      }
+      bar.addEventListener("pointermove", check);
+      for (const n of ends) bar.addEventListener(n, end);
+    });
+  })
+  .catch(() => {});
+
 // ---------- asa para cambiar el tamaño ----------
 
 // Esquina de abajo a la derecha. El tamaño se pide al proceso principal, como mucho una vez por fotograma. El arrastre

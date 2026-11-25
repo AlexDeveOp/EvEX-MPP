@@ -31,6 +31,14 @@ body {
   color: var(--text2, #8b98a9);
   border-bottom: 1px solid var(--border, #263244);
 }
+/* En Windows (y X11) la mueve la app (mini.js → mini-drag.js): sin la zona de arrastre de Chromium, que se quedaba
+   congelada tras apagarse los monitores o volver de suspensión. */
+.manual-drag .bar {
+  -webkit-app-region: no-drag;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
 .bar .name {
   flex: 1;
   overflow: hidden;
