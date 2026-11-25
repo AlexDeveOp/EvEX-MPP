@@ -6,7 +6,7 @@
 //   seguidos). Al desbloquear o volver de suspensión basta QUICK_MS: así está curada antes de que se toque.
 // - stuck(): la página vio un «soltar» sin su «pulsar»: recrearla ya, como mucho una vez cada MIN_GAP_MS.
 
-export const HEAL_DELAY_MS = 3000;
+export const HEAL_DELAY_MS = 1000; // pantallas que se conectan o desconectan (agrupa los eventos seguidos)
 export const HEAL_QUICK_MS = 500;
 export const HEAL_MIN_GAP_MS = 5000;
 
