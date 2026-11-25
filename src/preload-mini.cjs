@@ -1,8 +1,8 @@
 // Puente de la mini ventana para jugar (src/main/mini-window.js): una ventana siempre encima solo necesita leer sus
-// datos, pedir que se abra la app y cambiar su tamaño. Nada de ajustes, archivos, enlaces ni salir.
+// datos, pedir que se abra la app y cambiar su tamaño o moverla. Nada de ajustes, archivos, enlaces ni salir.
 const { contextBridge, ipcRenderer } = require("electron");
 
-const CHANNELS = ["mini:get", "mini:click", "mini:resize"];
+const CHANNELS = ["mini:get", "mini:click", "mini:resize", "mini:drag", "mini:stuck"];
 const EVENTS = ["mini-state"];
 
 contextBridge.exposeInMainWorld("evex", {

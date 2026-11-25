@@ -3,6 +3,7 @@
 // datos (o el tic de cada segundo) entre pulsar y soltar.
 import { t, currentLang } from "./i18n.js";
 import { fleetCountdown, timeAgo } from "./countdown.js";
+import { createLostPressDetector } from "./mini-lost-press.js";
 
 const call = (ch, ...a) => window.evex.call(ch, ...a);
 const root = document.getElementById("mini");
@@ -128,6 +129,45 @@ setInterval(tick, 1000);
 setTimeout(() => {
   if (!state) ui.empty.textContent = t("Abre EvEX-MPP para ver los pings (pulsa aquí)");
 }, 3000);
+
+// ---------- clics perdidos ----------
+
+// Tras apagarse los monitores, Chromium puede tragarse el «pulsar» y entregar solo el «soltar»: la mini no responde.
+// Si pasa, se pide al proceso principal que recree la ventana (src/main/mini-heal.js).
+const lostPress = createLostPressDetector(() => call("mini:stuck").catch(() => {}));
+addEventListener("pointerdown", (e) => lostPress.down(e), true);
+addEventListener("pointerup", (e) => lostPress.up(e), true);
+
+// ---------- mover la ventana con la barra ----------
+
+// La mueve el proceso principal siguiendo el ratón (src/main/mini-drag.js): la zona de arrastre de Chromium se
+// quedaba a veces congelada en Windows tras apagarse los monitores o volver de suspensión. Aquí solo se avisa al
+// pulsar y al soltar; los contadores de la barra siguen siendo botones. Si el proceso principal dice que no (Wayland),
+// se queda la zona de arrastre del CSS.
+call("mini:drag", "manual")
+  .then((manual) => {
+    if (!manual) return;
+    root.classList.add("manual-drag");
+    bar.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || e.target.closest(".count, button, a")) return;
+      e.preventDefault();
+      bar.setPointerCapture(e.pointerId);
+      call("mini:drag", "start").catch(() => {});
+      const ends = ["pointerup", "pointercancel", "lostpointercapture"];
+      function end() {
+        bar.removeEventListener("pointermove", check);
+        for (const n of ends) bar.removeEventListener(n, end);
+        call("mini:drag", "end").catch(() => {});
+      }
+      // Si el botón ya no está pulsado (se soltó fuera sin avisar), se termina.
+      function check(ev) {
+        if (!ev.buttons) end();
+      }
+      bar.addEventListener("pointermove", check);
+      for (const n of ends) bar.addEventListener(n, end);
+    });
+  })
+  .catch(() => {});
 
 // ---------- asa para cambiar el tamaño ----------
 
